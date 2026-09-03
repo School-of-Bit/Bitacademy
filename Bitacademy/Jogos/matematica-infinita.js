@@ -73,26 +73,18 @@ class MathInfiniteGame {
 
   tick() {
     if (!this.isRunning) return;
-
     this.state.timeLeft -= 1;
     if (this.state.timeLeft <= 0) {
       this.state.timeLeft = 0;
       this.finish(true);
     }
-
     this.render();
   }
 
   nextQuestion() {
     const level = Math.min(8, Math.floor(this.state.correct / 5) + 1);
     this.state.level = level;
-
-    const operations = level < 3
-      ? ["+", "-"]
-      : level < 6
-        ? ["+", "-", "*"]
-        : ["+", "-", "*", "/"];
-
+    const operations = level < 3 ? ["+", "-"] : level < 6 ? ["+", "-", "*"] : ["+", "-", "*", "/"];
     const operation = operations[Math.floor(Math.random() * operations.length)];
     const max = 8 + level * 6;
     let a = this.randomNumber(2, max);
@@ -123,7 +115,6 @@ class MathInfiniteGame {
 
   submitAnswer() {
     if (!this.isRunning) return;
-
     const userAnswer = Number(this.elements.answer.value);
     if (!Number.isFinite(userAnswer)) return;
 
@@ -145,11 +136,10 @@ class MathInfiniteGame {
       this.finish(true);
       return;
     }
-
     this.nextQuestion();
   }
 
-  finish(saveScore) {
+  async finish(saveScore) {
     clearInterval(this.timer);
     this.timer = null;
     this.isRunning = false;
@@ -159,22 +149,24 @@ class MathInfiniteGame {
     this.elements.reset.disabled = true;
 
     if (saveScore && this.state.score > 0) {
-      window.BitAcademyAuth?.recordGameScore({
-        mode: "math-infinite",
-        title: "Matemática Infinita",
-        score: this.state.score,
-        correct: this.state.correct,
-        wrong: this.state.wrong,
-        bestStreak: this.state.bestStreak,
-        duration: Math.round((Date.now() - this.state.startedAt) / 1000)
-      });
-
-      this.elements.feedback.textContent = "Fim de jogo! Pontuação salva no ranking.";
-      this.renderRanking();
+      try {
+        await window.BitAcademyAuth?.recordGameScore({
+          mode: "math-infinite",
+          title: "Matemática Infinita",
+          score: this.state.score,
+          correct: this.state.correct,
+          wrong: this.state.wrong,
+          bestStreak: this.state.bestStreak,
+          duration: Math.round((Date.now() - this.state.startedAt) / 1000)
+        });
+        this.elements.feedback.textContent = "Fim de jogo! Pontuação salva no ranking.";
+      } catch (error) {
+        this.elements.feedback.textContent = `Fim de jogo! ${error.message}`;
+      }
+      await this.renderRanking();
     } else if (saveScore) {
       this.elements.feedback.textContent = "Fim de jogo! Tente marcar pontos na próxima.";
     }
-
     this.render();
   }
 
@@ -186,24 +178,27 @@ class MathInfiniteGame {
     document.body.classList.toggle("danger-time", this.state.timeLeft <= 8);
   }
 
-  renderRanking() {
-    const scores = window.BitAcademyAuth?.getGameRanking("math-infinite", 8) || [];
-
-    if (!scores.length) {
-      this.elements.ranking.innerHTML = "<p>Nenhuma pontuação registrada ainda.</p>";
-      return;
+  async renderRanking() {
+    try {
+      await window.BitAcademyAuth?.ready;
+      const scores = await window.BitAcademyAuth?.getGameRanking("math-infinite", 8) || [];
+      if (!scores.length) {
+        this.elements.ranking.innerHTML = "<p>Nenhuma pontuação registrada ainda.</p>";
+        return;
+      }
+      this.elements.ranking.innerHTML = scores.map((score, index) => `
+        <article>
+          <span>${index + 1}</span>
+          <div>
+            <strong>${this.escapeHtml(score.playerName)}</strong>
+            <small>${new Date(score.date).toLocaleDateString("pt-BR")} · ${score.correct} acertos</small>
+          </div>
+          <b>${score.score}</b>
+        </article>
+      `).join("");
+    } catch (error) {
+      this.elements.ranking.innerHTML = `<p>Não foi possível carregar o ranking.</p>`;
     }
-
-    this.elements.ranking.innerHTML = scores.map((score, index) => `
-      <article>
-        <span>${index + 1}</span>
-        <div>
-          <strong>${this.escapeHtml(score.playerName)}</strong>
-          <small>${new Date(score.date).toLocaleDateString("pt-BR")} · ${score.correct} acertos</small>
-        </div>
-        <b>${score.score}</b>
-      </article>
-    `).join("");
   }
 
   randomNumber(min, max) {
