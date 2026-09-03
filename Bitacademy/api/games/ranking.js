@@ -32,6 +32,6 @@ module.exports = async function handler(req, res) {
     });
   } catch (error) {
     console.error("Game ranking failed:", error);
-    return res.status(500).json({ error: "Não foi possível carregar o ranking." });
+    return res.status(500).json({ error: "Não foi possível carregar o ranking.", diagnostic: error?.message || "Erro interno desconhecido." });
   }
 };
