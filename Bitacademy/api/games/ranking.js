@@ -9,29 +9,31 @@ module.exports = async function handler(req, res) {
     if (!mode) return res.status(400).json({ error: "Informe o modo do jogo." });
 
     const rows = await sql`
-      SELECT id, mode, title, score, correct, wrong, best_streak, duration, player_name, played_at
+      SELECT id, game_mode, game_title, score,
+             correct_answers, wrong_answers, best_streak,
+             duration_seconds, player_name, played_at
       FROM game_scores
-      WHERE mode = ${mode}
-      ORDER BY score DESC, correct DESC, played_at ASC
+      WHERE game_mode = ${mode}
+      ORDER BY score DESC, correct_answers DESC, played_at ASC
       LIMIT ${limit}
     `;
 
     return res.status(200).json({
       ranking: rows.map((row) => ({
         id: row.id,
-        mode: row.mode,
-        title: row.title,
+        mode: row.game_mode,
+        title: row.game_title,
         score: row.score,
-        correct: row.correct,
-        wrong: row.wrong,
+        correct: row.correct_answers,
+        wrong: row.wrong_answers,
         bestStreak: row.best_streak,
-        duration: row.duration,
+        duration: row.duration_seconds,
         playerName: row.player_name,
         date: row.played_at
       }))
     });
   } catch (error) {
     console.error("Game ranking failed:", error);
-    return res.status(500).json({ error: "Não foi possível carregar o ranking.", diagnostic: error?.message || "Erro interno desconhecido." });
+    return res.status(500).json({ error: "Não foi possível carregar o ranking." });
   }
 };
