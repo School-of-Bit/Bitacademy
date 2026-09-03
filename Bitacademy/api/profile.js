@@ -8,12 +8,19 @@ module.exports = async function handler(req, res) {
     const userId = getSessionUserId(req);
     if (!userId) return res.status(401).json({ error: "Não autenticado." });
 
-    const users = await sql`SELECT id, name, email, account_type FROM users WHERE id = ${userId} LIMIT 1`;
+    const users = await sql`
+      SELECT id, name, email, account_type
+      FROM users
+      WHERE id = ${userId}
+      LIMIT 1
+    `;
+
     if (!users.length) return res.status(401).json({ error: "Sessão inválida." });
     const user = users[0];
 
     const results = await sql`
-      SELECT qa.quiz_title, qa.score, qa.total_questions, qa.percentage, qa.completed_at, s.slug AS materia
+      SELECT qa.quiz_title, qa.score, qa.total_questions, qa.percentage,
+             qa.completed_at, s.slug AS materia
       FROM quiz_attempts qa
       JOIN subjects s ON s.id = qa.subject_id
       WHERE qa.user_id = ${userId}
@@ -22,7 +29,14 @@ module.exports = async function handler(req, res) {
     `;
 
     const games = await sql`
-      SELECT mode, title, score, correct, wrong, best_streak, duration, played_at
+      SELECT game_mode AS mode,
+             game_title AS title,
+             score,
+             correct_answers AS correct,
+             wrong_answers AS wrong,
+             best_streak,
+             duration_seconds AS duration,
+             played_at
       FROM game_scores
       WHERE user_id = ${userId}
       ORDER BY played_at DESC
@@ -30,7 +44,12 @@ module.exports = async function handler(req, res) {
     `;
 
     return res.status(200).json({
-      user: { id: user.id, name: user.name, email: user.email, type: user.account_type },
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        type: user.account_type
+      },
       quizResults: results.map((row) => ({
         materia: row.materia,
         titulo: row.quiz_title,
@@ -52,6 +71,6 @@ module.exports = async function handler(req, res) {
     });
   } catch (error) {
     console.error("Profile lookup failed:", error);
-    return res.status(500).json({ error: "Não foi possível carregar o perfil.", diagnostic: error?.message || "Erro interno desconhecido." });
+    return res.status(500).json({ error: "Não foi possível carregar o perfil." });
   }
 };
