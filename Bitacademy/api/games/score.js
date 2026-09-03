@@ -53,6 +53,6 @@ module.exports = async function handler(req, res) {
     });
   } catch (error) {
     console.error("Game score save failed:", error);
-    return res.status(500).json({ error: "Não foi possível salvar a pontuação." });
+    return res.status(500).json({ error: "Não foi possível salvar a pontuação.", diagnostic: error?.message || "Erro interno desconhecido." });
   }
 };
