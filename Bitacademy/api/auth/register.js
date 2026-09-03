@@ -72,10 +72,22 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // Diagnóstico temporário: verifica se o segredo JWT está disponível
+    // antes de tentar criar a sessão. Nunca expõe o valor do segredo.
+    if (!process.env.JWT_SECRET) {
+      console.error("Registration failed: JWT_SECRET não está configurado.");
+      return res.status(500).json({
+        error: "Configuração do servidor incompleta: JWT_SECRET não está configurado."
+      });
+    }
+
     setSessionCookie(res, user);
     return res.status(201).json({ user: safeUser(user) });
   } catch (error) {
     console.error("Registration failed:", error);
-    return res.status(500).json({ error: "Não foi possível criar a conta." });
+    return res.status(500).json({
+      error: "Não foi possível criar a conta.",
+      diagnostic: error?.message || "Erro interno desconhecido."
+    });
   }
 };
