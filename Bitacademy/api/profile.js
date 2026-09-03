@@ -52,6 +52,6 @@ module.exports = async function handler(req, res) {
     });
   } catch (error) {
     console.error("Profile lookup failed:", error);
-    return res.status(500).json({ error: "Não foi possível carregar o perfil." });
+    return res.status(500).json({ error: "Não foi possível carregar o perfil.", diagnostic: error?.message || "Erro interno desconhecido." });
   }
 };
