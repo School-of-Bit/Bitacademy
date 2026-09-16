@@ -1,35 +1,12 @@
 window.BitAcademyAuth = (() => {
-  const USERS_KEY = "bitacademy.users";
-  const SESSION_KEY = "bitacademy.session";
-  const QUIZ_SCORES_KEY = "bitacademy.quizScores";
-  const GAME_SCORES_KEY = "bitacademy.gameScores";
+  let currentUser = null;
+  let profileData = null;
 
-  const readJson = (key, fallback) => {
-    try {
-      return JSON.parse(localStorage.getItem(key)) || fallback;
-    } catch {
-      return fallback;
-    }
-  };
-
-  const saveJson = (key, value) => {
-    localStorage.setItem(key, JSON.stringify(value));
-  };
-
-  const normalize = (value) => value.trim().toLowerCase();
+  const normalize = (value) => String(value || "").trim().toLowerCase();
   const getRelativePrefix = () => {
     const path = window.location.pathname;
     return path.includes("/Quiz/") || path.includes("/Jogos/") ? "../" : "";
   };
-
-  const createId = () => {
-    if (window.crypto && typeof window.crypto.randomUUID === "function") {
-      return window.crypto.randomUUID();
-    }
-
-    return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  };
-
   const escapeHtml = (value) => String(value)
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -37,167 +14,113 @@ window.BitAcademyAuth = (() => {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 
-  const getUsers = () => readJson(USERS_KEY, []);
-  const saveUsers = (users) => saveJson(USERS_KEY, users);
+  const api = async (path, options = {}) => {
+    const response = await fetch(`${getRelativePrefix()}api/${path}`, {
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      ...options
+    });
 
-  const getCurrentUser = () => {
-    const session = readJson(SESSION_KEY, null);
-    if (!session) return null;
-    return getUsers().find((user) => user.id === session.userId) || null;
+    let data = {};
+    try { data = await response.json(); } catch {}
+    if (!response.ok) throw new Error(data.error || "Ocorreu um erro na comunicação com o servidor.");
+    return data;
   };
 
-  const setSession = (userId) => {
-    saveJson(SESSION_KEY, { userId, startedAt: new Date().toISOString() });
-  };
-
-  const register = ({ name, email, password, type }) => {
-    const users = getUsers();
-    const cleanEmail = normalize(email);
-
-    if (users.some((user) => user.email === cleanEmail)) {
-      throw new Error("Este e-mail já está cadastrado.");
+  const loadCurrentUser = async () => {
+    try {
+      const data = await api("auth/me");
+      currentUser = data.user || null;
+    } catch {
+      currentUser = null;
     }
-
-    if (password.length < 6) {
-      throw new Error("A senha precisa ter pelo menos 6 caracteres.");
-    }
-
-    const user = {
-      id: createId(),
-      name: name.trim(),
-      email: cleanEmail,
-      password,
-      type,
-      createdAt: new Date().toISOString(),
-      quizResults: []
-    };
-
-    users.push(user);
-    saveUsers(users);
-    setSession(user.id);
-    return user;
+    return currentUser;
   };
 
-  const login = ({ email, password }) => {
-    const cleanEmail = normalize(email);
-    const user = getUsers().find(
-      (account) => account.email === cleanEmail && account.password === password
-    );
+  const ready = loadCurrentUser();
 
-    if (!user) {
-      throw new Error("E-mail ou senha incorretos.");
-    }
+  const getCurrentUser = () => currentUser;
 
-    setSession(user.id);
-    return user;
+  const register = async ({ name, email, password, type, materia }) => {
+    const data = await api("auth/register", {
+      method: "POST",
+      body: JSON.stringify({
+        name: String(name || "").trim(),
+        email: normalize(email),
+        password,
+        type,
+        materia
+      })
+    });
+    currentUser = data.user;
+    return currentUser;
   };
 
-  const logout = () => {
-    localStorage.removeItem(SESSION_KEY);
+  const login = async ({ email, password }) => {
+    const data = await api("auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email: normalize(email), password })
+    });
+    currentUser = data.user;
+    return currentUser;
+  };
+
+  const logout = async () => {
+    try { await api("auth/logout", { method: "POST" }); } catch {}
+    currentUser = null;
     window.location.href = `${getRelativePrefix()}login.html`;
   };
 
-  const recordQuizResult = ({ materia, titulo, score, total, percent }) => {
-    const currentUser = getCurrentUser();
-    const quizEntry = {
-      id: createId(),
-      materia,
-      titulo,
-      score,
-      total,
-      percent,
-      userId: currentUser?.id || null,
-      playerName: currentUser?.name || "Visitante",
-      date: new Date().toISOString()
-    };
+  const recordQuizResult = async ({ materia, titulo, score, total }) => {
+    const data = await api("quizzes/result", {
+      method: "POST",
+      body: JSON.stringify({ materia, titulo, score, total })
+    });
+    return data.result;
+  };
 
-    const quizScores = readJson(QUIZ_SCORES_KEY, []);
-    quizScores.push(quizEntry);
-    quizScores.sort((a, b) => b.percent - a.percent || b.score - a.score);
-    saveJson(QUIZ_SCORES_KEY, quizScores.slice(0, 150));
+  const getQuizRanking = async (materia, limit = 10) => {
+    const params = new URLSearchParams({ materia, limit: String(limit) });
+    const data = await api(`quizzes/ranking?${params}`);
+    return data.ranking || [];
+  };
 
-    if (currentUser) {
-      const users = getUsers();
-      const userIndex = users.findIndex((user) => user.id === currentUser.id);
-      if (userIndex >= 0) {
-        users[userIndex].quizResults = users[userIndex].quizResults || [];
-        users[userIndex].quizResults.unshift(quizEntry);
-        users[userIndex].quizResults = users[userIndex].quizResults.slice(0, 20);
-        saveUsers(users);
-      }
+  const getProgress = async () => {
+    if (!currentUser) return [];
+    if (!profileData) {
+      profileData = await api("profile");
     }
-
-    return quizEntry;
+    return profileData.quizResults || [];
   };
 
-  const getQuizRanking = (materia, limit = 10) => {
-    return readJson(QUIZ_SCORES_KEY, [])
-      .filter((score) => score.materia === materia)
-      .sort((a, b) => b.percent - a.percent || b.score - a.score)
-      .slice(0, limit);
+  const recordGameScore = async ({ mode, title, score, correct, wrong, bestStreak, duration }) => {
+    const data = await api("games/score", {
+      method: "POST",
+      body: JSON.stringify({ mode, title, score, correct, wrong, bestStreak, duration })
+    });
+    return data.result;
   };
 
-  const getProgress = () => {
-    const currentUser = getCurrentUser();
+  const getGameRanking = async (mode, limit = 10) => {
+    const params = new URLSearchParams({ mode, limit: String(limit) });
+    const data = await api(`games/ranking?${params}`);
+    return data.ranking || [];
+  };
+
+  const getUserGameScores = async () => {
     if (!currentUser) return [];
-    return currentUser.quizResults || [];
-  };
-
-  const getGameScores = () => readJson(GAME_SCORES_KEY, []);
-
-  const saveGameScores = (scores) => {
-    saveJson(GAME_SCORES_KEY, scores);
-  };
-
-  const recordGameScore = ({ mode, title, score, correct, wrong, bestStreak, duration }) => {
-    const currentUser = getCurrentUser();
-    const scores = getGameScores();
-    const entry = {
-      id: createId(),
-      mode,
-      title,
-      score,
-      correct,
-      wrong,
-      bestStreak,
-      duration,
-      userId: currentUser?.id || null,
-      playerName: currentUser?.name || "Visitante",
-      date: new Date().toISOString()
-    };
-
-    scores.push(entry);
-    scores.sort((a, b) => b.score - a.score || b.correct - a.correct);
-    saveGameScores(scores.slice(0, 100));
-    return entry;
-  };
-
-  const getGameRanking = (mode, limit = 10) => {
-    return getGameScores()
-      .filter((score) => score.mode === mode)
-      .sort((a, b) => b.score - a.score || b.correct - a.correct)
-      .slice(0, limit);
-  };
-
-  const getUserGameScores = () => {
-    const currentUser = getCurrentUser();
-    if (!currentUser) return [];
-
-    return getGameScores()
-      .filter((score) => score.userId === currentUser.id)
-      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    if (!profileData) profileData = await api("profile");
+    return profileData.gameScores || [];
   };
 
   const renderAuthStatus = () => {
     document.querySelectorAll("[data-auth-status]").forEach((container) => {
       const user = getCurrentUser();
       const prefix = getRelativePrefix();
-
       if (!user) {
         container.innerHTML = `<a href="${prefix}login.html">Entrar</a>`;
         return;
       }
-
       const firstName = escapeHtml(user.name.split(" ")[0]);
       container.innerHTML = `
         <a href="${prefix}perfil.html">Olá, ${firstName}</a>
@@ -206,24 +129,28 @@ window.BitAcademyAuth = (() => {
     });
   };
 
-  const renderProfile = () => {
+  const renderProfile = async () => {
     const container = document.querySelector("[data-profile]");
     if (!container) return;
 
+    await ready;
     const user = getCurrentUser();
     if (!user) {
       window.location.href = "login.html";
       return;
     }
 
-    const results = getProgress();
-    const gameScores = getUserGameScores();
-    const bestPercent = results.length
-      ? Math.max(...results.map((result) => result.percent))
-      : 0;
-    const bestGameScore = gameScores.length
-      ? Math.max(...gameScores.map((result) => result.score))
-      : 0;
+    try {
+      profileData = await api("profile");
+    } catch (error) {
+      container.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
+      return;
+    }
+
+    const results = profileData.quizResults || [];
+    const gameScores = profileData.gameScores || [];
+    const bestPercent = results.length ? Math.max(...results.map((result) => result.percent)) : 0;
+    const bestGameScore = gameScores.length ? Math.max(...gameScores.map((result) => result.score)) : 0;
     const average = results.length
       ? Math.round(results.reduce((sum, result) => sum + result.percent, 0) / results.length)
       : 0;
@@ -237,27 +164,13 @@ window.BitAcademyAuth = (() => {
         </div>
         <a class="primary-link" href="Bitacademy.html#disciplinas">Continuar estudando</a>
       </section>
-
       <section class="profile-dashboard">
         <div class="profile-summary">
-          <article>
-            <span>Quizzes feitos</span>
-            <strong>${results.length}</strong>
-          </article>
-          <article>
-            <span>Média geral</span>
-            <strong>${average}%</strong>
-          </article>
-          <article>
-            <span>Melhor resultado</span>
-            <strong>${bestPercent}%</strong>
-          </article>
-          <article>
-            <span>Recorde infinito</span>
-            <strong>${bestGameScore}</strong>
-          </article>
+          <article><span>Quizzes feitos</span><strong>${results.length}</strong></article>
+          <article><span>Média geral</span><strong>${average}%</strong></article>
+          <article><span>Melhor resultado</span><strong>${bestPercent}%</strong></article>
+          <article><span>Recorde infinito</span><strong>${bestGameScore}</strong></article>
         </div>
-
         <div class="profile-next-step">
           <p class="eyebrow">Próximo passo</p>
           <h2>${results.length ? "Revise uma nova disciplina" : "Faça seu primeiro quiz"}</h2>
@@ -265,22 +178,11 @@ window.BitAcademyAuth = (() => {
           <a class="secondary-link" href="Jogos/matematica-infinita.html">Jogar modo infinito</a>
         </div>
       </section>
-
       <section>
         <h2>Histórico de quizzes</h2>
-        ${results.length ? `
-          <div class="result-list">
-            ${results.map((result) => `
-              <article>
-                <div>
-                  <strong>${escapeHtml(result.titulo)}</strong>
-                  <span>${new Date(result.date).toLocaleDateString("pt-BR")}</span>
-                </div>
-                <b>${result.score}/${result.total} (${result.percent}%)</b>
-              </article>
-            `).join("")}
-          </div>
-        ` : '<p>Você ainda não concluiu nenhum quiz. Escolha uma disciplina e comece quando quiser.</p>'}
+        ${results.length ? `<div class="result-list">${results.map((result) => `
+          <article><div><strong>${escapeHtml(result.titulo)}</strong><span>${new Date(result.date).toLocaleDateString("pt-BR")}</span></div><b>${result.score}/${result.total} (${result.percent}%)</b></article>
+        `).join("")}</div>` : '<p>Você ainda não concluiu nenhum quiz. Escolha uma disciplina e comece quando quiser.</p>'}
       </section>
     `;
   };
@@ -296,39 +198,33 @@ window.BitAcademyAuth = (() => {
       if (message) message.textContent = "";
     };
 
-    tabs.forEach((tab) => {
-      tab.addEventListener("click", () => showPanel(tab.dataset.authTab));
-    });
+    tabs.forEach((tab) => tab.addEventListener("click", () => showPanel(tab.dataset.authTab)));
 
-    document.querySelector("[data-login-form]")?.addEventListener("submit", (event) => {
+    document.querySelector("[data-login-form]")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
-
       try {
-        login({
-          email: form.email.value,
-          password: form.senha.value
-        });
+        await login({ email: form.email.value, password: form.senha.value });
         window.location.href = "perfil.html";
       } catch (error) {
-        message.textContent = error.message;
+        if (message) message.textContent = error.message;
       }
     });
 
-    document.querySelector("[data-register-form]")?.addEventListener("submit", (event) => {
+    document.querySelector("[data-register-form]")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
-
       try {
-        register({
+        await register({
           name: form.nome.value,
           email: form.email.value,
           password: form.senha.value,
-          type: form.tipo.value
+          type: form.tipo.value,
+          materia: form.materia?.value || null
         });
         window.location.href = "perfil.html";
       } catch (error) {
-        message.textContent = error.message;
+        if (message) message.textContent = error.message;
       }
     });
   };
@@ -337,28 +233,20 @@ window.BitAcademyAuth = (() => {
     const tabs = document.querySelectorAll("[data-home-tab]");
     const panels = document.querySelectorAll("[data-home-panel]");
     if (!tabs.length || !panels.length) return;
-
     const showPanel = (target) => {
-      tabs.forEach((tab) => {
-        tab.classList.toggle("active", tab.dataset.homeTab === target);
-      });
-
+      tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.homeTab === target));
       panels.forEach((panel) => {
-        const isActive = panel.dataset.homePanel === target;
-        panel.hidden = !isActive;
-        panel.classList.toggle("active", isActive);
+        const active = panel.dataset.homePanel === target;
+        panel.hidden = !active;
+        panel.classList.toggle("active", active);
       });
     };
-
-    tabs.forEach((tab) => {
-      tab.addEventListener("click", () => showPanel(tab.dataset.homeTab));
-    });
+    tabs.forEach((tab) => tab.addEventListener("click", () => showPanel(tab.dataset.homeTab)));
   };
 
   const bindSubjectExperience = () => {
     const page = document.body;
     if (!page.classList.contains("subject-page")) return;
-
     const header = document.querySelector("header");
     const nav = document.querySelector("nav");
     const main = document.querySelector("main");
@@ -377,21 +265,14 @@ window.BitAcademyAuth = (() => {
     header.classList.add("subject-hero");
     nav.classList.add("subject-nav");
     main.classList.add("subject-main");
-
     nav.childNodes.forEach((node) => {
-      if (node.nodeType === Node.TEXT_NODE && node.textContent.includes("|")) {
-        node.textContent = " ";
-      }
+      if (node.nodeType === Node.TEXT_NODE && node.textContent.includes("|")) node.textContent = " ";
     });
 
     if (!header.querySelector(".subject-visual")) {
       header.insertAdjacentHTML("beforeend", `
         <div class="subject-visual" aria-hidden="true">
-          <div class="visual-card main">
-            <span>${icon}</span>
-            <strong>${escapeHtml(title)}</strong>
-            <small>${escapeHtml(area)}</small>
-          </div>
+          <div class="visual-card main"><span>${icon}</span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(area)}</small></div>
           <div class="visual-card mini top">${topicLinks[0] ? escapeHtml(topicLinks[0].textContent) : "Conceitos"}</div>
           <div class="visual-card mini middle">${topicLinks[1] ? escapeHtml(topicLinks[1].textContent) : "Exemplos"}</div>
           <div class="visual-card mini bottom">${topicLinks[2] ? escapeHtml(topicLinks[2].textContent) : "Prática"}</div>
@@ -402,59 +283,34 @@ window.BitAcademyAuth = (() => {
     if (!document.querySelector(".subject-path")) {
       intro.insertAdjacentHTML("afterend", `
         <section class="subject-path" aria-label="Trilha sugerida">
-          <article>
-            <span>1</span>
-            <div>
-              <strong>Entenda a base</strong>
-              <p>Leia a introdução para saber por que esta matéria importa.</p>
-            </div>
-            <a href="#introducao">Abrir</a>
-          </article>
-          <article>
-            <span>2</span>
-            <div>
-              <strong>Explore os tópicos</strong>
-              <p>Avance pelos assuntos principais em uma ordem mais clara.</p>
-            </div>
-            <a href="${firstTopicHref}">Ver tópicos</a>
-          </article>
-          <article>
-            <span>3</span>
-            <div>
-              <strong>Pratique</strong>
-              <p>Finalize com quiz ou jogo para testar sua retenção.</p>
-            </div>
-            <a href="${quizHref}">Praticar</a>
-          </article>
+          <article><span>1</span><div><strong>Entenda a base</strong><p>Leia a introdução para saber por que esta matéria importa.</p></div><a href="#introducao">Abrir</a></article>
+          <article><span>2</span><div><strong>Explore os tópicos</strong><p>Avance pelos assuntos principais em uma ordem mais clara.</p></div><a href="${firstTopicHref}">Ver tópicos</a></article>
+          <article><span>3</span><div><strong>Pratique</strong><p>Finalize com quiz ou jogo para testar sua retenção.</p></div><a href="${quizHref}">Praticar</a></article>
         </section>
       `);
     }
 
     Array.from(main.querySelectorAll("section")).forEach((section) => {
-      const isSpecialSection = section.classList.contains("subject-path")
-        || section.classList.contains("math-game-callout");
-
-      if (section.id !== "introducao" && !isSpecialSection) {
-        section.classList.add("subject-topic");
-      }
+      const special = section.classList.contains("subject-path") || section.classList.contains("math-game-callout");
+      if (section.id !== "introducao" && !special) section.classList.add("subject-topic");
     });
   };
 
   document.addEventListener("click", (event) => {
-    if (event.target.matches("[data-auth-logout]")) {
-      logout();
-    }
+    if (event.target.matches("[data-auth-logout]")) logout();
   });
 
-  document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", async () => {
+    await ready;
     bindLoginPage();
     bindHomeTabs();
     bindSubjectExperience();
     renderAuthStatus();
-    renderProfile();
+    await renderProfile();
   });
 
   return {
+    ready,
     getCurrentUser,
     getGameRanking,
     getProgress,
@@ -463,6 +319,7 @@ window.BitAcademyAuth = (() => {
     login,
     logout,
     recordQuizResult,
-    register
+    register,
+    getUserGameScores
   };
 })();
