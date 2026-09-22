@@ -1,5 +1,5 @@
-const { sql } = require("./db");
-const { getSessionUserId } = require("./_auth");
+const { sql } = require("../lib/db");
+const { getSessionUserId } = require("../lib/_auth");
 
 function jsonBody(req) {
   if (!req.body) return {};
