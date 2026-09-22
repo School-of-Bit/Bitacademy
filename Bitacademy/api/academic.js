@@ -43,7 +43,7 @@ async function createMaterial(teacherId, body, res) {
     return res.status(400).json({ error: "Disciplina, título e conteúdo são obrigatórios." });
   }
 
-  if (link && !/^https?:\\/\\//i.test(link)) {
+  if (link && !/^https?:\/\//i.test(link)) {
     return res.status(400).json({ error: "O link deve começar com http:// ou https://." });
   }
 
