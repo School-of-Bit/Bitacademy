@@ -204,8 +204,8 @@
 
   const renderOverview = async (subject, content) => {
     const [materialsData, activitiesData] = await Promise.all([
-      api(`/api/academic?resource=materials&subject=${encodeURIComponent(subject.slug)}`),
-      api(`/api/academic?resource=activities&subject=${encodeURIComponent(subject.slug)}`)
+      api(`/api/academic?resource=materials&action=list&subject=${encodeURIComponent(subject.slug)}`),
+      api(`/api/academic?resource=activities&action=list&subject=${encodeURIComponent(subject.slug)}`)
     ]);
 
     const materials = materialsData.materials || [];
@@ -247,7 +247,7 @@
   };
 
   const renderMaterials = async (subject, content) => {
-    const data = await api(`/api/academic?resource=materials&subject=${encodeURIComponent(subject.slug)}`);
+    const data = await api(`/api/academic?resource=materials&action=list&subject=${encodeURIComponent(subject.slug)}`);
     const materials = data.materials || [];
 
     content.innerHTML = `
@@ -304,7 +304,7 @@
       showMessage(message, "Publicando material...", "info");
 
       try {
-        await api("/api/academic?resource=materials", {
+        await api("/api/academic?resource=materials&action=create", {
           method: "POST",
           body: JSON.stringify({
             subjectSlug: subject.slug,
@@ -324,7 +324,7 @@
   };
 
   const renderActivities = async (subject, content) => {
-    const data = await api(`/api/academic?resource=activities&subject=${encodeURIComponent(subject.slug)}`);
+    const data = await api(`/api/academic?resource=activities&action=list&subject=${encodeURIComponent(subject.slug)}`);
     const activities = data.activities || [];
 
     content.innerHTML = `
@@ -394,7 +394,7 @@
       showMessage(message, "Criando atividade...", "info");
 
       try {
-        await api("/api/academic?resource=activities", {
+        await api("/api/academic?resource=activities&action=create", {
           method: "POST",
           body: JSON.stringify({
             subjectSlug: subject.slug,
