@@ -86,8 +86,7 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     console.error("Registration failed:", error);
     return res.status(500).json({
-      error: "Não foi possível criar a conta.",
-      diagnostic: error?.message || "Erro interno desconhecido."
+      error: "Não foi possível criar a conta."
     });
   }
 };

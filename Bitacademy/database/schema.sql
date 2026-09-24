@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
     account_type VARCHAR(20) NOT NULL DEFAULT 'Aluno',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT users_account_type_check CHECK (account_type IN ('Aluno', 'Professor'))
+    CONSTRAINT users_account_type_check CHECK (account_type IN ('Aluno', 'Professor', 'Administrador'))
 );
 
 CREATE TABLE IF NOT EXISTS teacher_subjects (

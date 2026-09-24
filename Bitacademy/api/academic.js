@@ -22,6 +22,8 @@ async function getAuthorizedSubject(teacherId, subjectSlug) {
 }
 
 async function listMaterials(teacherId, subjectSlug, res) {
+  const authorized = await getAuthorizedSubject(teacherId, subjectSlug);
+  if (!authorized) return res.status(403).json({ error: "Você não pode acessar esta disciplina." });
   const rows = await sql`
     SELECT m.id, m.title, m.content, m.link, m.created_at, m.updated_at
     FROM materials m
@@ -62,6 +64,8 @@ async function createMaterial(teacherId, body, res) {
 }
 
 async function listActivities(teacherId, subjectSlug, res) {
+  const authorized = await getAuthorizedSubject(teacherId, subjectSlug);
+  if (!authorized) return res.status(403).json({ error: "Você não pode acessar esta disciplina." });
   const rows = await sql`
     SELECT a.id, a.title, a.description, a.activity_type, a.max_score, a.due_at, a.created_at, a.updated_at
     FROM activities a

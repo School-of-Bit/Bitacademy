@@ -52,8 +52,7 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     console.error("Login failed:", error);
     return res.status(500).json({
-      error: "Não foi possível realizar o login.",
-      diagnostic: error?.message || String(error)
+      error: "Não foi possível realizar o login."
     });
   }
 };
