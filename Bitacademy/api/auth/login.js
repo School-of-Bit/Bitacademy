@@ -1,6 +1,6 @@
 const bcrypt = require("bcryptjs");
-const { sql } = require("../db");
-const { setSessionCookie } = require("../_auth");
+const { sql } = require("../../lib/db");
+const { setSessionCookie } = require("../../lib/_auth");
 
 function jsonBody(req) {
   if (!req.body) return {};
@@ -51,6 +51,9 @@ module.exports = async function handler(req, res) {
     });
   } catch (error) {
     console.error("Login failed:", error);
-    return res.status(500).json({ error: "Não foi possível realizar o login." });
+    return res.status(500).json({
+      error: "Não foi possível realizar o login.",
+      diagnostic: error?.message || String(error)
+    });
   }
 };

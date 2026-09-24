@@ -1,5 +1,5 @@
-const { sql } = require("../db");
-const { getSessionUserId } = require("../_auth");
+const { sql } = require("../../lib/db");
+const { getSessionUserId } = require("../../lib/_auth");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "GET") {

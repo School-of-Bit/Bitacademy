@@ -1,6 +1,6 @@
 const bcrypt = require("bcryptjs");
-const { sql } = require("../db");
-const { setSessionCookie } = require("../_auth");
+const { sql } = require("../../lib/db");
+const { setSessionCookie } = require("../../lib/_auth");
 
 function jsonBody(req) {
   if (!req.body) return {};

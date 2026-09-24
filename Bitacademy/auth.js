@@ -72,7 +72,7 @@ window.BitAcademyAuth = (() => {
   };
 
   const recordQuizResult = async ({ materia, titulo, score, total }) => {
-    const data = await api("quizzes/result", {
+    const data = await api("quizzes?action=result", {
       method: "POST",
       body: JSON.stringify({ materia, titulo, score, total })
     });
@@ -81,7 +81,7 @@ window.BitAcademyAuth = (() => {
 
   const getQuizRanking = async (materia, limit = 10) => {
     const params = new URLSearchParams({ materia, limit: String(limit) });
-    const data = await api(`quizzes/ranking?${params}`);
+    const data = await api(`quizzes?action=ranking&${params}`);
     return data.ranking || [];
   };
 
@@ -94,7 +94,7 @@ window.BitAcademyAuth = (() => {
   };
 
   const recordGameScore = async ({ mode, title, score, correct, wrong, bestStreak, duration }) => {
-    const data = await api("games/score", {
+    const data = await api("games?action=score", {
       method: "POST",
       body: JSON.stringify({ mode, title, score, correct, wrong, bestStreak, duration })
     });
@@ -103,7 +103,7 @@ window.BitAcademyAuth = (() => {
 
   const getGameRanking = async (mode, limit = 10) => {
     const params = new URLSearchParams({ mode, limit: String(limit) });
-    const data = await api(`games/ranking?${params}`);
+    const data = await api(`games?action=ranking&${params}`);
     return data.ranking || [];
   };
 
