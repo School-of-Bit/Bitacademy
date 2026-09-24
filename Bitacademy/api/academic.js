@@ -125,7 +125,7 @@ async function createActivity(teacherId, body, res) {
 
 module.exports = async function handler(req, res) {
   try {
-    const teacherId = getSessionUserId(req);
+    const teacherId = await getSessionUserId(req);
     if (!teacherId) return res.status(401).json({ error: "Não autenticado." });
 
     const query = req.query || {};

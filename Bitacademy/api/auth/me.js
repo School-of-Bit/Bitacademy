@@ -7,7 +7,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const userId = getSessionUserId(req);
+    const userId = await getSessionUserId(req);
 
     if (!userId) {
       return res.status(401).json({ error: "Não autenticado." });

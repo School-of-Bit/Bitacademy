@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     const users = await sql`
-      SELECT id, name, email, password_hash, account_type
+      SELECT id, name, email, password_hash, account_type, auth_version
       FROM users
       WHERE email = ${normalizedEmail}
       LIMIT 1

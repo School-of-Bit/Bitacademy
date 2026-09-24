@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const { sql } = require("./db");
 
 const COOKIE_NAME = "bitacademy_session";
 const MAX_AGE = 60 * 60 * 24 * 7;
@@ -15,7 +16,7 @@ function serializeCookie(value, maxAge) {
 }
 
 function setSessionCookie(res, user) {
-  const token = jwt.sign({ sub: user.id, type: user.account_type }, getSecret(), { expiresIn: MAX_AGE });
+  const token = jwt.sign({ sub: user.id, type: user.account_type, ver: user.auth_version || 0 }, getSecret(), { expiresIn: MAX_AGE });
   res.setHeader("Set-Cookie", serializeCookie(token, MAX_AGE));
 }
 
@@ -28,10 +29,16 @@ function getTokenFromRequest(req) {
   return session ? decodeURIComponent(session.slice(COOKIE_NAME.length + 1)) : null;
 }
 
-function getSessionUserId(req) {
-  const token = getTokenFromRequest(req);
-  if (!token) return null;
-  try { return jwt.verify(token, getSecret()).sub || null; } catch { return null; }
+async function getSessionUserId(req) {
+  try {
+    const token = getTokenFromRequest(req);
+    if (!token) return null;
+    const claims = jwt.verify(token, getSecret());
+    if (!claims.sub) return null;
+    const users = await sql`SELECT auth_version FROM users WHERE id = ${claims.sub} LIMIT 1`;
+    if (!users.length || Number(users[0].auth_version) !== Number(claims.ver || 0)) return null;
+    return claims.sub;
+  } catch { return null; }
 }
 
 module.exports = { setSessionCookie, clearSessionCookie, getSessionUserId };

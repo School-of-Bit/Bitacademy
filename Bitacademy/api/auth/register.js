@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
     const created = await sql`
       INSERT INTO users (name, email, password_hash, account_type)
       VALUES (${normalizedName}, ${normalizedEmail}, ${passwordHash}, ${type})
-      RETURNING id, name, email, account_type
+      RETURNING id, name, email, account_type, auth_version
     `;
 
     const user = created[0];
