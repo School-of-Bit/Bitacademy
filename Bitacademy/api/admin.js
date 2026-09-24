@@ -33,6 +33,12 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ teachers, subjects });
     }
 
+    if (req.method === "GET" && action === "users") {
+      const rows = await sql`SELECT id, name, email, account_type, created_at
+        FROM users ORDER BY created_at DESC LIMIT 500`;
+      return res.status(200).json({ users: rows });
+    }
+
     if (req.method === "POST" && ["assign-subject", "remove-subject"].includes(action)) {
       const body = jsonBody(req);
       const teacherId = String(body.teacherId || "").trim();

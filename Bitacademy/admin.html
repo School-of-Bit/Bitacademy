@@ -8,12 +8,13 @@
 </head>
 <body>
   <header class="admin-header"><div><p>BitAcademy</p><h1>Área administrativa</h1></div><span data-auth-status></span></header>
-  <nav class="admin-nav" aria-label="Navegação administrativa"><a href="#inicio">Visão geral</a><a href="#professores">Professores</a><a href="#estrutura">Novas seções</a></nav>
+  <nav class="admin-nav" aria-label="Navegação administrativa"><a href="#inicio">Visão geral</a><a href="#professores">Professores</a><a href="#usuarios">Usuários</a><a href="#estrutura">Próximas seções</a></nav>
   <main>
     <section id="inicio" class="welcome"><p>Painel de controle</p><h2>Administração da plataforma</h2><span>Gerencie professores e vínculos de disciplinas.</span></section>
     <section class="stats" aria-label="Resumo"><article><span>Professores</span><strong data-teacher-count>—</strong></article><article><span>Disciplinas</span><strong data-subject-count>—</strong></article><article><span>Acessos</span><strong>Administrador</strong></article></section>
     <section id="professores"><div class="section-title"><div><p>Gestão acadêmica</p><h2>Professores e disciplinas</h2></div><button type="button" data-refresh>Atualizar</button></div><p class="message" data-message aria-live="polite">Carregando dados administrativos...</p><div class="teacher-list" data-teachers></div></section>
-    <section id="estrutura" class="future"><p>Próximas seções</p><h2>Estrutura preparada para expansão</h2><div><span>Usuários</span><span>Redefinição de senha</span><span>Disciplinas</span><span>Fale Conosco</span></div></section>
+    <section id="usuarios" class="users-section"><div class="section-title"><div><p>Contas cadastradas</p><h2>Usuários</h2></div><button type="button" data-load-users>Carregar usuários</button></div><label class="user-search">Buscar por nome ou e-mail<input type="search" data-user-search placeholder="Digite para filtrar"></label><p class="message" data-users-message aria-live="polite"></p><div class="users-table-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Cadastro</th></tr></thead><tbody data-users></tbody></table></div></section>
+    <section id="estrutura" class="future"><p>Próximas seções</p><h2>Estrutura preparada para expansão</h2><div><span>Redefinição de senha</span><span>Cadastro e edição de disciplinas</span><span>Fale Conosco</span></div></section>
   </main>
   <script src="auth.js"></script><script src="admin.js"></script>
 </body>
