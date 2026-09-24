@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
     const created = await sql`
       INSERT INTO users (name, email, password_hash, account_type)
       VALUES (${normalizedName}, ${normalizedEmail}, ${passwordHash}, ${type})
-      RETURNING id, name, email, account_type
+      RETURNING id, name, email, account_type, auth_version
     `;
 
     const user = created[0];
@@ -86,8 +86,7 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     console.error("Registration failed:", error);
     return res.status(500).json({
-      error: "Não foi possível criar a conta.",
-      diagnostic: error?.message || "Erro interno desconhecido."
+      error: "Não foi possível criar a conta."
     });
   }
 };

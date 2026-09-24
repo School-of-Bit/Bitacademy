@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administração - BitAcademy</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <header class="admin-header"><div><p>BitAcademy</p><h1>Área administrativa</h1></div><span data-auth-status></span></header>
+  <nav class="admin-nav" aria-label="Navegação administrativa"><a href="#inicio">Visão geral</a><a href="#professores">Professores</a><a href="#usuarios">Usuários</a><a href="#disciplinas">Disciplinas</a></nav>
+  <main>
+    <section id="inicio" class="welcome"><p>Painel de controle</p><h2>Administração da plataforma</h2><span>Gerencie professores e vínculos de disciplinas.</span></section>
+    <section class="stats" aria-label="Resumo"><article><span>Professores</span><strong data-teacher-count>—</strong></article><article><span>Disciplinas</span><strong data-subject-count>—</strong></article><article><span>Acessos</span><strong>Administrador</strong></article></section>
+    <section id="professores"><div class="section-title"><div><p>Gestão acadêmica</p><h2>Professores e disciplinas</h2></div><button type="button" data-refresh>Atualizar</button></div><p class="message" data-message aria-live="polite">Carregando dados administrativos...</p><div class="teacher-list" data-teachers></div></section>
+    <section id="usuarios" class="users-section"><div class="section-title"><div><p>Contas cadastradas</p><h2>Usuários</h2></div><button type="button" data-load-users>Atualizar usuários</button></div><label class="user-search">Buscar por nome ou e-mail<input type="search" data-user-search placeholder="Digite para filtrar"></label><p class="message" data-users-message aria-live="polite"></p><div class="users-table-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Cadastro</th><th>Definir senha</th><th></th></tr></thead><tbody data-users></tbody></table></div></section>
+    <section id="disciplinas" class="users-section"><div class="section-title"><div><p>Catálogo acadêmico</p><h2>Disciplinas</h2></div></div><p>O identificador (slug) é permanente depois do cadastro para preservar referências e vínculos existentes.</p><form class="subject-form" data-create-subject><h3>Adicionar disciplina</h3><label>Nome<input name="name" maxlength="100" required></label><label>Identificador (slug)<input name="slug" maxlength="50" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="exemplo-disciplina" required></label><label>Ícone opcional<input name="icon" maxlength="10" placeholder="📘"></label><label>Descrição opcional<textarea name="description" rows="2"></textarea></label><button type="submit">Adicionar</button></form><p class="message" data-subject-message aria-live="polite"></p><div class="subject-admin-list" data-subjects></div></section>
+  </main>
+  <script src="auth.js"></script><script src="admin.js"></script>
+</body>
+</html>

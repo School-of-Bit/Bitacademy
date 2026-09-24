@@ -17,10 +17,11 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(150) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    auth_version INTEGER NOT NULL DEFAULT 0 CHECK (auth_version >= 0),
     account_type VARCHAR(20) NOT NULL DEFAULT 'Aluno',
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT users_account_type_check CHECK (account_type IN ('Aluno', 'Professor'))
+    CONSTRAINT users_account_type_check CHECK (account_type IN ('Aluno', 'Professor', 'Administrador'))
 );
 
 CREATE TABLE IF NOT EXISTS teacher_subjects (

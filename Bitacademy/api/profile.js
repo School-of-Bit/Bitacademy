@@ -5,7 +5,7 @@ module.exports = async function handler(req, res) {
   if (req.method !== "GET") return res.status(405).json({ error: "Método não permitido." });
 
   try {
-    const userId = getSessionUserId(req);
+    const userId = await getSessionUserId(req);
     if (!userId) return res.status(401).json({ error: "Não autenticado." });
 
     const users = await sql`

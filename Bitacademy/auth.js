@@ -204,8 +204,8 @@ window.BitAcademyAuth = (() => {
       event.preventDefault();
       const form = event.currentTarget;
       try {
-        await login({ email: form.email.value, password: form.senha.value });
-        window.location.href = "perfil.html";
+        const user = await login({ email: form.email.value, password: form.senha.value });
+        window.location.href = user.type === "Administrador" ? "admin.html" : "perfil.html";
       } catch (error) {
         if (message) message.textContent = error.message;
       }

@@ -22,7 +22,7 @@ module.exports = async function handler(req, res) {
     }
 
     const users = await sql`
-      SELECT id, name, email, password_hash, account_type
+      SELECT id, name, email, password_hash, account_type, auth_version
       FROM users
       WHERE email = ${normalizedEmail}
       LIMIT 1
@@ -52,8 +52,7 @@ module.exports = async function handler(req, res) {
   } catch (error) {
     console.error("Login failed:", error);
     return res.status(500).json({
-      error: "Não foi possível realizar o login.",
-      diagnostic: error?.message || String(error)
+      error: "Não foi possível realizar o login."
     });
   }
 };

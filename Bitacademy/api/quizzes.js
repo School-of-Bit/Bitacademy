@@ -48,7 +48,7 @@ module.exports = async function handler(req, res) {
       const titulo = String(body.titulo || "").trim();
       const score = Number(body.score);
       const total = Number(body.total);
-      const userId = getSessionUserId(req);
+      const userId = await getSessionUserId(req);
 
       if (!materia || !titulo || !Number.isInteger(score) || !Number.isInteger(total) || total <= 0 || score < 0 || score > total) {
         return res.status(400).json({ error: "Dados do resultado inválidos." });

@@ -57,7 +57,7 @@ module.exports = async function handler(req, res) {
       const wrong = Number(body.wrong || 0);
       const bestStreak = Number(body.bestStreak || 0);
       const duration = Number(body.duration || 0);
-      const userId = getSessionUserId(req);
+      const userId = await getSessionUserId(req);
 
       if (!mode || !title || !Number.isFinite(score) || score < 0 || !Number.isInteger(correct) || !Number.isInteger(wrong) || !Number.isInteger(bestStreak) || !Number.isInteger(duration)) {
         return res.status(400).json({ error: "Dados da pontuação inválidos." });
