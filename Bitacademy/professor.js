@@ -69,6 +69,9 @@
       return;
     }
 
+    const teacherName = document.querySelector("[data-teacher-user]");
+    if (teacherName) teacherName.textContent = user.name;
+
     const subjects = Array.isArray(user.subjects) ? user.subjects : [];
 
     const subjectCards = subjects.length

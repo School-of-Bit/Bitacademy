@@ -180,6 +180,23 @@ module.exports = async function handler(req, res) {
     if (req.method === "GET" && action === "published") {
       return listPublishedMaterials(String(query.subject || "").trim().toLowerCase(), res);
     }
+    if (req.method === "GET" && action === "student-activities") {
+      const studentId = await getSessionUserId(req);
+      if (!studentId) return res.status(401).json({ error: "Não autenticado." });
+      const users = await sql`SELECT account_type FROM users WHERE id = ${studentId} LIMIT 1`;
+      if (!users.length || users[0].account_type !== "Aluno") {
+        return res.status(403).json({ error: "Esta consulta está disponível para contas de aluno." });
+      }
+      const activities = await sql`SELECT a.id, a.title, a.description, a.activity_type,
+          a.max_score, a.due_at, a.created_at, s.name AS subject_name, s.slug AS subject_slug,
+          u.name AS teacher_name
+        FROM activities a
+        JOIN subjects s ON s.id = a.subject_id
+        JOIN users u ON u.id = a.teacher_id
+        ORDER BY a.due_at ASC NULLS LAST, a.created_at DESC
+        LIMIT 100`;
+      return res.status(200).json({ activities });
+    }
 
     const teacherId = await getSessionUserId(req);
     if (!teacherId) return res.status(401).json({ error: "Não autenticado." });

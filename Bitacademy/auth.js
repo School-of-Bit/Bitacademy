@@ -122,8 +122,18 @@ window.BitAcademyAuth = (() => {
         return;
       }
       const firstName = escapeHtml(user.name.split(" ")[0]);
+      const areaByRole = {
+        Professor: { href: "professor.html", label: "Área do professor" },
+        Administrador: { href: "admin.html", label: "Painel administrativo" }
+      };
+      const roleArea = areaByRole[user.type];
+      const currentPage = window.location.pathname.split("/").pop().toLowerCase();
+      const areaLink = roleArea && currentPage !== roleArea.href
+        ? `<a href="${prefix}${roleArea.href}">${roleArea.label}</a>`
+        : "";
       container.innerHTML = `
-        <a href="${prefix}perfil.html">Olá, ${firstName}</a>
+        <a href="${prefix}perfil.html">Olá, ${firstName} (${escapeHtml(user.type)})</a>
+        ${areaLink}
         <button type="button" data-auth-logout>Sair</button>
       `;
     });
@@ -140,6 +150,23 @@ window.BitAcademyAuth = (() => {
       return;
     }
 
+    if (user.type === "Administrador") {
+      container.innerHTML = `
+        <section class="profile-hero"><div><p class="eyebrow">Perfil Administrador</p><h2>${escapeHtml(user.name)}</h2><p>${escapeHtml(user.email)}</p></div><a class="primary-link" href="admin.html">Abrir painel administrativo</a></section>
+        <section class="profile-next-step"><p class="eyebrow">Acesso administrativo</p><h2>Gerencie a plataforma</h2><p>Cadastre disciplinas, gerencie usuários e organize os vínculos dos professores.</p><a class="secondary-link" href="admin.html">Ir para Administração</a></section>
+      `;
+      return;
+    }
+
+    if (user.type === "Professor") {
+      const subjects = Array.isArray(user.subjects) ? user.subjects : [];
+      container.innerHTML = `
+        <section class="profile-hero"><div><p class="eyebrow">Perfil Professor</p><h2>${escapeHtml(user.name)}</h2><p>${escapeHtml(user.email)}</p></div><a class="primary-link" href="professor.html">Abrir área do professor</a></section>
+        <section class="profile-next-step"><p class="eyebrow">Gestão acadêmica</p><h2>${subjects.length} ${subjects.length === 1 ? "disciplina vinculada" : "disciplinas vinculadas"}</h2><p>${subjects.length ? subjects.map((subject) => escapeHtml(subject.name)).join(" · ") : "Aguarde o administrador vincular disciplinas à sua conta."}</p><a class="secondary-link" href="professor.html">Gerenciar materiais e atividades</a></section>
+      `;
+      return;
+    }
+
     try {
       profileData = await api("profile");
     } catch (error) {
@@ -149,6 +176,12 @@ window.BitAcademyAuth = (() => {
 
     const results = profileData.quizResults || [];
     const gameScores = profileData.gameScores || [];
+    let availableActivities = [];
+    let activitiesError = "";
+    try {
+      const activityData = await api("academic?action=student-activities");
+      availableActivities = activityData.activities || [];
+    } catch (error) { activitiesError = error.message; }
     const bestPercent = results.length ? Math.max(...results.map((result) => result.percent)) : 0;
     const bestGameScore = gameScores.length ? Math.max(...gameScores.map((result) => result.score)) : 0;
     const average = results.length
@@ -184,6 +217,13 @@ window.BitAcademyAuth = (() => {
           <article><div><strong>${escapeHtml(result.titulo)}</strong><span>${new Date(result.date).toLocaleDateString("pt-BR")}</span></div><b>${result.score}/${result.total} (${result.percent}%)</b></article>
         `).join("")}</div>` : '<p>Você ainda não concluiu nenhum quiz. Escolha uma disciplina e comece quando quiser.</p>'}
       </section>
+      <section class="profile-activities">
+        <h2>Atividades disponíveis</h2>
+        <p>Estas propostas são visíveis a todos os alunos porque o sistema ainda não organiza matrículas por turma. A entrega online ainda não está disponível.</p>
+        ${activitiesError ? `<p>${escapeHtml(activitiesError)}</p>` : availableActivities.length ? `<div class="result-list">${availableActivities.map((activity) => `
+          <article><div><strong>${escapeHtml(activity.title)}</strong><span>${escapeHtml(activity.subject_name)} · ${escapeHtml(activity.teacher_name)} · ${activity.activity_type === "automatic" ? "Atividade automática" : "Correção manual"}</span><p>${escapeHtml(activity.description)}</p><a href="materia.html?slug=${encodeURIComponent(activity.subject_slug)}">Estudar disciplina</a></div><b>${activity.due_at ? `Prazo: ${new Date(activity.due_at).toLocaleDateString("pt-BR")}` : "Sem prazo"} · ${escapeHtml(activity.max_score)} pontos</b></article>
+        `).join("")}</div>` : '<p>Nenhuma atividade foi disponibilizada pelos professores até o momento.</p>'}
+      </section>
     `;
   };
 
@@ -205,7 +245,7 @@ window.BitAcademyAuth = (() => {
       const form = event.currentTarget;
       try {
         const user = await login({ email: form.email.value, password: form.senha.value });
-        window.location.href = user.type === "Administrador" ? "admin.html" : "perfil.html";
+        window.location.href = user.type === "Administrador" ? "admin.html" : user.type === "Professor" ? "professor.html" : "perfil.html";
       } catch (error) {
         if (message) message.textContent = error.message;
       }
@@ -215,14 +255,14 @@ window.BitAcademyAuth = (() => {
       event.preventDefault();
       const form = event.currentTarget;
       try {
-        await register({
+        const user = await register({
           name: form.nome.value,
           email: form.email.value,
           password: form.senha.value,
           type: form.tipo.value,
           materia: form.materia?.value || null
         });
-        window.location.href = "perfil.html";
+        window.location.href = user.type === "Professor" ? "professor.html" : "perfil.html";
       } catch (error) {
         if (message) message.textContent = error.message;
       }
