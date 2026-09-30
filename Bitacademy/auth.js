@@ -287,6 +287,7 @@ window.BitAcademyAuth = (() => {
   const loadSubjectCatalog = async () => {
     const grid = document.querySelector("[data-subject-catalog]");
     if (!grid) return;
+    const status = document.querySelector("[data-subject-catalog-status]");
     try {
       const data = await api("academic?action=subjects");
       const subjects = data.subjects || [];
@@ -300,7 +301,9 @@ window.BitAcademyAuth = (() => {
       `).join("") : '<p>Nenhuma disciplina disponível no momento.</p>';
       const count = document.querySelector(".home-overview article:first-child strong");
       if (count) count.textContent = subjects.length;
+      if (status) status.textContent = `${subjects.length} disciplinas carregadas do catálogo.`;
     } catch (error) {
+      if (status) status.textContent = "Não foi possível atualizar o catálogo do banco. Exibindo as matérias já disponíveis neste site.";
       console.warn("Não foi possível carregar o catálogo de disciplinas:", error.message);
     }
   };

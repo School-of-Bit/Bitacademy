@@ -54,7 +54,7 @@
           <article class="material-card">
             <h3>${escapeHtml(item.title)}</h3>
             <div class="material-content">${escapeHtml(item.content)}</div>
-            <div class="material-meta"><span>Professor(a): ${escapeHtml(item.teacher_name)}</span><span>Publicado em ${escapeHtml(formatDate(item.published_at))}</span></div>
+            <div class="material-meta"><span>Responsável: ${escapeHtml(item.teacher_name)}</span><span>Publicado em ${escapeHtml(formatDate(item.published_at))}</span></div>
             ${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Abrir material complementar ↗</a>` : ""}
           </article>
         `;

@@ -610,6 +610,12 @@ main section li:hover {
   margin-bottom: 22px;
 }
 
+.catalog-status {
+  min-height: 1.25rem;
+  color: var(--cor-subtexto);
+  font-size: .9rem;
+}
+
 .home-intro {
   display: grid;
   gap: 16px;

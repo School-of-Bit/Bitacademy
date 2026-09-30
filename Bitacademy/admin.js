@@ -26,7 +26,10 @@
     }).join("") : '<tr><td colspan="6">Nenhum usuário encontrado.</td></tr>';
   };
   const renderSubjects = () => {
-    subjectList.innerHTML = subjects.length ? subjects.map((subject) => `<form class="subject-form subject-edit-form" data-subject="${escapeHtml(subject.id)}"><h3>${escapeHtml(subject.name)} <small>${escapeHtml(subject.slug)}</small></h3><div class="subject-fields"><label>Nome<input name="name" value="${escapeHtml(subject.name)}" maxlength="100" required></label><label>Ícone<input name="icon" value="${escapeHtml(subject.icon || "")}" maxlength="10"></label><label>Descrição<input name="description" value="${escapeHtml(subject.description || "")}"></label><button type="submit">Salvar disciplina</button></div></form>`).join("") : "<p>Nenhuma disciplina cadastrada.</p>";
+    const query = document.querySelector("[data-subject-search]").value.trim().toLowerCase();
+    const filtered = subjects.filter((subject) => `${subject.name} ${subject.slug}`.toLowerCase().includes(query));
+    document.querySelector("[data-subject-list-count]").textContent = `${filtered.length} de ${subjects.length} disciplinas`;
+    subjectList.innerHTML = filtered.length ? filtered.map((subject) => `<form class="subject-form subject-edit-form" data-subject="${escapeHtml(subject.id)}"><div class="subject-title-row"><h3>${escapeHtml(subject.name)} <small>${escapeHtml(subject.slug)}</small></h3><a href="materia.html?slug=${encodeURIComponent(subject.slug)}" target="_blank" rel="noopener noreferrer">Pré-visualizar ↗</a></div><div class="subject-fields"><label>Nome<input name="name" value="${escapeHtml(subject.name)}" maxlength="100" required></label><label>Ícone<input name="icon" value="${escapeHtml(subject.icon || "")}" maxlength="10"></label><label>Descrição<input name="description" value="${escapeHtml(subject.description || "")}"></label><button type="submit">Salvar disciplina</button></div></form>`).join("") : "<p>Nenhuma disciplina encontrada.</p>";
   };
   const loadUsers = async () => {
     usersMessage.textContent = "Carregando usuários...";
@@ -110,6 +113,7 @@
   document.querySelector("[data-refresh]").addEventListener("click", load);
   document.querySelector("[data-load-users]").addEventListener("click", loadUsers);
   document.querySelector("[data-user-search]").addEventListener("input", renderUsers);
+  document.querySelector("[data-subject-search]").addEventListener("input", renderSubjects);
   document.addEventListener("DOMContentLoaded", async () => {
     await window.BitAcademyAuth.ready;
     const user = window.BitAcademyAuth.getCurrentUser();

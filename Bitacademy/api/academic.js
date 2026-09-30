@@ -87,11 +87,8 @@ async function updateMaterial(teacherId, body, res) {
 }
 
 async function listPublicSubjects(res) {
-  const rows = await sql`SELECT s.id, s.slug, s.name, s.description, s.icon,
-      COUNT(m.id)::int AS published_material_count
-    FROM subjects s
-    LEFT JOIN materials m ON m.subject_id = s.id AND m.status = 'published'
-    GROUP BY s.id ORDER BY s.name`;
+  const rows = await sql`SELECT id, slug, name, description, icon
+    FROM subjects ORDER BY name`;
   res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
   return res.status(200).json({ subjects: rows });
 }
@@ -102,10 +99,11 @@ async function listPublishedMaterials(subjectSlug, res) {
   }
   const subjects = await sql`SELECT id, slug, name, description, icon FROM subjects WHERE slug = ${subjectSlug} LIMIT 1`;
   if (!subjects.length) return res.status(404).json({ error: "Disciplina não encontrada." });
-  const materials = await sql`SELECT m.id, m.title, m.content, m.link, m.published_at, u.name AS teacher_name
-    FROM materials m JOIN users u ON u.id = m.teacher_id
+  const materials = await sql`SELECT m.id, m.title, m.content, m.link, m.published_at,
+      COALESCE(u.name, 'Equipe BitAcademy') AS teacher_name
+    FROM materials m LEFT JOIN users u ON u.id = m.teacher_id
     WHERE m.subject_id = ${subjects[0].id} AND m.status = 'published'
-    ORDER BY m.created_at ASC LIMIT 100`;
+    ORDER BY m.display_order ASC, m.created_at ASC LIMIT 100`;
   res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
   return res.status(200).json({ subject: subjects[0], materials });
 }

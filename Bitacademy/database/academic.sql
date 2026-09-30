@@ -1,15 +1,17 @@
 -- BitAcademy - módulo acadêmico
--- Execute este arquivo uma vez no Neon antes de usar Materiais e Atividades.
+-- Execute este arquivo no Neon para criar ou atualizar Materiais e Atividades.
 
 CREATE TABLE IF NOT EXISTS materials (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    teacher_id UUID NOT NULL,
+    teacher_id UUID,
     subject_id UUID NOT NULL,
     title VARCHAR(200) NOT NULL,
     content TEXT NOT NULL,
     link TEXT,
     status VARCHAR(12) NOT NULL DEFAULT 'draft',
     published_at TIMESTAMPTZ,
+    display_order INTEGER NOT NULL DEFAULT 1000,
+    legacy_key VARCHAR(100),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_materials_teacher FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -23,6 +25,9 @@ ALTER TABLE materials ALTER COLUMN status SET DEFAULT 'draft';
 ALTER TABLE materials DROP CONSTRAINT IF EXISTS materials_status_check;
 ALTER TABLE materials ADD CONSTRAINT materials_status_check CHECK (status IN ('draft', 'published'));
 ALTER TABLE materials ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+ALTER TABLE materials ALTER COLUMN teacher_id DROP NOT NULL;
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS display_order INTEGER NOT NULL DEFAULT 1000;
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS legacy_key VARCHAR(100);
 UPDATE materials SET published_at = created_at WHERE status = 'published' AND published_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS activities (
@@ -45,5 +50,6 @@ CREATE TABLE IF NOT EXISTS activities (
 CREATE INDEX IF NOT EXISTS idx_materials_subject ON materials(subject_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_materials_teacher ON materials(teacher_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_materials_published_subject ON materials(subject_id, created_at DESC) WHERE status = 'published';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_materials_legacy_key ON materials(legacy_key) WHERE legacy_key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_activities_subject ON activities(subject_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activities_teacher ON activities(teacher_id, created_at DESC);
