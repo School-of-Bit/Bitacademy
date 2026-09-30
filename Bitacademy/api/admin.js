@@ -40,6 +40,46 @@ module.exports = async function handler(req, res) {
       return res.status(200).json({ users: rows });
     }
 
+    if (req.method === "GET" && action === "resources") {
+      const rows = await sql`SELECT r.id, r.subject_id, s.name AS subject_name, s.slug AS subject_slug,
+          r.resource_type, r.title, r.description, r.html_path
+        FROM subject_resources r JOIN subjects s ON s.id = r.subject_id
+        ORDER BY s.name, r.resource_type, r.title`;
+      return res.status(200).json({ resources: rows });
+    }
+
+    if (req.method === "POST" && ["create-resource", "update-resource", "delete-resource"].includes(action)) {
+      const body = jsonBody(req);
+      const id = String(body.id || "").trim();
+      if (action === "delete-resource") {
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return res.status(400).json({ error: "Recurso inválido." });
+        const deleted = await sql`DELETE FROM subject_resources WHERE id = ${id} RETURNING id`;
+        if (!deleted.length) return res.status(404).json({ error: "Recurso não encontrado." });
+        return res.status(200).json({ ok: true });
+      }
+      const subjectId = String(body.subjectId || "").trim();
+      const type = String(body.resourceType || "").trim().toLowerCase();
+      const title = String(body.title || "").trim();
+      const description = String(body.description || "").trim() || null;
+      const htmlPath = String(body.htmlPath || "").trim();
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(subjectId)) return res.status(400).json({ error: "Selecione uma disciplina válida." });
+      if (!["quiz", "game"].includes(type)) return res.status(400).json({ error: "Tipo de recurso inválido." });
+      if (title.length < 2 || title.length > 120) return res.status(400).json({ error: "O título deve ter entre 2 e 120 caracteres." });
+      if (description && description.length > 300) return res.status(400).json({ error: "A descrição deve ter até 300 caracteres." });
+      if (htmlPath.length > 255 || !/^(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.html$/.test(htmlPath)) return res.status(400).json({ error: "Informe um caminho relativo para um arquivo .html do projeto, sem .., URL ou parâmetros." });
+      if (action === "create-resource") {
+        await sql`INSERT INTO subject_resources (subject_id, resource_type, title, description, html_path)
+          VALUES (${subjectId}, ${type}, ${title}, ${description}, ${htmlPath})`;
+        return res.status(201).json({ ok: true });
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return res.status(400).json({ error: "Recurso inválido." });
+      const updated = await sql`UPDATE subject_resources SET subject_id = ${subjectId}, resource_type = ${type},
+          title = ${title}, description = ${description}, html_path = ${htmlPath}
+        WHERE id = ${id} RETURNING id`;
+      if (!updated.length) return res.status(404).json({ error: "Recurso não encontrado." });
+      return res.status(200).json({ ok: true });
+    }
+
     if (req.method === "POST" && ["update-user", "reset-password"].includes(action)) {
       const body = jsonBody(req);
       const targetId = String(body.userId || "").trim();
@@ -137,7 +177,7 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: "Ação administrativa inválida." });
   } catch (error) {
     console.error("Admin API failed:", error);
-    if (error?.code === "23505") return res.status(409).json({ error: "Já existe um usuário ou uma disciplina com esses dados." });
+    if (error?.code === "23505") return res.status(409).json({ error: "Já existe um usuário, disciplina ou caminho de recurso com esses dados." });
     return res.status(500).json({ error: "Não foi possível concluir a operação administrativa." });
   }
 };

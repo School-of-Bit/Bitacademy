@@ -47,9 +47,37 @@ CREATE TABLE IF NOT EXISTS activities (
     CONSTRAINT activities_score_check CHECK (max_score > 0 AND max_score <= 100)
 );
 
+CREATE TABLE IF NOT EXISTS subject_resources (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    subject_id UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+    resource_type VARCHAR(10) NOT NULL,
+    title VARCHAR(120) NOT NULL,
+    description VARCHAR(300),
+    html_path VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT subject_resources_type_check CHECK (resource_type IN ('quiz', 'game')),
+    CONSTRAINT subject_resources_subject_path_unique UNIQUE (subject_id, html_path)
+);
+
 CREATE INDEX IF NOT EXISTS idx_materials_subject ON materials(subject_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_materials_teacher ON materials(teacher_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_materials_published_subject ON materials(subject_id, created_at DESC) WHERE status = 'published';
 CREATE UNIQUE INDEX IF NOT EXISTS idx_materials_legacy_key ON materials(legacy_key) WHERE legacy_key IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_activities_subject ON activities(subject_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activities_teacher ON activities(teacher_id, created_at DESC);
+
+INSERT INTO subject_resources (subject_id, resource_type, title, description, html_path)
+SELECT s.id, r.resource_type, r.title, r.description, r.html_path
+FROM (VALUES
+    ('artes', 'quiz', 'Quiz de Artes', 'Revise movimentos e conceitos artísticos.', 'Quiz/quiz-artes.html'),
+    ('ciencias', 'quiz', 'Quiz de Ciências', 'Pratique Biologia, Química e Física.', 'Quiz/quiz-ciencias.html'),
+    ('filosofia', 'quiz', 'Quiz de Filosofia', 'Teste conceitos de ética e pensamento crítico.', 'Quiz/quiz-filosofia.html'),
+    ('geografia', 'quiz', 'Quiz de Geografia', 'Revise clima, relevo e espaço geográfico.', 'Quiz/quiz-geografia.html'),
+    ('historia', 'quiz', 'Quiz de História', 'Pratique os períodos e processos históricos.', 'Quiz/quiz-historia.html'),
+    ('ingles', 'quiz', 'Quiz de Inglês', 'Pratique vocabulário e gramática.', 'Quiz/quiz-ingles.html'),
+    ('matematica', 'quiz', 'Quiz de Matemática', 'Teste seus conhecimentos matemáticos.', 'Quiz/quiz-matematica.html'),
+    ('matematica', 'game', 'Matemática Infinita', 'Resolva desafios contra o relógio.', 'Jogos/matematica-infinita.html'),
+    ('portugues', 'quiz', 'Quiz de Português', 'Pratique leitura, gramática e interpretação.', 'Quiz/quiz-portugues.html')
+) AS r(subject_slug, resource_type, title, description, html_path)
+JOIN subjects s ON s.slug = r.subject_slug
+ON CONFLICT (subject_id, html_path) DO NOTHING;

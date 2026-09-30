@@ -5,8 +5,11 @@
   const usersMessage = document.querySelector("[data-users-message]");
   const subjectList = document.querySelector("[data-subjects]");
   const subjectMessage = document.querySelector("[data-subject-message]");
+  const resourceList = document.querySelector("[data-resource-list]");
+  const resourceMessage = document.querySelector("[data-resource-message]");
   let allUsers = [];
   let subjects = [];
+  let resources = [];
   let currentUserId = null;
   const escapeHtml = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
   const api = async (action, options) => {
@@ -31,6 +34,17 @@
     document.querySelector("[data-subject-list-count]").textContent = `${filtered.length} de ${subjects.length} disciplinas`;
     subjectList.innerHTML = filtered.length ? filtered.map((subject) => `<form class="subject-form subject-edit-form" data-subject="${escapeHtml(subject.id)}"><div class="subject-title-row"><h3>${escapeHtml(subject.name)} <small>${escapeHtml(subject.slug)}</small></h3><a href="materia.html?slug=${encodeURIComponent(subject.slug)}" target="_blank" rel="noopener noreferrer">Pré-visualizar ↗</a></div><div class="subject-fields"><label>Nome<input name="name" value="${escapeHtml(subject.name)}" maxlength="100" required></label><label>Ícone<input name="icon" value="${escapeHtml(subject.icon || "")}" maxlength="10"></label><label>Descrição<input name="description" value="${escapeHtml(subject.description || "")}"></label><button type="submit">Salvar disciplina</button></div></form>`).join("") : "<p>Nenhuma disciplina encontrada.</p>";
   };
+  const renderResourceOptions = () => {
+    document.querySelector("[data-resource-subject]").innerHTML = '<option value="">Selecione uma disciplina</option>' + subjects.map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join("");
+  };
+  const renderResources = () => {
+    resourceList.innerHTML = resources.length ? resources.map((r) => `<form class="subject-form resource-edit-form" data-resource="${escapeHtml(r.id)}"><div class="subject-title-row"><h3>${escapeHtml(r.title)}</h3><a href="${escapeHtml(r.html_path)}" target="_blank" rel="noopener noreferrer">Abrir página ↗</a></div><div class="subject-fields"><label>Disciplina<select name="subjectId" required>${subjects.map((s) => `<option value="${escapeHtml(s.id)}" ${s.id === r.subject_id ? "selected" : ""}>${escapeHtml(s.name)}</option>`).join("")}</select></label><label>Tipo<select name="resourceType"><option value="quiz" ${r.resource_type === "quiz" ? "selected" : ""}>Quiz</option><option value="game" ${r.resource_type === "game" ? "selected" : ""}>Jogo</option></select></label><label>Título<input name="title" value="${escapeHtml(r.title)}" maxlength="120" required></label><label>Caminho HTML<input name="htmlPath" value="${escapeHtml(r.html_path)}" maxlength="255" pattern="([A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\\.html" required></label></div><label>Descrição<textarea name="description" maxlength="300" rows="2">${escapeHtml(r.description || "")}</textarea></label><div class="resource-actions"><button type="submit">Salvar alterações</button><button type="button" class="danger-button" data-delete-resource="${escapeHtml(r.id)}">Remover</button></div></form>`).join("") : '<p>Nenhum quiz ou jogo cadastrado.</p>';
+  };
+  const loadResources = async () => {
+    resourceMessage.textContent = "Carregando recursos...";
+    try { const data = await api("resources"); resources = data.resources || []; renderResources(); resourceMessage.textContent = `${resources.length} recursos cadastrados.`; }
+    catch (error) { resourceMessage.textContent = error.message; }
+  };
   const loadUsers = async () => {
     usersMessage.textContent = "Carregando usuários...";
     try { const data = await api("users"); allUsers = data.users || []; renderUsers(); usersMessage.textContent = `${allUsers.length} contas carregadas (máximo de 500).`; }
@@ -42,6 +56,7 @@
       const data = await api("dashboard");
       subjects = data.subjects || [];
       renderSubjects();
+      renderResourceOptions();
       const teachers = data.teachers || [];
       document.querySelector("[data-teacher-count]").textContent = teachers.length;
       document.querySelector("[data-subject-count]").textContent = subjects.length;
@@ -78,8 +93,29 @@
       try { await api("assign-subject", { method: "POST", body: JSON.stringify({ teacherId: card.dataset.teacher, subjectId: event.target.querySelector("select").value }) }); await load(); }
       catch (error) { show(error.message, "error"); }
     }
+    if (event.target.matches("[data-resource-create], .resource-edit-form")) {
+      event.preventDefault();
+      const form = event.target;
+      const body = Object.fromEntries(new FormData(form));
+      const editing = form.matches(".resource-edit-form");
+      if (editing) body.id = form.dataset.resource;
+      try {
+        await api(editing ? "update-resource" : "create-resource", { method: "POST", body: JSON.stringify(body) });
+        if (!editing) form.reset();
+        resourceMessage.textContent = editing ? "Recurso atualizado." : "Recurso adicionado.";
+        await loadResources();
+      } catch (error) { resourceMessage.textContent = error.message; }
+      return;
+    }
   });
   document.addEventListener("click", async (event) => {
+    const deleteResource = event.target.closest("[data-delete-resource]");
+    if (deleteResource) {
+      if (!confirm("Remover este recurso da disciplina? O arquivo HTML continuará no projeto.")) return;
+      try { await api("delete-resource", { method: "POST", body: JSON.stringify({ id: deleteResource.dataset.deleteResource }) }); resourceMessage.textContent = "Recurso removido."; await loadResources(); }
+      catch (error) { resourceMessage.textContent = error.message; }
+      return;
+    }
     const row = event.target.closest("[data-user]");
     if (event.target.matches("[data-save-user]")) {
       const body = { userId: row.dataset.user, name: row.querySelector("[data-user-name]").value, email: row.querySelector("[data-user-email]").value, type: row.querySelector("[data-user-type]").value };
@@ -112,6 +148,7 @@
   });
   document.querySelector("[data-refresh]").addEventListener("click", load);
   document.querySelector("[data-load-users]").addEventListener("click", loadUsers);
+  document.querySelector("[data-load-resources]").addEventListener("click", loadResources);
   document.querySelector("[data-user-search]").addEventListener("input", renderUsers);
   document.querySelector("[data-subject-search]").addEventListener("input", renderSubjects);
   document.addEventListener("DOMContentLoaded", async () => {
@@ -121,6 +158,6 @@
     currentUserId = user.id;
     if (user.type !== "Administrador") { show("Acesso restrito a administradores.", "error"); list.innerHTML = ""; return; }
     await load();
-    await loadUsers();
+    await Promise.all([loadUsers(), loadResources()]);
   });
 })();

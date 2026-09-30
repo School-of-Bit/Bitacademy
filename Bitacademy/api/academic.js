@@ -108,6 +108,15 @@ async function listPublishedMaterials(subjectSlug, res) {
   return res.status(200).json({ subject: subjects[0], materials });
 }
 
+async function listSubjectResources(subjectSlug, res) {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(subjectSlug)) return res.status(400).json({ error: "Identificador de disciplina inválido." });
+  const rows = await sql`SELECT r.id, r.resource_type, r.title, r.description, r.html_path
+    FROM subject_resources r JOIN subjects s ON s.id = r.subject_id
+    WHERE s.slug = ${subjectSlug} ORDER BY CASE r.resource_type WHEN 'quiz' THEN 0 ELSE 1 END, r.title`;
+  res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+  return res.status(200).json({ resources: rows });
+}
+
 async function listActivities(teacherId, subjectSlug, res) {
   const authorized = await getAuthorizedSubject(teacherId, subjectSlug);
   if (!authorized) return res.status(403).json({ error: "Você não pode acessar esta disciplina." });
@@ -177,6 +186,9 @@ module.exports = async function handler(req, res) {
     if (req.method === "GET" && action === "subjects") return listPublicSubjects(res);
     if (req.method === "GET" && action === "published") {
       return listPublishedMaterials(String(query.subject || "").trim().toLowerCase(), res);
+    }
+    if (req.method === "GET" && action === "resources") {
+      return listSubjectResources(String(query.subject || "").trim().toLowerCase(), res);
     }
     if (req.method === "GET" && action === "student-activities") {
       const studentId = await getSessionUserId(req);

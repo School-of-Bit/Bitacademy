@@ -4,14 +4,10 @@
     geografia: "geografia.html", historia: "historia.html", ingles: "ingles.html",
     matematica: "matematica.html", portugues: "portugues.html"
   };
-  const quizPages = {
-    artes: "Quiz/quiz-artes.html", ciencias: "Quiz/quiz-ciencias.html", filosofia: "Quiz/quiz-filosofia.html",
-    geografia: "Quiz/quiz-geografia.html", historia: "Quiz/quiz-historia.html", ingles: "Quiz/quiz-ingles.html",
-    matematica: "Quiz/quiz-matematica.html", portugues: "Quiz/quiz-portugues.html"
-  };
   const slug = new URLSearchParams(location.search).get("slug") || "";
   const status = document.querySelector("[data-status]");
   const materials = document.querySelector("[data-materials]");
+  const resourceList = document.querySelector("[data-subject-resources]");
   const escapeHtml = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
   const formatDate = (value) => new Date(value).toLocaleDateString("pt-BR", { dateStyle: "medium" });
   const safeExternalUrl = (value) => {
@@ -37,8 +33,13 @@
       document.querySelector("[data-subject-description]").textContent = data.subject.description || "Conteúdos e materiais para estudar esta disciplina.";
       const legacyLink = document.querySelector("[data-legacy-link]");
       if (legacyPages[slug]) { legacyLink.href = legacyPages[slug]; legacyLink.hidden = false; }
-      const quizLink = document.querySelector("[data-quiz-link]");
-      if (quizPages[slug]) { quizLink.href = quizPages[slug]; quizLink.hidden = false; }
+      try {
+        const resourceResponse = await fetch(`/api/academic?action=resources&subject=${encodeURIComponent(slug)}`);
+        const resourceData = await resourceResponse.json();
+        if (!resourceResponse.ok) throw new Error(resourceData.error || "Falha ao carregar recursos.");
+        const resources = resourceData.resources || [];
+        resourceList.innerHTML = resources.length ? resources.map((item) => `<article class="material-card resource-card"><p class="resource-type">${item.resource_type === "game" ? "Jogo" : "Quiz"}</p><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.description || "Pratique o conteúdo desta disciplina.")}</p><a href="${escapeHtml(item.html_path)}">${item.resource_type === "game" ? "Jogar" : "Fazer quiz"} →</a></article>`).join("") : '<p class="empty-state">Ainda não há quizzes ou jogos cadastrados nesta disciplina.</p>';
+      } catch { resourceList.innerHTML = '<p class="empty-state">Não foi possível carregar os quizzes e jogos.</p>'; }
 
       const rows = data.materials || [];
       document.querySelector("[data-material-count]").textContent = `${rows.length} ${rows.length === 1 ? "material" : "materiais"}`;
