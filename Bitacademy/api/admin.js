@@ -68,7 +68,10 @@ module.exports = async function handler(req, res) {
       if (name.length < 2 || name.length > 150) return res.status(400).json({ error: "O nome deve ter entre 2 e 150 caracteres." });
       if (email.length > 255 || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: "Informe um e-mail válido." });
       if (!["Aluno", "Professor"].includes(type)) return res.status(400).json({ error: "Perfil inválido." });
-      const updated = await sql`WITH removed AS (
+      const updated = await sql`WITH archived AS (
+          UPDATE materials SET status = 'draft', published_at = NULL, updated_at = NOW()
+          WHERE teacher_id = ${targetId} AND ${type} = 'Aluno' AND status = 'published'
+        ), removed AS (
           DELETE FROM teacher_subjects WHERE teacher_id = ${targetId} AND ${type} = 'Aluno'
         ), changed AS (
           UPDATE users SET name = ${name}, email = ${email}, account_type = ${type}, auth_version = auth_version + 1, updated_at = NOW()
@@ -118,9 +121,16 @@ module.exports = async function handler(req, res) {
         if (!subject.length) return res.status(404).json({ error: "Disciplina não encontrada." });
         return res.status(200).json({ ok: true, assigned: inserted.length > 0 });
       }
-      const removed = await sql`DELETE FROM teacher_subjects
-        WHERE teacher_id = ${teacherId} AND subject_id = ${subjectId} RETURNING teacher_id`;
-      return res.status(200).json({ ok: true, removed: removed.length > 0 });
+      const result = await sql`WITH archived AS (
+          UPDATE materials SET status = 'draft', published_at = NULL, updated_at = NOW()
+          WHERE teacher_id = ${teacherId} AND subject_id = ${subjectId} AND status = 'published'
+          RETURNING id
+        ), removed AS (
+          DELETE FROM teacher_subjects WHERE teacher_id = ${teacherId} AND subject_id = ${subjectId}
+          RETURNING teacher_id
+        ) SELECT (SELECT COUNT(*)::int FROM archived) AS archived_count,
+                 (SELECT COUNT(*)::int FROM removed) AS removed_count`;
+      return res.status(200).json({ ok: true, removed: result[0]?.removed_count > 0, unpublishedMaterials: result[0]?.archived_count || 0 });
     }
 
     if (req.method !== "GET" && req.method !== "POST") return res.status(405).json({ error: "Método não permitido." });

@@ -244,6 +244,27 @@ window.BitAcademyAuth = (() => {
     tabs.forEach((tab) => tab.addEventListener("click", () => showPanel(tab.dataset.homeTab)));
   };
 
+  const loadSubjectCatalog = async () => {
+    const grid = document.querySelector("[data-subject-catalog]");
+    if (!grid) return;
+    try {
+      const data = await api("academic?action=subjects");
+      const subjects = data.subjects || [];
+      grid.innerHTML = subjects.length ? subjects.map((subject) => `
+        <article class="subject-card">
+          <span class="subject-icon">${escapeHtml(subject.icon || "📘")}</span>
+          <strong>${escapeHtml(subject.name)}</strong>
+          <span>${escapeHtml(subject.description || "Conteúdos e materiais para estudar esta disciplina.")}</span>
+          <a href="materia.html?slug=${encodeURIComponent(subject.slug)}">Estudar</a>
+        </article>
+      `).join("") : '<p>Nenhuma disciplina disponível no momento.</p>';
+      const count = document.querySelector(".home-overview article:first-child strong");
+      if (count) count.textContent = subjects.length;
+    } catch (error) {
+      console.warn("Não foi possível carregar o catálogo de disciplinas:", error.message);
+    }
+  };
+
   const bindSubjectExperience = () => {
     const page = document.body;
     if (!page.classList.contains("subject-page")) return;
@@ -306,6 +327,7 @@ window.BitAcademyAuth = (() => {
     bindHomeTabs();
     bindSubjectExperience();
     renderAuthStatus();
+    loadSubjectCatalog();
     await renderProfile();
   });
 

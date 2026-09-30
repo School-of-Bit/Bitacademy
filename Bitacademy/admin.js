@@ -97,7 +97,14 @@
     }
     const button = event.target.closest("[data-remove]"); if (!button) return;
     const card = button.closest("[data-teacher]");
-    try { await api("remove-subject", { method: "POST", body: JSON.stringify({ teacherId: card.dataset.teacher, subjectId: button.dataset.remove }) }); await load(); }
+    try {
+      const result = await api("remove-subject", { method: "POST", body: JSON.stringify({ teacherId: card.dataset.teacher, subjectId: button.dataset.remove }) });
+      await load();
+      if (result.unpublishedMaterials) {
+        const count = result.unpublishedMaterials;
+        show(count === 1 ? "1 material publicado voltou para rascunho após a remoção do vínculo." : `${count} materiais publicados voltaram para rascunho após a remoção do vínculo.`, "success");
+      }
+    }
     catch (error) { show(error.message, "error"); }
   });
   document.querySelector("[data-refresh]").addEventListener("click", load);

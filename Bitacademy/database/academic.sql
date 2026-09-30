@@ -8,11 +8,22 @@ CREATE TABLE IF NOT EXISTS materials (
     title VARCHAR(200) NOT NULL,
     content TEXT NOT NULL,
     link TEXT,
+    status VARCHAR(12) NOT NULL DEFAULT 'draft',
+    published_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_materials_teacher FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_materials_subject FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE
+    CONSTRAINT fk_materials_subject FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE CASCADE,
+    CONSTRAINT materials_status_check CHECK (status IN ('draft', 'published'))
 );
+
+-- Mantém materiais já existentes visíveis e habilita rascunhos para novos materiais.
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS status VARCHAR(12) NOT NULL DEFAULT 'published';
+ALTER TABLE materials ALTER COLUMN status SET DEFAULT 'draft';
+ALTER TABLE materials DROP CONSTRAINT IF EXISTS materials_status_check;
+ALTER TABLE materials ADD CONSTRAINT materials_status_check CHECK (status IN ('draft', 'published'));
+ALTER TABLE materials ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+UPDATE materials SET published_at = created_at WHERE status = 'published' AND published_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS activities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -33,5 +44,6 @@ CREATE TABLE IF NOT EXISTS activities (
 
 CREATE INDEX IF NOT EXISTS idx_materials_subject ON materials(subject_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_materials_teacher ON materials(teacher_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_materials_published_subject ON materials(subject_id, created_at DESC) WHERE status = 'published';
 CREATE INDEX IF NOT EXISTS idx_activities_subject ON activities(subject_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_activities_teacher ON activities(teacher_id, created_at DESC);
