@@ -69,6 +69,9 @@
       return;
     }
 
+    const teacherName = document.querySelector("[data-teacher-user]");
+    if (teacherName) teacherName.textContent = user.name;
+
     const subjects = Array.isArray(user.subjects) ? user.subjects : [];
 
     const subjectCards = subjects.length
@@ -257,7 +260,7 @@
             <span class="teacher-label">Conteúdo</span>
             <h2>Materiais</h2>
           </div>
-          <p>Publique materiais que ficarão disponíveis para os alunos da disciplina.</p>
+          <p>Salve materiais como rascunho enquanto prepara o conteúdo ou publique para disponibilizá-los aos estudantes.</p>
         </div>
 
         <form class="teacher-form" data-material-form>
@@ -266,28 +269,30 @@
             <p>Você pode publicar um texto e, opcionalmente, adicionar um link externo.</p>
           </div>
           <label>Título<input name="title" maxlength="200" required placeholder="Ex.: Introdução à matéria"></label>
-          <label>Conteúdo<textarea name="content" rows="6" required placeholder="Escreva o conteúdo do material..."></textarea></label>
+          <label>Conteúdo<textarea name="content" rows="6" maxlength="30000" required placeholder="Escreva o conteúdo do material..."></textarea></label>
           <label>Link opcional<input name="link" type="url" placeholder="https://..."></label>
-          <div class="teacher-form-actions"><button class="teacher-button" type="submit">Publicar material</button></div>
+          <label>Visibilidade<select name="status"><option value="draft">Salvar como rascunho</option><option value="published">Publicar para estudantes</option></select></label>
+          <div class="teacher-form-actions"><button class="teacher-button" type="submit">Salvar material</button></div>
           <div class="teacher-message" data-material-message aria-live="polite"></div>
         </form>
 
         <div class="teacher-list-heading">
-          <h3>Materiais publicados</h3>
+          <h3>Meus materiais</h3>
           <span>${materials.length} ${materials.length === 1 ? "material" : "materiais"}</span>
         </div>
         <div class="teacher-list">
           ${materials.length ? materials.map((material) => `
-            <article class="teacher-list-item">
-              <div>
-                <span class="teacher-label">${escapeHtml(formatDate(material.created_at))}</span>
-                <h3>${escapeHtml(material.title)}</h3>
-                <p>${escapeHtml(material.content)}</p>
-                ${material.link ? `<a href="${escapeHtml(material.link)}" target="_blank" rel="noopener noreferrer">Abrir link ↗</a>` : ""}
-              </div>
-            </article>
+            <form class="teacher-form teacher-list-item material-edit-form" data-material-id="${escapeHtml(material.id)}">
+              <div class="teacher-badges"><span class="teacher-badge">${material.status === "published" ? "Publicado" : "Rascunho"}</span><span class="teacher-badge">${escapeHtml(formatDate(material.updated_at || material.created_at))}</span></div>
+              <label>Título<input name="title" maxlength="200" required value="${escapeHtml(material.title)}"></label>
+              <label>Conteúdo<textarea name="content" rows="5" maxlength="30000" required>${escapeHtml(material.content)}</textarea></label>
+              <label>Link opcional<input name="link" type="url" maxlength="2048" value="${escapeHtml(material.link || "")}" placeholder="https://..."></label>
+              <label>Visibilidade<select name="status"><option value="draft" ${material.status === "draft" ? "selected" : ""}>Rascunho</option><option value="published" ${material.status === "published" ? "selected" : ""}>Publicado</option></select></label>
+              <div class="teacher-message" data-edit-message aria-live="polite"></div>
+              <div class="teacher-form-actions"><button class="teacher-button" type="submit">Salvar alterações</button></div>
+            </form>
           `).join("") : `
-            <div class="teacher-empty compact"><span class="teacher-icon">📄</span><h3>Nenhum material publicado</h3><p>Use o formulário acima para adicionar o primeiro.</p></div>
+            <div class="teacher-empty compact"><span class="teacher-icon">📄</span><h3>Nenhum material cadastrado</h3><p>Use o formulário acima para adicionar o primeiro.</p></div>
           `}
         </div>
       </section>
@@ -310,10 +315,11 @@
             subjectSlug: subject.slug,
             title: formData.get("title"),
             content: formData.get("content"),
-            link: formData.get("link")
+            link: formData.get("link"),
+            status: formData.get("status")
           })
         });
-        showMessage(message, "Material publicado com sucesso!", "success");
+        showMessage(message, formData.get("status") === "published" ? "Material publicado para os estudantes." : "Rascunho salvo.", "success");
         form.reset();
         setTimeout(() => switchTab(subject, "materials"), 500);
       } catch (error) {
@@ -321,6 +327,31 @@
         button.disabled = false;
       }
     });
+
+    content.querySelectorAll("[data-material-id]").forEach((form) => form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const editForm = event.currentTarget;
+      const formData = new FormData(editForm);
+      const submit = editForm.querySelector("button[type=submit]");
+      submit.disabled = true;
+      try {
+        await api("/api/academic?resource=materials&action=update", {
+          method: "POST",
+          body: JSON.stringify({
+            id: editForm.dataset.materialId,
+            subjectSlug: subject.slug,
+            title: formData.get("title"),
+            content: formData.get("content"),
+            link: formData.get("link"),
+            status: formData.get("status")
+          })
+        });
+        await switchTab(subject, "materials");
+      } catch (error) {
+        showMessage(editForm.querySelector("[data-edit-message]"), error.message, "error");
+        submit.disabled = false;
+      }
+    }));
   };
 
   const renderActivities = async (subject, content) => {
