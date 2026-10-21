@@ -249,14 +249,28 @@ window.BitAcademyAuth = (() => {
     const tabs = document.querySelectorAll("[data-auth-tab]");
     const panels = document.querySelectorAll("[data-auth-panel]");
     const message = document.querySelector("[data-auth-message]");
+    const recoveryNotice = document.querySelector("[data-recovery-notice]");
 
     const showPanel = (target) => {
       tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.authTab === target));
       panels.forEach((panel) => panel.hidden = panel.dataset.authPanel !== target);
       if (message) message.textContent = "";
+      if (recoveryNotice) recoveryNotice.hidden = true;
     };
 
     tabs.forEach((tab) => tab.addEventListener("click", () => showPanel(tab.dataset.authTab)));
+    document.querySelector("[data-forgot-password]")?.addEventListener("click", () => {
+      if (recoveryNotice) recoveryNotice.hidden = !recoveryNotice.hidden;
+      if (message) message.textContent = "";
+    });
+    document.querySelectorAll("[data-password-toggle]").forEach((button) => button.addEventListener("click", () => {
+      const input = document.getElementById(button.dataset.passwordToggle);
+      if (!input) return;
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      button.textContent = show ? "Ocultar" : "Mostrar";
+      button.setAttribute("aria-label", `${show ? "Ocultar" : "Mostrar"} senha`);
+    }));
 
     document.querySelector("[data-login-form]")?.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -272,11 +286,25 @@ window.BitAcademyAuth = (() => {
     document.querySelector("[data-register-form]")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
+      const password = form.senha.value;
+      const confirmation = form.confirmaSenha.value;
+      const strongPassword = password.length >= 8 && new TextEncoder().encode(password).length <= 72
+        && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password) && /[^A-Za-z0-9À-ÿ]/.test(password);
+      if (!strongPassword) {
+        if (message) message.textContent = "A senha precisa ter 8 a 72 bytes e incluir maiúscula, minúscula, número e símbolo.";
+        form.senha.focus();
+        return;
+      }
+      if (password !== confirmation) {
+        if (message) message.textContent = "As senhas não coincidem.";
+        form.confirmaSenha.focus();
+        return;
+      }
       try {
         await register({
           name: form.nome.value,
           email: form.email.value,
-          password: form.senha.value
+          password
         });
         window.location.href = "perfil.html";
       } catch (error) {

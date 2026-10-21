@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
     const { email, password } = jsonBody(req);
     const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (!normalizedEmail || !password) {
+    if (normalizedEmail.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail) || !password) {
       return res.status(400).json({ error: "Informe e-mail e senha." });
     }
 
