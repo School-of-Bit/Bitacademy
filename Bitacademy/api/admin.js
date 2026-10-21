@@ -20,6 +20,31 @@ module.exports = async function handler(req, res) {
     }
 
     const action = String(req.query?.action || (req.method === "GET" ? "dashboard" : "")).trim().toLowerCase();
+    if (req.method === "POST" && action === "create-teacher") {
+      const body = jsonBody(req);
+      const name = String(body.name || "").trim();
+      const email = String(body.email || "").trim().toLowerCase();
+      const password = String(body.password || "");
+      const subjectId = String(body.subjectId || "").trim();
+      if (name.length < 2 || name.length > 150) return res.status(400).json({ error: "O nome deve ter entre 2 e 150 caracteres." });
+      if (email.length > 255 || !/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ error: "Informe um e-mail válido." });
+      if (password.length < 8 || Buffer.byteLength(password, "utf8") > 72) return res.status(400).json({ error: "A senha inicial deve ter de 8 a 72 bytes." });
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(subjectId)) return res.status(400).json({ error: "Selecione uma disciplina válida." });
+      const hash = await bcrypt.hash(password, 12);
+      const created = await sql`WITH selected_subject AS (
+          SELECT id FROM subjects WHERE id = ${subjectId}
+        ), new_teacher AS (
+          INSERT INTO users (name, email, password_hash, account_type)
+          SELECT ${name}, ${email}, ${hash}, 'Professor' FROM selected_subject
+          RETURNING id
+        ), assignment AS (
+          INSERT INTO teacher_subjects (teacher_id, subject_id)
+          SELECT new_teacher.id, selected_subject.id FROM new_teacher CROSS JOIN selected_subject
+          RETURNING teacher_id
+        ) SELECT new_teacher.id FROM new_teacher JOIN assignment ON assignment.teacher_id = new_teacher.id`;
+      if (!created.length) return res.status(404).json({ error: "Disciplina não encontrada." });
+      return res.status(201).json({ ok: true, userId: created[0].id });
+    }
     if (req.method === "GET" && action === "dashboard") {
       const [teachers, subjects] = await Promise.all([
         sql`SELECT u.id, u.name, u.email, u.created_at,

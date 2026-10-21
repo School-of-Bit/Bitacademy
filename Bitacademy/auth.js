@@ -41,15 +41,13 @@ window.BitAcademyAuth = (() => {
 
   const getCurrentUser = () => currentUser;
 
-  const register = async ({ name, email, password, type, materia }) => {
+  const register = async ({ name, email, password }) => {
     const data = await api("auth/register", {
       method: "POST",
       body: JSON.stringify({
         name: String(name || "").trim(),
         email: normalize(email),
-        password,
-        type,
-        materia
+        password
       })
     });
     currentUser = data.user;
@@ -255,14 +253,12 @@ window.BitAcademyAuth = (() => {
       event.preventDefault();
       const form = event.currentTarget;
       try {
-        const user = await register({
+        await register({
           name: form.nome.value,
           email: form.email.value,
-          password: form.senha.value,
-          type: form.tipo.value,
-          materia: form.materia?.value || null
+          password: form.senha.value
         });
-        window.location.href = user.type === "Professor" ? "professor.html" : "perfil.html";
+        window.location.href = "perfil.html";
       } catch (error) {
         if (message) message.textContent = error.message;
       }

@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { name, email, password, type, materia } = jsonBody(req);
+    const { name, email, password, type } = jsonBody(req);
     const normalizedEmail = String(email || "").trim().toLowerCase();
     const normalizedName = String(name || "").trim();
 
@@ -36,9 +36,11 @@ module.exports = async function handler(req, res) {
     if (String(password || "").length < 6) {
       return res.status(400).json({ error: "A senha deve ter pelo menos 6 caracteres." });
     }
-    if (!["Aluno", "Professor"].includes(type)) {
-      return res.status(400).json({ error: "Tipo de conta inválido." });
+    if (type && type !== "Aluno") {
+      return res.status(403).json({ error: "Contas de professor devem ser criadas por um administrador." });
     }
+    // Public registration is restricted to students. Staff accounts are created by admins.
+    const type = "Aluno";
 
     const existing = await sql`
       SELECT id FROM users WHERE email = ${normalizedEmail} LIMIT 1
@@ -57,20 +59,6 @@ module.exports = async function handler(req, res) {
     `;
 
     const user = created[0];
-
-    if (type === "Professor" && materia) {
-      const subjects = await sql`
-        SELECT id FROM subjects WHERE slug = ${String(materia).trim().toLowerCase()} LIMIT 1
-      `;
-
-      if (subjects.length) {
-        await sql`
-          INSERT INTO teacher_subjects (teacher_id, subject_id)
-          VALUES (${user.id}, ${subjects[0].id})
-          ON CONFLICT DO NOTHING
-        `;
-      }
-    }
 
     // Diagnóstico temporário: verifica se o segredo JWT está disponível
     // antes de tentar criar a sessão. Nunca expõe o valor do segredo.

@@ -88,7 +88,7 @@ As páginas dependem das APIs e do banco. Abrir `Bitacademy.html` diretamente pe
 
 ## Primeiro acesso e perfis
 
-1. Na página inicial, abra **Entrar** e crie uma conta de aluno ou professor. O cadastro público não cria administradores.
+1. Na página inicial, abra **Entrar** e crie uma conta de aluno. Contas de professor são criadas por um administrador no painel.
 2. Para criar o primeiro administrador, promova uma conta confiável pelo SQL Editor do Neon, substituindo o e-mail:
 
    ```sql
