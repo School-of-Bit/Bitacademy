@@ -91,12 +91,32 @@ window.BitAcademyAuth = (() => {
     return profileData.quizResults || [];
   };
 
-  const recordGameScore = async ({ mode, title, score, correct, wrong, bestStreak, duration }) => {
-    const data = await api("games?action=score", {
+  const startGame = async () => {
+    return api("games?action=start", {
       method: "POST",
-      body: JSON.stringify({ mode, title, score, correct, wrong, bestStreak, duration })
+      body: JSON.stringify({ mode: "math-infinite" })
     });
-    return data.result;
+  };
+
+  const submitGameAnswer = async ({ sessionId, answer, revision }) => {
+    return api("games?action=answer", {
+      method: "POST",
+      body: JSON.stringify({ sessionId, answer, revision })
+    });
+  };
+
+  const finishGame = async (sessionId) => {
+    return api("games?action=finish", {
+      method: "POST",
+      body: JSON.stringify({ sessionId })
+    });
+  };
+
+  const abortGame = async (sessionId) => {
+    return api("games?action=abort", {
+      method: "POST",
+      body: JSON.stringify({ sessionId })
+    });
   };
 
   const getGameRanking = async (mode, limit = 10) => {
@@ -376,7 +396,10 @@ window.BitAcademyAuth = (() => {
     getGameRanking,
     getProgress,
     getQuizRanking,
-    recordGameScore,
+    startGame,
+    submitGameAnswer,
+    finishGame,
+    abortGame,
     login,
     logout,
     recordQuizResult,

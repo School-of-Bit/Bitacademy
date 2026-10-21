@@ -46,12 +46,12 @@ Bitacademy/
 Crie um banco PostgreSQL no [Neon](https://neon.tech/) e abra o SQL Editor do projeto. Execute os arquivos abaixo nesta ordem:
 
 1. `Bitacademy/database/schema.sql` — cria usuários, disciplinas, vínculos de professores, tentativas de quiz e pontuações de jogos.
-2. `Bitacademy/database/ranking-best-results.sql` — remove registros anônimos e duplicados e prepara um único recorde por usuário, disciplina e modo de jogo.
+2. `Bitacademy/database/ranking-best-results.sql` — remove registros anônimos e duplicados, prepara um único recorde por usuário, disciplina e modo de jogo e cria a tabela de sessões validadas do jogo.
 3. `Bitacademy/database/admin-migration.sql` — habilita o papel Administrador e `auth_version`. O script pode ser executado novamente com segurança.
 4. `Bitacademy/database/academic.sql` — cria materiais, atividades e cadastro de recursos HTML; também pré-cadastra os quizzes e o jogo que já estão no repositório.
 5. `Bitacademy/database/legacy-subject-content.sql` — importa para o banco os textos das páginas originais das disciplinas.
 
-Os scripts 2 a 5 podem ser executados novamente conforme indicado em cada arquivo. Em bancos já configurados, execute `ranking-best-results.sql` para consolidar os rankings; execute também `academic.sql` se ainda não tiver aplicado os recursos acadêmicos atuais.
+Os scripts 2 a 5 podem ser executados novamente conforme indicado em cada arquivo. Em bancos já configurados, execute novamente `ranking-best-results.sql` para consolidar os rankings e habilitar as sessões de jogo validadas; execute também `academic.sql` se ainda não tiver aplicado os recursos acadêmicos atuais.
 
 ## Rodar localmente
 
