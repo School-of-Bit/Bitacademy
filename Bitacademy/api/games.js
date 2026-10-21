@@ -25,13 +25,13 @@ function mapScore(row) {
 function maximumScoreForCorrectAnswers(correct) {
   let levelBonus = 0;
   for (let level = 1; level <= 7; level++) {
-    const first = level === 1 ? 1 : (level - 1) * 5;
-    const last = level === 1 ? 4 : level * 5 - 1;
+    const first = (level - 1) * 5 + 1;
+    const last = level * 5;
     const count = Math.max(0, Math.min(correct, last) - first + 1);
     levelBonus += count * level;
   }
-  if (correct >= 35) levelBonus += (correct - 34) * 8;
-  return (10 * correct) + (correct * (correct + 1) / 2) + levelBonus;
+  if (correct >= 36) levelBonus += (correct - 35) * 8;
+  return (10 * correct) + (correct * (correct + 1)) + levelBonus;
 }
 
 module.exports = async function handler(req, res) {
