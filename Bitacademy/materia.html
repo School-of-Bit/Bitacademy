@@ -4,17 +4,40 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Disciplina - BitAcademy</title>
+  <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="materia.css">
 </head>
-<body>
-  <header class="subject-header">
-    <nav><a href="Bitacademy.html">← Todas as disciplinas</a><span data-auth-status></span></nav>
-    <div class="subject-heading"><span data-subject-icon>📘</span><div><p>Biblioteca BitAcademy</p><h1 data-subject-name>Carregando disciplina...</h1><p data-subject-description></p></div></div>
-    <div class="subject-links"><a data-legacy-link hidden>Conteúdo original</a></div>
+<body class="home-page material-page">
+  <header class="home-topbar">
+    <a class="brand-link" href="Bitacademy.html" aria-label="BitAcademy página inicial">
+      <span class="brand-mark">BA</span>
+      <strong>BitAcademy</strong>
+    </a>
+    <nav class="home-nav" aria-label="Navegação principal">
+      <a href="Bitacademy.html#disciplinas">Disciplinas</a>
+      <a href="Bitacademy.html#quizzes">Quizzes</a>
+      <a href="sobre-mim.html">Equipe</a>
+      <span data-auth-status><a href="login.html">Entrar</a></span>
+    </nav>
   </header>
-  <main>
-    <section class="materials-section"><div class="section-title"><div><p>Conteúdo publicado</p><h2>Materiais de estudo</h2></div><span data-material-count></span></div><p class="status" data-status aria-live="polite">Buscando conteúdo...</p><div class="materials-list" data-materials></div></section>
-    <section class="materials-section resources-section"><div class="section-title"><div><p>Pratique</p><h2>Quizzes e jogos</h2></div></div><div class="resource-list" data-subject-resources><p class="status">Carregando atividades...</p></div></section>
+  <main class="home-main material-main">
+    <section class="material-hero">
+      <a class="material-back" href="Bitacademy.html#disciplinas">← Todas as disciplinas</a>
+      <div class="material-heading">
+        <span class="material-icon" data-subject-icon>📘</span>
+        <div><p class="eyebrow">Biblioteca BitAcademy</p><h1 data-subject-name>Carregando disciplina...</h1><p data-subject-description></p></div>
+      </div>
+      <a class="material-original" data-legacy-link hidden>Ver conteúdo original →</a>
+    </section>
+    <section class="materials-section">
+      <div class="section-heading"><p class="eyebrow">Conteúdo publicado</p><h2>Materiais de estudo</h2><p>Conteúdos preparados pelos professores para apoiar seus estudos.</p></div>
+      <div class="material-list-heading"><p class="status" data-status aria-live="polite">Buscando conteúdo...</p><span data-material-count></span></div>
+      <div class="materials-list" data-materials></div>
+    </section>
+    <section class="materials-section resources-section">
+      <div class="section-heading"><p class="eyebrow">Pratique</p><h2>Quizzes e jogos</h2><p>Revise o que aprendeu com atividades interativas.</p></div>
+      <div class="resource-list" data-subject-resources><p class="status">Carregando atividades...</p></div>
+    </section>
   </main>
   <footer><p>&copy; 2026 BitAcademy. Todos os direitos reservados.</p></footer>
   <script src="auth.js"></script>
