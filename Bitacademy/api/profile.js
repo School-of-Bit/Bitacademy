@@ -24,7 +24,7 @@ module.exports = async function handler(req, res) {
       FROM quiz_attempts qa
       JOIN subjects s ON s.id = qa.subject_id
       WHERE qa.user_id = ${userId}
-      ORDER BY qa.completed_at DESC
+      ORDER BY qa.score DESC, qa.percentage DESC, qa.completed_at ASC
       LIMIT 50
     `;
 
@@ -39,7 +39,7 @@ module.exports = async function handler(req, res) {
              played_at
       FROM game_scores
       WHERE user_id = ${userId}
-      ORDER BY played_at DESC
+      ORDER BY score DESC, correct_answers DESC, best_streak DESC, played_at ASC
       LIMIT 50
     `;
 

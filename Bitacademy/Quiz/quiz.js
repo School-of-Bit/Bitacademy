@@ -215,6 +215,7 @@ class QuizEngine {
     
     this.materiaInfo = QUIZZES[materia];
     this.perguntasTotal = [...this.materiaInfo.perguntas];
+    this.perguntaIndices = [];
     this.perguntas = this._prepararPerguntas(5); // Seleciona 5 difíceis
     this.atual = 0;
     this.pontuacao = 0;
@@ -223,9 +224,12 @@ class QuizEngine {
   }
 
   _prepararPerguntas(qtd) {
-    return this.perguntasTotal
+    const selecionadas = this.perguntasTotal
+      .map((pergunta, questionIndex) => ({ pergunta, questionIndex }))
       .sort(() => Math.random() - 0.5)
       .slice(0, qtd);
+    this.perguntaIndices = selecionadas.map((item) => item.questionIndex);
+    return selecionadas.map((item) => item.pergunta);
   }
 
   get perguntaAtual() {
@@ -241,6 +245,8 @@ class QuizEngine {
     if (isCorreto) this.pontuacao++;
     
     this.respostasUsuario.push({
+      questionIndex: this.perguntaIndices[this.atual],
+      selected: Number.isInteger(indice) ? indice : null,
       pergunta: this.perguntaAtual.pergunta,
       acertou: isCorreto,
       escolhida: indice,
@@ -357,9 +363,11 @@ class QuizUI {
   }
 
   handleNext() {
+    if (this.engine.finalizado) return;
     if (this.engine.proximo()) {
       this.renderPergunta();
     } else {
+      this.btnNext.disabled = true;
       this.renderResultado();
     }
   }
@@ -373,21 +381,27 @@ class QuizUI {
       .replaceAll("'", "&#039;");
   }
 
-  renderResultado() {
+  async renderResultado() {
     const total = this.engine.perguntas.length;
     const score = this.engine.pontuacao;
     const percent = Math.round((score / total) * 100);
+    await window.BitAcademyAuth?.ready;
     const user = window.BitAcademyAuth?.getCurrentUser();
+    let saveMessage = user ? "Resultado salvo no seu perfil." : "Entre ou cadastre-se para registrar seu melhor resultado.";
+    if (user) {
+      try {
+        const saved = await window.BitAcademyAuth.recordQuizResult({
+          materia: this.materia,
+          answers: this.engine.respostasUsuario.map(({ questionIndex, selected }) => ({ questionIndex, selected }))
+        });
+        if (!saved.improved) saveMessage = "Seu recorde desta disciplina continua sendo sua melhor pontuação.";
+      } catch (error) {
+        saveMessage = error.message;
+      }
+    }
 
-    window.BitAcademyAuth?.recordQuizResult({
-      materia: this.materia,
-      titulo: this.engine.materiaInfo.titulo,
-      score,
-      total,
-      percent
-    });
-
-    const ranking = window.BitAcademyAuth?.getQuizRanking(this.materia, 5) || [];
+    let ranking = [];
+    try { ranking = await window.BitAcademyAuth?.getQuizRanking(this.materia, 5) || []; } catch {}
     const rankingHtml = ranking.length ? `
       <div class="quiz-ranking">
         <h4>Ranking deste quiz</h4>
@@ -406,7 +420,7 @@ class QuizUI {
         <div class="score-circle">${score}/${total}</div>
         <h3>${percent >= 70 ? "Ótimo desempenho!" : "Bom esforço!"}</h3>
         <p>Você acertou ${percent}% das questões.</p>
-        <p>${user ? "Resultado salvo no seu perfil." : "Entre ou cadastre-se para salvar seus resultados."}</p>
+        <p>${this.escapeHtml(saveMessage)}</p>
         ${rankingHtml}
         <button onclick="location.reload()" class="btn-primary">Tentar novamente</button>
         <a href="../Bitacademy.html" class="btn-secondary">Voltar ao portal</a>

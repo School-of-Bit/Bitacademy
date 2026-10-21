@@ -69,10 +69,10 @@ window.BitAcademyAuth = (() => {
     window.location.href = `${getRelativePrefix()}login.html`;
   };
 
-  const recordQuizResult = async ({ materia, titulo, score, total }) => {
+  const recordQuizResult = async ({ materia, answers }) => {
     const data = await api("quizzes?action=result", {
       method: "POST",
-      body: JSON.stringify({ materia, titulo, score, total })
+      body: JSON.stringify({ materia, answers })
     });
     return data.result;
   };
@@ -197,20 +197,20 @@ window.BitAcademyAuth = (() => {
       </section>
       <section class="profile-dashboard">
         <div class="profile-summary">
-          <article><span>Quizzes feitos</span><strong>${results.length}</strong></article>
+          <article><span>Disciplinas com recorde</span><strong>${results.length}</strong></article>
           <article><span>Média geral</span><strong>${average}%</strong></article>
           <article><span>Melhor resultado</span><strong>${bestPercent}%</strong></article>
           <article><span>Recorde infinito</span><strong>${bestGameScore}</strong></article>
         </div>
         <div class="profile-next-step">
           <p class="eyebrow">Próximo passo</p>
-          <h2>${results.length ? "Revise uma nova disciplina" : "Faça seu primeiro quiz"}</h2>
-          <p>${results.length ? "Escolha outra matéria para ampliar seu histórico de desempenho." : "Ao finalizar um quiz logado, o resultado aparece automaticamente aqui."}</p>
+          <h2>${results.length ? "Melhore seus recordes" : "Faça seu primeiro quiz"}</h2>
+          <p>${results.length ? "Seu melhor resultado em cada disciplina aparece aqui." : "Ao finalizar um quiz logado, seu melhor resultado aparece automaticamente aqui."}</p>
           <a class="secondary-link" href="Jogos/matematica-infinita.html">Jogar modo infinito</a>
         </div>
       </section>
       <section>
-        <h2>Histórico de quizzes</h2>
+        <h2>Melhores resultados por disciplina</h2>
         ${results.length ? `<div class="result-list">${results.map((result) => `
           <article><div><strong>${escapeHtml(result.titulo)}</strong><span>${new Date(result.date).toLocaleDateString("pt-BR")}</span></div><b>${result.score}/${result.total} (${result.percent}%)</b></article>
         `).join("")}</div>` : '<p>Você ainda não concluiu nenhum quiz. Escolha uma disciplina e comece quando quiser.</p>'}

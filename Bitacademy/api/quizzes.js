@@ -1,6 +1,17 @@
 const { sql } = require("../lib/db");
 const { getSessionUserId } = require("../lib/_auth");
 
+const QUIZ_CONFIG = {
+  matematica: { title: "Matemática Avançada", answers: [1, 0, 0, 2] },
+  portugues: { title: "Língua Portuguesa & Literatura", answers: [0, 1, 0] },
+  ciencias: { title: "Ciências da Natureza", answers: [1, 2, 1] },
+  filosofia: { title: "Filosofia Moderna e Ética", answers: [1, 2] },
+  historia: { title: "História", answers: [0, 2, 2] },
+  geografia: { title: "Geografia", answers: [1, 2, 0] },
+  artes: { title: "Artes", answers: [1, 0, 2] },
+  ingles: { title: "Inglês", answers: [1, 1, 3] }
+};
+
 function jsonBody(req) {
   if (!req.body) return {};
   if (typeof req.body === "object") return req.body;
@@ -16,14 +27,14 @@ module.exports = async function handler(req, res) {
 
       const materia = String(req.query?.materia || "").trim().toLowerCase();
       const limit = Math.min(Math.max(Number(req.query?.limit) || 10, 1), 50);
-      if (!materia) return res.status(400).json({ error: "Informe a disciplina." });
+      if (!Object.hasOwn(QUIZ_CONFIG, materia)) return res.status(400).json({ error: "Disciplina de quiz inválida." });
 
       const rows = await sql`
         SELECT qa.id, qa.quiz_title, qa.score, qa.total_questions, qa.percentage, qa.player_name, qa.completed_at
         FROM quiz_attempts qa
         JOIN subjects s ON s.id = qa.subject_id
-        WHERE s.slug = ${materia}
-        ORDER BY qa.percentage DESC, qa.score DESC, qa.completed_at ASC
+        WHERE s.slug = ${materia} AND qa.user_id IS NOT NULL
+        ORDER BY qa.score DESC, qa.percentage DESC, qa.completed_at ASC
         LIMIT ${limit}
       `;
 
@@ -45,34 +56,58 @@ module.exports = async function handler(req, res) {
 
       const body = jsonBody(req);
       const materia = String(body.materia || "").trim().toLowerCase();
-      const titulo = String(body.titulo || "").trim();
-      const score = Number(body.score);
-      const total = Number(body.total);
       const userId = await getSessionUserId(req);
+      if (!userId) return res.status(401).json({ error: "Entre na sua conta para salvar resultados no ranking." });
+      const quiz = Object.hasOwn(QUIZ_CONFIG, materia) ? QUIZ_CONFIG[materia] : null;
+      if (!quiz) return res.status(400).json({ error: "Disciplina de quiz inválida." });
+      const answers = body.answers;
 
-      if (!materia || !titulo || !Number.isInteger(score) || !Number.isInteger(total) || total <= 0 || score < 0 || score > total) {
-        return res.status(400).json({ error: "Dados do resultado inválidos." });
+      if (!Array.isArray(answers) || answers.length !== quiz.answers.length) {
+        return res.status(400).json({ error: "Respostas do quiz inválidas." });
+      }
+      const seen = new Set();
+      let score = 0;
+      for (const answer of answers) {
+        const questionIndex = answer?.questionIndex;
+        const selected = answer?.selected;
+        if (!Number.isInteger(questionIndex) || questionIndex < 0 || questionIndex >= quiz.answers.length || seen.has(questionIndex)
+          || !Number.isInteger(selected) || selected < 0 || selected > 3) {
+          return res.status(400).json({ error: "Respostas do quiz inválidas." });
+        }
+        seen.add(questionIndex);
+        if (quiz.answers[questionIndex] === selected) score++;
       }
 
-      const subjects = await sql`SELECT id FROM subjects WHERE slug = ${materia} LIMIT 1`;
-      if (!subjects.length) return res.status(400).json({ error: "Disciplina não encontrada." });
-
-      let playerName = "Visitante";
-      if (userId) {
-        const users = await sql`SELECT name FROM users WHERE id = ${userId} LIMIT 1`;
-        if (users.length) playerName = users[0].name;
-      }
-
+      const total = quiz.answers.length;
       const percentage = Math.round((score / total) * 100);
-      const rows = await sql`
-        INSERT INTO quiz_attempts
-          (user_id, subject_id, quiz_title, score, total_questions, percentage, player_name, started_at, completed_at)
-        VALUES
-          (${userId}, ${subjects[0].id}, ${titulo}, ${score}, ${total}, ${percentage}, ${playerName}, NOW(), NOW())
-        RETURNING id, quiz_title, score, total_questions, percentage, player_name, completed_at
+      const rows = await sql`WITH subject AS (
+          SELECT id FROM subjects WHERE slug = ${materia}
+        ), saved AS (
+          INSERT INTO quiz_attempts
+            (user_id, subject_id, quiz_title, score, total_questions, percentage, player_name, started_at, completed_at)
+          SELECT ${userId}, subject.id, ${quiz.title}, ${score}, ${total}, ${percentage}, users.name, NOW(), NOW()
+          FROM subject JOIN users ON users.id = ${userId}
+          WHERE TRUE
+          ON CONFLICT (user_id, subject_id) WHERE user_id IS NOT NULL
+          DO UPDATE SET quiz_title = EXCLUDED.quiz_title, score = EXCLUDED.score,
+            total_questions = EXCLUDED.total_questions, percentage = EXCLUDED.percentage,
+            player_name = EXCLUDED.player_name, started_at = EXCLUDED.started_at, completed_at = NOW()
+          WHERE EXCLUDED.score > quiz_attempts.score
+          RETURNING id, quiz_title, score, total_questions, percentage, player_name, completed_at
+        ) SELECT saved.id, saved.quiz_title, saved.score, saved.total_questions,
+            saved.percentage, saved.player_name, saved.completed_at, TRUE AS improved
+          FROM saved
+        UNION ALL
+        SELECT qa.id, qa.quiz_title, qa.score, qa.total_questions, qa.percentage,
+            qa.player_name, qa.completed_at, FALSE AS improved
+          FROM quiz_attempts qa JOIN subject ON subject.id = qa.subject_id
+          WHERE qa.user_id = ${userId} AND NOT EXISTS (SELECT 1 FROM saved)
+        LIMIT 1
       `;
 
-      return res.status(201).json({
+      if (!rows.length) return res.status(404).json({ error: "Disciplina não encontrada." });
+
+      return res.status(200).json({
         result: {
           id: rows[0].id,
           materia,
@@ -81,7 +116,8 @@ module.exports = async function handler(req, res) {
           total: rows[0].total_questions,
           percent: rows[0].percentage,
           playerName: rows[0].player_name,
-          date: rows[0].completed_at
+          date: rows[0].completed_at,
+          improved: rows[0].improved
         }
       });
     }

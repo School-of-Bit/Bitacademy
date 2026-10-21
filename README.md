@@ -9,7 +9,7 @@ Portal de aprendizado com disciplinas, materiais, quizzes e jogos. O projeto usa
 - Oito quizzes temáticos e o jogo Matemática Infinita, com resultados e rankings.
 - Cadastro e login com sessão autenticada e senha armazenada como hash.
 - Perfis de **Aluno**, **Professor** e **Administrador**, com páginas e navegação de acordo com o papel.
-- Perfil do aluno com histórico de quizzes, pontuação, rankings e atividades disponibilizadas pelos professores.
+- Perfil do aluno com melhores resultados por disciplina, recordes de jogos, rankings e atividades disponibilizadas pelos professores.
 - Área do professor para consultar disciplinas vinculadas, criar/editar materiais e cadastrar atividades.
 - Painel administrativo para gerenciar usuários, redefinir senhas, editar disciplinas, vincular professores e cadastrar/editar/remover quizzes e jogos.
 - Recursos interativos associados a uma disciplina por um caminho de HTML já existente no projeto.
@@ -46,11 +46,12 @@ Bitacademy/
 Crie um banco PostgreSQL no [Neon](https://neon.tech/) e abra o SQL Editor do projeto. Execute os arquivos abaixo nesta ordem:
 
 1. `Bitacademy/database/schema.sql` — cria usuários, disciplinas, vínculos de professores, tentativas de quiz e pontuações de jogos.
-2. `Bitacademy/database/admin-migration.sql` — habilita o papel Administrador e `auth_version`. O script pode ser executado novamente com segurança.
-3. `Bitacademy/database/academic.sql` — cria materiais, atividades e cadastro de recursos HTML; também pré-cadastra os quizzes e o jogo que já estão no repositório.
-4. `Bitacademy/database/legacy-subject-content.sql` — importa para o banco os textos das páginas originais das disciplinas.
+2. `Bitacademy/database/ranking-best-results.sql` — remove registros anônimos e duplicados e prepara um único recorde por usuário, disciplina e modo de jogo.
+3. `Bitacademy/database/admin-migration.sql` — habilita o papel Administrador e `auth_version`. O script pode ser executado novamente com segurança.
+4. `Bitacademy/database/academic.sql` — cria materiais, atividades e cadastro de recursos HTML; também pré-cadastra os quizzes e o jogo que já estão no repositório.
+5. `Bitacademy/database/legacy-subject-content.sql` — importa para o banco os textos das páginas originais das disciplinas.
 
-Os scripts 2 a 4 são idempotentes conforme indicado em cada arquivo. Se o banco já estiver configurado, execute as atualizações necessárias; para habilitar os recursos e jogos documentados aqui, execute a versão atualizada de `academic.sql`.
+Os scripts 2 a 5 podem ser executados novamente conforme indicado em cada arquivo. Em bancos já configurados, execute `ranking-best-results.sql` para consolidar os rankings; execute também `academic.sql` se ainda não tiver aplicado os recursos acadêmicos atuais.
 
 ## Rodar localmente
 
@@ -106,7 +107,7 @@ As páginas dependem das APIs e do banco. Abrir `Bitacademy.html` diretamente pe
 
 1. Entre com uma conta de aluno.
 2. Na página inicial, escolha uma disciplina. A página dinâmica reúne os textos importados, materiais publicados e recursos interativos cadastrados.
-3. Acesse um quiz ou o jogo Matemática Infinita. O perfil mostra os resultados associados à conta.
+3. Entre na conta antes de responder quizzes ou jogar para registrar seus recordes. O perfil mostra o melhor resultado por disciplina e modo de jogo.
 4. Consulte no perfil as atividades cadastradas pelos professores.
 
 ### Professor

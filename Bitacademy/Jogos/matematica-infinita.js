@@ -150,16 +150,23 @@ class MathInfiniteGame {
 
     if (saveScore && this.state.score > 0) {
       try {
-        await window.BitAcademyAuth?.recordGameScore({
-          mode: "math-infinite",
-          title: "Matemática Infinita",
-          score: this.state.score,
-          correct: this.state.correct,
-          wrong: this.state.wrong,
-          bestStreak: this.state.bestStreak,
-          duration: Math.round((Date.now() - this.state.startedAt) / 1000)
-        });
-        this.elements.feedback.textContent = "Fim de jogo! Pontuação salva no ranking.";
+        await window.BitAcademyAuth?.ready;
+        if (!window.BitAcademyAuth?.getCurrentUser()) {
+          this.elements.feedback.textContent = "Fim de jogo! Entre na sua conta para salvar seu recorde no ranking.";
+        } else {
+          const saved = await window.BitAcademyAuth.recordGameScore({
+            mode: "math-infinite",
+            title: "Matemática Infinita",
+            score: this.state.score,
+            correct: this.state.correct,
+            wrong: this.state.wrong,
+            bestStreak: this.state.bestStreak,
+            duration: Math.round((Date.now() - this.state.startedAt) / 1000)
+          });
+          this.elements.feedback.textContent = saved.improved
+            ? "Fim de jogo! Recorde atualizado no ranking."
+            : "Fim de jogo! Seu recorde no ranking continua sendo sua melhor pontuação.";
+        }
       } catch (error) {
         this.elements.feedback.textContent = `Fim de jogo! ${error.message}`;
       }
