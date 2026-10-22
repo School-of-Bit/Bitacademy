@@ -125,6 +125,8 @@ As páginas dependem das APIs e do banco. Abrir `Bitacademy.html` diretamente pe
 
 O cadastro administrativo aponta para um arquivo HTML que já faz parte do projeto. Para disponibilizar um jogo novo, primeiro adicione o HTML e seus arquivos JavaScript/CSS ao repositório e publique a versão; depois cadastre o caminho no painel. O conteúdo dos materiais de estudo é armazenado no banco, enquanto o código executável dos jogos permanece como arquivo do projeto.
 
+Para implementar jogos ranqueados com pontuação validada no servidor, consulte [`docs/JOGOS_PARA_DESENVOLVEDORES.md`](docs/JOGOS_PARA_DESENVOLVEDORES.md). O painel registra o acesso ao arquivo, mas cada novo modo requer integração própria com a API e o armazenamento de sessões.
+
 ## Publicação na Vercel
 
 Importe o repositório na Vercel e configure o **Root Directory** como `Bitacademy`. Cadastre `DATABASE_URL` e `JWT_SECRET` nas variáveis de ambiente dos ambientes desejados e publique. O arquivo `vercel.json` direciona a raiz do site para `Bitacademy.html`.
