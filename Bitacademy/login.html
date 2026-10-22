@@ -23,20 +23,19 @@
             </div>
 
             <p class="form-message" data-auth-message aria-live="polite"></p>
+            <div class="form-message recovery-notice" data-recovery-notice hidden role="status">
+                Para proteger sua conta, solicite a redefinição de senha ao administrador da plataforma. Ele pode redefini-la pelo painel administrativo.
+            </div>
 
             <form class="login-form" data-login-form data-auth-panel="login">
                 <label for="login-email">E-mail</label>
-                <input type="email" id="login-email" name="email" placeholder="seunome@escola.com" required>
+                <input type="email" id="login-email" name="email" placeholder="seunome@escola.com" maxlength="255" autocomplete="email" required>
 
                 <label for="login-senha">Senha</label>
-                <input type="password" id="login-senha" name="senha" placeholder="Digite sua senha" required>
+                <div class="password-field"><input type="password" id="login-senha" name="senha" placeholder="Digite sua senha" autocomplete="current-password" required><button type="button" class="password-toggle" data-password-toggle="login-senha" aria-label="Mostrar senha">Mostrar</button></div>
 
                 <div class="login-options">
-                    <label class="check-option">
-                        <input type="checkbox" name="lembrar">
-                        <span>Lembrar meu acesso</span>
-                    </label>
-                    <a href="Bitacademy.html">Entrar como visitante</a>
+                    <div class="login-help-links"><button type="button" data-forgot-password>Esqueceu sua senha?</button><a href="Bitacademy.html">Entrar como visitante</a></div>
                 </div>
 
                 <button type="submit">Entrar</button>
@@ -44,45 +43,29 @@
 
             <form class="login-form" data-register-form data-auth-panel="cadastro" hidden>
                 <label for="cadastro-nome">Nome completo</label>
-                <input type="text" id="cadastro-nome" name="nome" placeholder="Seu nome" required>
-
-                <label for="cadastro-tipo">Tipo de conta</label>
-                <select id="cadastro-tipo" name="tipo">
-                    <option>Aluno</option>
-                    <option>Professor</option>
-                </select>
-
-                <div class="teacher-field" data-teacher-field hidden>
-                    <label for="cadastro-materia">Matéria do professor</label>
-                    <select id="cadastro-materia" name="materia">
-                        <option value="matematica">Matemática</option>
-                        <option value="portugues">Português</option>
-                        <option value="ciencias">Ciências</option>
-                        <option value="historia">História</option>
-                        <option value="geografia">Geografia</option>
-                        <option value="ingles">Inglês</option>
-                        <option value="filosofia">Filosofia</option>
-                        <option value="artes">Artes</option>
-                    </select>
-                </div>
+                <input type="text" id="cadastro-nome" name="nome" placeholder="Seu nome completo" minlength="2" maxlength="150" autocomplete="name" required>
 
                 <label for="cadastro-email">E-mail</label>
-                <input type="email" id="cadastro-email" name="email" placeholder="seunome@escola.com" required>
+                <input type="email" id="cadastro-email" name="email" placeholder="seunome@escola.com" maxlength="255" autocomplete="email" required>
 
                 <label for="cadastro-senha">Senha</label>
-                <input type="password" id="cadastro-senha" name="senha" placeholder="Mínimo de 6 caracteres" minlength="6" required>
+                <div class="password-field"><input type="password" id="cadastro-senha" name="senha" placeholder="Crie uma senha forte" minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="password-rules" required><button type="button" class="password-toggle" data-password-toggle="cadastro-senha" aria-label="Mostrar senha">Mostrar</button></div>
+                <small id="password-rules" class="password-rules">Use 8 a 72 caracteres, com letra maiúscula, minúscula, número e símbolo.</small>
+
+                <label for="cadastro-confirma-senha">Confirmar senha</label>
+                <div class="password-field"><input type="password" id="cadastro-confirma-senha" name="confirmaSenha" placeholder="Digite a senha novamente" minlength="8" maxlength="72" autocomplete="new-password" required><button type="button" class="password-toggle" data-password-toggle="cadastro-confirma-senha" aria-label="Mostrar confirmação da senha">Mostrar</button></div>
 
                 <button type="submit">Criar conta</button>
             </form>
         </section>
 
         <aside class="access-panel" aria-label="Informações sobre o acesso">
-            <h2>Um acesso para aprender e ensinar</h2>
-            <p>Alunos entram para estudar conteúdos e responder quizzes. Professores podem testar o mesmo acesso e acompanhar a base preparada para futuras turmas.</p>
+            <h2>Um acesso para aprender</h2>
+            <p>Crie sua conta de aluno para estudar conteúdos e responder quizzes. Contas de professor são criadas pela administração da plataforma.</p>
             <ul>
                 <li>Ambiente simples para estudantes</li>
-                <li>Preparado para o modo professor</li>
-                <li>Acesso rápido ao portal de conteúdos</li>
+                <li>Conteúdos e quizzes por disciplina</li>
+                <li>Acompanhe seu progresso no perfil</li>
             </ul>
         </aside>
     </main>

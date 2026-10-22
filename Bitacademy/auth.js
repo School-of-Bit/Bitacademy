@@ -41,15 +41,13 @@ window.BitAcademyAuth = (() => {
 
   const getCurrentUser = () => currentUser;
 
-  const register = async ({ name, email, password, type, materia }) => {
+  const register = async ({ name, email, password }) => {
     const data = await api("auth/register", {
       method: "POST",
       body: JSON.stringify({
         name: String(name || "").trim(),
         email: normalize(email),
-        password,
-        type,
-        materia
+        password
       })
     });
     currentUser = data.user;
@@ -71,10 +69,10 @@ window.BitAcademyAuth = (() => {
     window.location.href = `${getRelativePrefix()}login.html`;
   };
 
-  const recordQuizResult = async ({ materia, titulo, score, total }) => {
+  const recordQuizResult = async ({ materia, answers }) => {
     const data = await api("quizzes?action=result", {
       method: "POST",
-      body: JSON.stringify({ materia, titulo, score, total })
+      body: JSON.stringify({ materia, answers })
     });
     return data.result;
   };
@@ -93,12 +91,32 @@ window.BitAcademyAuth = (() => {
     return profileData.quizResults || [];
   };
 
-  const recordGameScore = async ({ mode, title, score, correct, wrong, bestStreak, duration }) => {
-    const data = await api("games?action=score", {
+  const startGame = async () => {
+    return api("games?action=start", {
       method: "POST",
-      body: JSON.stringify({ mode, title, score, correct, wrong, bestStreak, duration })
+      body: JSON.stringify({ mode: "math-infinite" })
     });
-    return data.result;
+  };
+
+  const submitGameAnswer = async ({ sessionId, answer, revision }) => {
+    return api("games?action=answer", {
+      method: "POST",
+      body: JSON.stringify({ sessionId, answer, revision })
+    });
+  };
+
+  const finishGame = async (sessionId) => {
+    return api("games?action=finish", {
+      method: "POST",
+      body: JSON.stringify({ sessionId })
+    });
+  };
+
+  const abortGame = async (sessionId) => {
+    return api("games?action=abort", {
+      method: "POST",
+      body: JSON.stringify({ sessionId })
+    });
   };
 
   const getGameRanking = async (mode, limit = 10) => {
@@ -199,20 +217,20 @@ window.BitAcademyAuth = (() => {
       </section>
       <section class="profile-dashboard">
         <div class="profile-summary">
-          <article><span>Quizzes feitos</span><strong>${results.length}</strong></article>
+          <article><span>Disciplinas com recorde</span><strong>${results.length}</strong></article>
           <article><span>Média geral</span><strong>${average}%</strong></article>
           <article><span>Melhor resultado</span><strong>${bestPercent}%</strong></article>
           <article><span>Recorde infinito</span><strong>${bestGameScore}</strong></article>
         </div>
         <div class="profile-next-step">
           <p class="eyebrow">Próximo passo</p>
-          <h2>${results.length ? "Revise uma nova disciplina" : "Faça seu primeiro quiz"}</h2>
-          <p>${results.length ? "Escolha outra matéria para ampliar seu histórico de desempenho." : "Ao finalizar um quiz logado, o resultado aparece automaticamente aqui."}</p>
+          <h2>${results.length ? "Melhore seus recordes" : "Faça seu primeiro quiz"}</h2>
+          <p>${results.length ? "Seu melhor resultado em cada disciplina aparece aqui." : "Ao finalizar um quiz logado, seu melhor resultado aparece automaticamente aqui."}</p>
           <a class="secondary-link" href="Jogos/matematica-infinita.html">Jogar modo infinito</a>
         </div>
       </section>
       <section>
-        <h2>Histórico de quizzes</h2>
+        <h2>Melhores resultados por disciplina</h2>
         ${results.length ? `<div class="result-list">${results.map((result) => `
           <article><div><strong>${escapeHtml(result.titulo)}</strong><span>${new Date(result.date).toLocaleDateString("pt-BR")}</span></div><b>${result.score}/${result.total} (${result.percent}%)</b></article>
         `).join("")}</div>` : '<p>Você ainda não concluiu nenhum quiz. Escolha uma disciplina e comece quando quiser.</p>'}
@@ -231,14 +249,28 @@ window.BitAcademyAuth = (() => {
     const tabs = document.querySelectorAll("[data-auth-tab]");
     const panels = document.querySelectorAll("[data-auth-panel]");
     const message = document.querySelector("[data-auth-message]");
+    const recoveryNotice = document.querySelector("[data-recovery-notice]");
 
     const showPanel = (target) => {
       tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.authTab === target));
       panels.forEach((panel) => panel.hidden = panel.dataset.authPanel !== target);
       if (message) message.textContent = "";
+      if (recoveryNotice) recoveryNotice.hidden = true;
     };
 
     tabs.forEach((tab) => tab.addEventListener("click", () => showPanel(tab.dataset.authTab)));
+    document.querySelector("[data-forgot-password]")?.addEventListener("click", () => {
+      if (recoveryNotice) recoveryNotice.hidden = !recoveryNotice.hidden;
+      if (message) message.textContent = "";
+    });
+    document.querySelectorAll("[data-password-toggle]").forEach((button) => button.addEventListener("click", () => {
+      const input = document.getElementById(button.dataset.passwordToggle);
+      if (!input) return;
+      const show = input.type === "password";
+      input.type = show ? "text" : "password";
+      button.textContent = show ? "Ocultar" : "Mostrar";
+      button.setAttribute("aria-label", `${show ? "Ocultar" : "Mostrar"} senha`);
+    }));
 
     document.querySelector("[data-login-form]")?.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -254,15 +286,27 @@ window.BitAcademyAuth = (() => {
     document.querySelector("[data-register-form]")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
+      const password = form.senha.value;
+      const confirmation = form.confirmaSenha.value;
+      const strongPassword = password.length >= 8 && new TextEncoder().encode(password).length <= 72
+        && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password) && /[^A-Za-z0-9À-ÿ]/.test(password);
+      if (!strongPassword) {
+        if (message) message.textContent = "A senha precisa ter 8 a 72 bytes e incluir maiúscula, minúscula, número e símbolo.";
+        form.senha.focus();
+        return;
+      }
+      if (password !== confirmation) {
+        if (message) message.textContent = "As senhas não coincidem.";
+        form.confirmaSenha.focus();
+        return;
+      }
       try {
-        const user = await register({
+        await register({
           name: form.nome.value,
           email: form.email.value,
-          password: form.senha.value,
-          type: form.tipo.value,
-          materia: form.materia?.value || null
+          password
         });
-        window.location.href = user.type === "Professor" ? "professor.html" : "perfil.html";
+        window.location.href = "perfil.html";
       } catch (error) {
         if (message) message.textContent = error.message;
       }
@@ -380,7 +424,10 @@ window.BitAcademyAuth = (() => {
     getGameRanking,
     getProgress,
     getQuizRanking,
-    recordGameScore,
+    startGame,
+    submitGameAnswer,
+    finishGame,
+    abortGame,
     login,
     logout,
     recordQuizResult,

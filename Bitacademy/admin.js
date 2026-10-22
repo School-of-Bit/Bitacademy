@@ -7,6 +7,7 @@
   const subjectMessage = document.querySelector("[data-subject-message]");
   const resourceList = document.querySelector("[data-resource-list]");
   const resourceMessage = document.querySelector("[data-resource-message]");
+  const teacherCreateMessage = document.querySelector("[data-teacher-create-message]");
   let allUsers = [];
   let subjects = [];
   let resources = [];
@@ -37,6 +38,9 @@
   const renderResourceOptions = () => {
     document.querySelector("[data-resource-subject]").innerHTML = '<option value="">Selecione uma disciplina</option>' + subjects.map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join("");
   };
+  const renderTeacherSubjectOptions = () => {
+    document.querySelector("[data-teacher-subject]").innerHTML = '<option value="">Selecione uma disciplina</option>' + subjects.map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join("");
+  };
   const renderResources = () => {
     resourceList.innerHTML = resources.length ? resources.map((r) => `<form class="subject-form resource-edit-form" data-resource="${escapeHtml(r.id)}"><div class="subject-title-row"><h3>${escapeHtml(r.title)}</h3><a href="${escapeHtml(r.html_path)}" target="_blank" rel="noopener noreferrer">Abrir página ↗</a></div><div class="subject-fields"><label>Disciplina<select name="subjectId" required>${subjects.map((s) => `<option value="${escapeHtml(s.id)}" ${s.id === r.subject_id ? "selected" : ""}>${escapeHtml(s.name)}</option>`).join("")}</select></label><label>Tipo<select name="resourceType"><option value="quiz" ${r.resource_type === "quiz" ? "selected" : ""}>Quiz</option><option value="game" ${r.resource_type === "game" ? "selected" : ""}>Jogo</option></select></label><label>Título<input name="title" value="${escapeHtml(r.title)}" maxlength="120" required></label><label>Caminho HTML<input name="htmlPath" value="${escapeHtml(r.html_path)}" maxlength="255" pattern="([A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\\.html" required></label></div><label>Descrição<textarea name="description" maxlength="300" rows="2">${escapeHtml(r.description || "")}</textarea></label><div class="resource-actions"><button type="submit">Salvar alterações</button><button type="button" class="danger-button" data-delete-resource="${escapeHtml(r.id)}">Remover</button></div></form>`).join("") : '<p>Nenhum quiz ou jogo cadastrado.</p>';
   };
@@ -57,6 +61,7 @@
       subjects = data.subjects || [];
       renderSubjects();
       renderResourceOptions();
+      renderTeacherSubjectOptions();
       const teachers = data.teachers || [];
       document.querySelector("[data-teacher-count]").textContent = teachers.length;
       document.querySelector("[data-subject-count]").textContent = subjects.length;
@@ -72,6 +77,21 @@
     }
   };
   document.addEventListener("submit", async (event) => {
+    if (event.target.matches("[data-create-teacher]")) {
+      event.preventDefault();
+      const form = event.target;
+      try {
+        await api("create-teacher", { method: "POST", body: JSON.stringify(Object.fromEntries(new FormData(form))) });
+        form.reset();
+        teacherCreateMessage.textContent = "Conta criada e disciplina vinculada. Entregue a senha inicial ao professor por um canal seguro.";
+        teacherCreateMessage.className = "message success";
+        await Promise.all([load(), loadUsers()]);
+      } catch (error) {
+        teacherCreateMessage.textContent = error.message;
+        teacherCreateMessage.className = "message error";
+      }
+      return;
+    }
     if (event.target.matches("[data-create-subject]")) {
       event.preventDefault();
       const form = event.target;

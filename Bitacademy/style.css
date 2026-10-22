@@ -1303,6 +1303,81 @@ h3 {
   filter: brightness(1.06);
 }
 
+.login-form .password-field {
+  display: flex;
+  align-items: stretch;
+  position: relative;
+}
+
+.login-form .password-field input {
+  padding-right: 84px;
+}
+
+.login-form .password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  margin: 0;
+  padding: 6px 8px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: var(--cor-ciano);
+  font-size: .84rem;
+}
+
+.login-form .password-toggle:hover {
+  transform: translateY(-50%);
+  filter: brightness(1.15);
+}
+
+.login-help-links {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.login-help-links button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cor-ciano);
+  cursor: pointer;
+  font: inherit;
+  font-size: .9rem;
+  font-weight: 800;
+}
+
+.login-help-links button:hover {
+  transform: none;
+  text-decoration: underline;
+}
+
+.login-form .password-rules {
+  margin-top: -6px;
+  color: var(--cor-subtexto);
+  line-height: 1.5;
+}
+
+.recovery-notice[hidden] {
+  display: none;
+}
+
+.recovery-notice {
+  min-height: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(250,204,21,.25);
+  border-radius: 10px;
+  background: rgba(250,204,21,.06);
+  color: var(--cor-texto);
+  font-size: .9rem;
+}
+
+.login-form input:invalid:not(:placeholder-shown) {
+  border-color: #fb7185;
+}
+
 [data-auth-status] {
   display: inline-flex;
   gap: 8px;

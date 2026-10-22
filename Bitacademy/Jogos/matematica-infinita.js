@@ -1,9 +1,10 @@
 class MathInfiniteGame {
   constructor() {
     this.initialTime = 30;
-    this.maxTime = 60;
     this.timer = null;
     this.isRunning = false;
+    this.pendingAnswer = false;
+    this.sessionId = null;
     this.state = this.createInitialState();
 
     this.elements = {
@@ -34,8 +35,7 @@ class MathInfiniteGame {
       correct: 0,
       wrong: 0,
       level: 1,
-      currentAnswer: null,
-      startedAt: null
+      revision: 0
     };
   }
 
@@ -48,23 +48,42 @@ class MathInfiniteGame {
     });
   }
 
-  start() {
-    this.state = this.createInitialState();
-    this.state.startedAt = Date.now();
-    this.isRunning = true;
-    this.elements.answer.disabled = false;
-    this.elements.form.querySelector("button").disabled = false;
+  async start() {
+    if (this.isRunning) return;
     this.elements.start.disabled = true;
-    this.elements.reset.disabled = false;
-    this.elements.feedback.textContent = "Valendo!";
-    this.nextQuestion();
-    this.render();
-    this.timer = setInterval(() => this.tick(), 1000);
+    this.elements.feedback.textContent = "Preparando partida...";
+    try {
+      await window.BitAcademyAuth?.ready;
+      if (!window.BitAcademyAuth?.getCurrentUser()) throw new Error("Entre na sua conta para iniciar uma partida ranqueada.");
+      const game = await window.BitAcademyAuth.startGame();
+      this.sessionId = game.sessionId;
+      this.state = this.createInitialState();
+      this.applyServerState(game);
+      this.isRunning = true;
+      this.elements.answer.disabled = false;
+      this.elements.form.querySelector("button").disabled = false;
+      this.elements.start.disabled = true;
+      this.elements.reset.disabled = false;
+      this.elements.feedback.textContent = "Valendo!";
+      this.timer = setInterval(() => this.tick(), 1000);
+    } catch (error) {
+      this.elements.start.disabled = false;
+      this.elements.feedback.textContent = error.message;
+    }
   }
 
   reset() {
-    this.finish(false);
+    clearInterval(this.timer);
+    this.timer = null;
+    this.isRunning = false;
+    this.pendingAnswer = false;
+    if (this.sessionId) window.BitAcademyAuth?.abortGame?.(this.sessionId).catch(() => {});
+    this.sessionId = null;
     this.state = this.createInitialState();
+    this.elements.answer.disabled = true;
+    this.elements.form.querySelector("button").disabled = true;
+    this.elements.start.disabled = false;
+    this.elements.reset.disabled = true;
     this.elements.question.textContent = "?";
     this.elements.answer.value = "";
     this.elements.feedback.textContent = "Partida reiniciada. Comece de novo quando quiser.";
@@ -72,102 +91,106 @@ class MathInfiniteGame {
   }
 
   tick() {
-    if (!this.isRunning) return;
+    if (!this.isRunning || this.pendingAnswer) return;
     this.state.timeLeft -= 1;
     if (this.state.timeLeft <= 0) {
       this.state.timeLeft = 0;
-      this.finish(true);
+      this.finish();
     }
     this.render();
   }
 
-  nextQuestion() {
-    const level = Math.min(8, Math.floor(this.state.correct / 5) + 1);
-    this.state.level = level;
-    const operations = level < 3 ? ["+", "-"] : level < 6 ? ["+", "-", "*"] : ["+", "-", "*", "/"];
-    const operation = operations[Math.floor(Math.random() * operations.length)];
-    const max = 8 + level * 6;
-    let a = this.randomNumber(2, max);
-    let b = this.randomNumber(2, max);
-    let answer;
-
-    if (operation === "+") answer = a + b;
-    if (operation === "-") {
-      if (b > a) [a, b] = [b, a];
-      answer = a - b;
-    }
-    if (operation === "*") {
-      b = this.randomNumber(2, Math.min(12, level + 5));
-      answer = a * b;
-    }
-    if (operation === "/") {
-      answer = this.randomNumber(2, Math.min(12, level + 5));
-      b = this.randomNumber(2, Math.min(12, level + 4));
-      a = answer * b;
-    }
-
-    this.state.currentAnswer = answer;
-    this.elements.question.textContent = `${a} ${operation} ${b}`;
+  applyServerState(game) {
+    const state = game.state;
+    this.state.score = Number(state.score);
+    this.state.correct = Number(state.correct);
+    this.state.wrong = Number(state.wrong);
+    this.state.streak = Number(state.streak);
+    this.state.bestStreak = Number(state.bestStreak);
+    this.state.level = Number(state.level);
+    this.state.timeLeft = Number(state.timeLeft);
+    this.state.revision = Number(state.revision);
+    if (game.question) this.elements.question.textContent = game.question;
     this.elements.answer.value = "";
-    this.elements.answer.focus();
     this.render();
   }
 
-  submitAnswer() {
-    if (!this.isRunning) return;
+  async submitAnswer() {
+    if (!this.isRunning || this.pendingAnswer) return;
     const userAnswer = Number(this.elements.answer.value);
-    if (!Number.isFinite(userAnswer)) return;
-
-    if (userAnswer === this.state.currentAnswer) {
-      this.state.correct += 1;
-      this.state.streak += 1;
-      this.state.bestStreak = Math.max(this.state.bestStreak, this.state.streak);
-      this.state.score += 10 + this.state.streak * 2 + this.state.level;
-      this.state.timeLeft = Math.min(this.maxTime, this.state.timeLeft + 4);
-      this.elements.feedback.textContent = "Acertou! +4s";
-    } else {
-      this.state.wrong += 1;
-      this.state.streak = 0;
-      this.state.timeLeft = Math.max(0, this.state.timeLeft - 5);
-      this.elements.feedback.textContent = `Errou. A resposta era ${this.state.currentAnswer}. -5s`;
+    if (!Number.isInteger(userAnswer)) return;
+    this.pendingAnswer = true;
+    this.elements.answer.disabled = true;
+    this.elements.form.querySelector("button").disabled = true;
+    this.elements.reset.disabled = true;
+    this.elements.feedback.textContent = "Verificando resposta...";
+    try {
+      const game = await window.BitAcademyAuth.submitGameAnswer({
+        sessionId: this.sessionId,
+        answer: userAnswer,
+        revision: this.state.revision
+      });
+      this.applyServerState(game);
+      if (game.finished) {
+        this.completeGame(game);
+        return;
+      }
+      this.elements.feedback.textContent = game.accepted === false
+        ? "A resposta já havia sido enviada. Questão atualizada."
+        : game.wasCorrect ? "Acertou! +4s" : `Errou. A resposta era ${game.correctAnswer}. -5s`;
+      this.elements.answer.disabled = false;
+      this.elements.form.querySelector("button").disabled = false;
+      this.elements.reset.disabled = false;
+      this.elements.answer.focus();
+    } catch (error) {
+      this.elements.feedback.textContent = error.message;
+      this.elements.answer.disabled = false;
+      this.elements.form.querySelector("button").disabled = false;
+      this.elements.reset.disabled = false;
+      this.elements.answer.focus();
+    } finally {
+      this.pendingAnswer = false;
     }
-
-    if (this.state.timeLeft <= 0) {
-      this.finish(true);
-      return;
-    }
-    this.nextQuestion();
   }
 
-  async finish(saveScore) {
+  async finish() {
     clearInterval(this.timer);
     this.timer = null;
     this.isRunning = false;
+    this.pendingAnswer = true;
+    this.elements.answer.disabled = true;
+    this.elements.form.querySelector("button").disabled = true;
+    this.elements.start.disabled = true;
+    this.elements.reset.disabled = true;
+    try {
+      const result = await window.BitAcademyAuth.finishGame(this.sessionId);
+      this.completeGame(result);
+    } catch (error) {
+      this.elements.feedback.textContent = `Fim de jogo! ${error.message}`;
+      this.elements.start.disabled = true;
+      this.elements.reset.disabled = false;
+    } finally {
+      this.pendingAnswer = false;
+    }
+  }
+
+  async completeGame(result) {
+    clearInterval(this.timer);
+    this.timer = null;
+    this.isRunning = false;
+    this.sessionId = null;
+    this.pendingAnswer = false;
+    this.state = { ...this.state, ...result.state };
     this.elements.answer.disabled = true;
     this.elements.form.querySelector("button").disabled = true;
     this.elements.start.disabled = false;
     this.elements.reset.disabled = true;
-
-    if (saveScore && this.state.score > 0) {
-      try {
-        await window.BitAcademyAuth?.recordGameScore({
-          mode: "math-infinite",
-          title: "Matemática Infinita",
-          score: this.state.score,
-          correct: this.state.correct,
-          wrong: this.state.wrong,
-          bestStreak: this.state.bestStreak,
-          duration: Math.round((Date.now() - this.state.startedAt) / 1000)
-        });
-        this.elements.feedback.textContent = "Fim de jogo! Pontuação salva no ranking.";
-      } catch (error) {
-        this.elements.feedback.textContent = `Fim de jogo! ${error.message}`;
-      }
-      await this.renderRanking();
-    } else if (saveScore) {
-      this.elements.feedback.textContent = "Fim de jogo! Tente marcar pontos na próxima.";
-    }
+    if (!result.recorded) this.elements.feedback.textContent = "Fim de jogo! Nenhum ponto foi marcado.";
+    else this.elements.feedback.textContent = result.improved
+      ? "Fim de jogo! Recorde atualizado no ranking."
+      : "Fim de jogo! Seu recorde no ranking continua sendo sua melhor pontuação.";
     this.render();
+    await this.renderRanking();
   }
 
   render() {
@@ -199,10 +222,6 @@ class MathInfiniteGame {
     } catch (error) {
       this.elements.ranking.innerHTML = `<p>Não foi possível carregar o ranking.</p>`;
     }
-  }
-
-  randomNumber(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
   escapeHtml(value) {

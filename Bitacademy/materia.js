@@ -1,9 +1,4 @@
 (() => {
-  const legacyPages = {
-    artes: "artes.html", ciencias: "ciencias.html", filosofia: "filosofia.html",
-    geografia: "geografia.html", historia: "historia.html", ingles: "ingles.html",
-    matematica: "matematica.html", portugues: "portugues.html"
-  };
   const slug = new URLSearchParams(location.search).get("slug") || "";
   const status = document.querySelector("[data-status]");
   const materials = document.querySelector("[data-materials]");
@@ -31,8 +26,6 @@
       document.querySelector("[data-subject-name]").textContent = data.subject.name;
       document.querySelector("[data-subject-icon]").textContent = data.subject.icon || "📘";
       document.querySelector("[data-subject-description]").textContent = data.subject.description || "Conteúdos e materiais para estudar esta disciplina.";
-      const legacyLink = document.querySelector("[data-legacy-link]");
-      if (legacyPages[slug]) { legacyLink.href = legacyPages[slug]; legacyLink.hidden = false; }
       try {
         const resourceResponse = await fetch(`/api/academic?action=resources&subject=${encodeURIComponent(slug)}`);
         const resourceData = await resourceResponse.json();
@@ -45,7 +38,7 @@
       document.querySelector("[data-material-count]").textContent = `${rows.length} ${rows.length === 1 ? "material" : "materiais"}`;
       if (!rows.length) {
         status.textContent = "Ainda não há materiais publicados nesta disciplina.";
-        materials.innerHTML = legacyPages[slug] ? '<div class="empty-state">Enquanto o professor prepara novos materiais, você pode consultar o conteúdo original desta disciplina pelo botão acima.</div>' : '<div class="empty-state">O professor ainda não publicou materiais para esta disciplina. Volte em breve.</div>';
+        materials.innerHTML = '<div class="empty-state">O professor ainda não publicou materiais para esta disciplina. Volte em breve.</div>';
         return;
       }
       status.textContent = "Materiais preparados pelos professores desta disciplina.";

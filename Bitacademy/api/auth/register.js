@@ -23,22 +23,26 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { name, email, password, type, materia } = jsonBody(req);
+    const { name, email, password, type: requestedType } = jsonBody(req);
     const normalizedEmail = String(email || "").trim().toLowerCase();
     const normalizedName = String(name || "").trim();
+    const rawPassword = String(password || "");
 
-    if (normalizedName.length < 2) {
-      return res.status(400).json({ error: "Informe um nome válido." });
+    if (normalizedName.length < 2 || normalizedName.length > 150 || /[<>]/.test(normalizedName)) {
+      return res.status(400).json({ error: "Informe um nome válido, com 2 a 150 caracteres." });
     }
-    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+    if (normalizedEmail.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail)) {
       return res.status(400).json({ error: "Informe um e-mail válido." });
     }
-    if (String(password || "").length < 6) {
-      return res.status(400).json({ error: "A senha deve ter pelo menos 6 caracteres." });
+    if (Buffer.byteLength(rawPassword, "utf8") < 8 || Buffer.byteLength(rawPassword, "utf8") > 72
+      || !/[a-z]/.test(rawPassword) || !/[A-Z]/.test(rawPassword) || !/\d/.test(rawPassword) || !/[^A-Za-z0-9À-ÿ]/.test(rawPassword)) {
+      return res.status(400).json({ error: "A senha deve ter 8 a 72 bytes e incluir maiúscula, minúscula, número e símbolo." });
     }
-    if (!["Aluno", "Professor"].includes(type)) {
-      return res.status(400).json({ error: "Tipo de conta inválido." });
+    if (requestedType && requestedType !== "Aluno") {
+      return res.status(403).json({ error: "Contas de professor devem ser criadas por um administrador." });
     }
+    // Public registration is restricted to students. Staff accounts are created by admins.
+    const accountType = "Aluno";
 
     const existing = await sql`
       SELECT id FROM users WHERE email = ${normalizedEmail} LIMIT 1
@@ -48,29 +52,15 @@ module.exports = async function handler(req, res) {
       return res.status(409).json({ error: "Este e-mail já está cadastrado." });
     }
 
-    const passwordHash = await bcrypt.hash(String(password), 12);
+    const passwordHash = await bcrypt.hash(rawPassword, 12);
 
     const created = await sql`
       INSERT INTO users (name, email, password_hash, account_type)
-      VALUES (${normalizedName}, ${normalizedEmail}, ${passwordHash}, ${type})
+      VALUES (${normalizedName}, ${normalizedEmail}, ${passwordHash}, ${accountType})
       RETURNING id, name, email, account_type, auth_version
     `;
 
     const user = created[0];
-
-    if (type === "Professor" && materia) {
-      const subjects = await sql`
-        SELECT id FROM subjects WHERE slug = ${String(materia).trim().toLowerCase()} LIMIT 1
-      `;
-
-      if (subjects.length) {
-        await sql`
-          INSERT INTO teacher_subjects (teacher_id, subject_id)
-          VALUES (${user.id}, ${subjects[0].id})
-          ON CONFLICT DO NOTHING
-        `;
-      }
-    }
 
     // Diagnóstico temporário: verifica se o segredo JWT está disponível
     // antes de tentar criar a sessão. Nunca expõe o valor do segredo.
