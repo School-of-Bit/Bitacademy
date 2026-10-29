@@ -49,6 +49,31 @@
     try { const data = await api("resources"); resources = data.resources || []; renderResources(); resourceMessage.textContent = `${resources.length} recursos cadastrados.`; }
     catch (error) { resourceMessage.textContent = error.message; }
   };
+  const loadGradebook = async () => {
+    const message = document.querySelector("[data-gradebook-message]");
+    try {
+      const response = await fetch("/api/gradebook?action=setup", { credentials: "same-origin" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Não foi possível carregar a configuração do boletim.");
+      const fill = (selector, items, value, label) => {
+        document.querySelectorAll(selector).forEach((select) => {
+          select.innerHTML = `<option value="">Selecione</option>${items.map((item) => `<option value="${escapeHtml(item[value])}">${escapeHtml(label(item))}</option>`).join("")}`;
+        });
+      };
+      fill("[data-gb-years]", data.years, "id", (item) => `${item.name} (${item.status})`);
+      fill("[data-gb-classes]", data.classes, "id", (item) => `${item.name} · ${item.academic_year_name}`);
+      fill("[data-gb-students]", data.students, "id", (item) => `${item.name} · ${item.email}`);
+      fill("[data-gb-teachers]", data.teachers, "id", (item) => `${item.name} · ${item.email}`);
+      fill("[data-gb-subjects]", data.subjects, "id", (item) => item.name);
+      document.querySelector("[data-gradebook-years]").innerHTML = data.years.length ? data.years.map((year) => `
+        <article class="teacher-card"><h3>${escapeHtml(year.name)} · ${escapeHtml(year.status)}</h3><p>${escapeHtml(year.starts_on)} a ${escapeHtml(year.ends_on)} · Aprovação: ${escapeHtml(year.passing_score)}/10</p>
+          <label>Estado<select data-year-status-select="${escapeHtml(year.id)}"><option value="draft" ${year.status === "draft" ? "selected" : ""}>Rascunho</option><option value="active" ${year.status === "active" ? "selected" : ""}>Ativo</option><option value="closed" ${year.status === "closed" ? "selected" : ""}>Encerrado</option></select></label><button type="button" data-save-year-status="${escapeHtml(year.id)}">Salvar estado</button>
+          <div>${(year.periods || []).map((period) => `<div class="subject-row"><span>${escapeHtml(period.sequence)}. ${escapeHtml(period.name)} · peso ${escapeHtml(period.weight)} · ${escapeHtml(period.status)}</span><button type="button" data-toggle-period="${escapeHtml(period.id)}" data-period-next="${period.status === "open" ? "closed" : "open"}">${period.status === "open" ? "Encerrar" : "Reabrir"}</button></div>`).join("") || "<p>Nenhum período configurado.</p>"}</div>
+        </article>`).join("") : "<p>Nenhum ano letivo configurado.</p>";
+      document.querySelector("[data-gradebook-classes]").innerHTML = data.classes.length ? data.classes.map((item) => `<article class="teacher-card"><h3>${escapeHtml(item.name)}</h3><p>${escapeHtml(item.academic_year_name)} · ${escapeHtml(item.grade_level || "Série não informada")} · ${item.student_count} alunos</p></article>`).join("") : "<p>Nenhuma turma cadastrada.</p>";
+      message.textContent = "Configuração do boletim carregada.";
+    } catch (error) { message.textContent = error.message; }
+  };
   const loadUsers = async () => {
     usersMessage.textContent = "Carregando usuários...";
     try { const data = await api("users"); allUsers = data.users || []; renderUsers(); usersMessage.textContent = `${allUsers.length} contas carregadas (máximo de 500).`; }
@@ -77,6 +102,21 @@
     }
   };
   document.addEventListener("submit", async (event) => {
+    if (event.target.matches("[data-gradebook-form]")) {
+      event.preventDefault();
+      const form = event.target;
+      const body = Object.fromEntries(new FormData(form));
+      const message = document.querySelector("[data-gradebook-message]");
+      try {
+        const response = await fetch(`/api/gradebook?action=${encodeURIComponent(form.dataset.gradebookForm)}`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Não foi possível salvar.");
+        message.textContent = "Alterações salvas.";
+        form.reset();
+        await loadGradebook();
+      } catch (error) { message.textContent = error.message; }
+      return;
+    }
     if (event.target.matches("[data-create-teacher]")) {
       event.preventDefault();
       const form = event.target;
@@ -129,6 +169,23 @@
     }
   });
   document.addEventListener("click", async (event) => {
+    const yearButton = event.target.closest("[data-save-year-status]");
+    const periodButton = event.target.closest("[data-toggle-period]");
+    if (yearButton || periodButton) {
+      const message = document.querySelector("[data-gradebook-message]");
+      const body = yearButton
+        ? { academicYearId: yearButton.dataset.saveYearStatus, status: document.querySelector(`[data-year-status-select="${yearButton.dataset.saveYearStatus}"]`).value }
+        : { periodId: periodButton.dataset.togglePeriod, status: periodButton.dataset.periodNext };
+      const action = yearButton ? "update-year-status" : "update-period-status";
+      try {
+        const response = await fetch(`/api/gradebook?action=${action}`, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Não foi possível atualizar o estado.");
+        message.textContent = "Estado atualizado.";
+        await loadGradebook();
+      } catch (error) { message.textContent = error.message; }
+      return;
+    }
     const deleteResource = event.target.closest("[data-delete-resource]");
     if (deleteResource) {
       if (!confirm("Remover este recurso da disciplina? O arquivo HTML continuará no projeto.")) return;
@@ -169,6 +226,7 @@
   document.querySelector("[data-refresh]").addEventListener("click", load);
   document.querySelector("[data-load-users]").addEventListener("click", loadUsers);
   document.querySelector("[data-load-resources]").addEventListener("click", loadResources);
+  document.querySelector("[data-load-gradebook]").addEventListener("click", loadGradebook);
   document.querySelector("[data-user-search]").addEventListener("input", renderUsers);
   document.querySelector("[data-subject-search]").addEventListener("input", renderSubjects);
   document.addEventListener("DOMContentLoaded", async () => {
@@ -178,6 +236,6 @@
     currentUserId = user.id;
     if (user.type !== "Administrador") { show("Acesso restrito a administradores.", "error"); list.innerHTML = ""; return; }
     await load();
-    await Promise.all([loadUsers(), loadResources()]);
+    await Promise.all([loadUsers(), loadResources(), loadGradebook()]);
   });
 })();

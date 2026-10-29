@@ -1467,6 +1467,22 @@ h3 {
   margin-bottom: 16px;
 }
 
+.gradebook-reports > h2 { display:block; }
+.gradebook-reports > h2::before,.gradebook-reports > h2::after { content:none; }
+.gradebook-report-card { margin-top:16px; padding:20px; border:1px solid var(--cor-borda); border-radius:16px; background:rgba(255,255,255,.035); }
+.gradebook-report-heading,.gradebook-period-heading { display:flex; justify-content:space-between; align-items:center; gap:14px; }
+.gradebook-report-heading strong,.gradebook-report-heading span { display:block; }
+.gradebook-report-heading strong { color:var(--cor-texto); font-size:1.15rem; }
+.gradebook-report-heading span,.gradebook-period-heading span { color:var(--cor-subtexto); font-size:.88rem; }
+.gradebook-report-heading>b { color:var(--cor-ciano); text-align:right; }
+.gradebook-period-list { display:grid; gap:12px; margin-top:16px; }
+.gradebook-period-list>section { margin:0; padding:14px; border:1px solid var(--cor-borda); border-radius:12px; background:rgba(0,0,0,.12); }
+.gradebook-period-heading strong { color:var(--cor-texto); }
+.gradebook-assessment-list { display:grid; gap:8px; margin-top:10px; }
+.gradebook-assessment-list>div { display:grid; grid-template-columns:1fr auto; gap:4px 12px; color:var(--cor-subtexto); font-size:.9rem; }
+.gradebook-assessment-list b { color:var(--cor-texto); }
+.gradebook-assessment-list small { grid-column:1/-1; }
+
 .result-list {
   display: grid;
   gap: 12px;

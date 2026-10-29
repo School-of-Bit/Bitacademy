@@ -200,6 +200,12 @@ window.BitAcademyAuth = (() => {
       const activityData = await api("academic?action=student-activities");
       availableActivities = activityData.activities || [];
     } catch (error) { activitiesError = error.message; }
+    let gradeReports = [];
+    let gradeReportError = "";
+    try {
+      const gradeData = await api("gradebook?action=report");
+      gradeReports = gradeData.reports || [];
+    } catch (error) { gradeReportError = error.message; }
     const bestPercent = results.length ? Math.max(...results.map((result) => result.percent)) : 0;
     const bestGameScore = gameScores.length ? Math.max(...gameScores.map((result) => result.score)) : 0;
     const average = results.length
@@ -228,6 +234,14 @@ window.BitAcademyAuth = (() => {
           <p>${results.length ? "Seu melhor resultado em cada disciplina aparece aqui." : "Ao finalizar um quiz logado, seu melhor resultado aparece automaticamente aqui."}</p>
           <a class="secondary-link" href="Jogos/matematica-infinita.html">Jogar modo infinito</a>
         </div>
+      </section>
+      <section class="gradebook-reports">
+        <p class="eyebrow">Vida escolar</p><h2>Boletim</h2>
+        ${gradeReportError ? `<p>${escapeHtml(gradeReportError)}</p>` : gradeReports.length ? gradeReports.map((report) => `
+          <article class="gradebook-report-card"><div class="gradebook-report-heading"><div><strong>${escapeHtml(report.subject)}</strong><span>${escapeHtml(report.className)} · ${escapeHtml(report.year)}</span></div><b>${report.finalScore === null ? `Média parcial: ${report.annualAverage === null ? "—" : `${report.annualAverage.toFixed(2)}/10`}` : `${report.finalScore.toFixed(2)}/10 · ${report.result === "passed" ? "Aprovado" : report.result === "recovery_pending" ? "Recuperação final pendente" : "Não aprovado"}`}</b></div>
+            ${report.finalRecovery !== null ? `<p>Nota de recuperação final: ${report.finalRecovery.toFixed(2)}/10 · política ${escapeHtml(report.finalRecoveryPolicy === "higher" ? "maior nota" : "média")}</p>` : ""}
+            <div class="gradebook-period-list">${report.periods.map((period) => `<section><div class="gradebook-period-heading"><strong>${escapeHtml(period.sequence)}. ${escapeHtml(period.name)}</strong><span>Peso ${escapeHtml(period.weight)} · ${period.average === null ? "Sem média" : `${period.average.toFixed(2)}/10`}</span></div><div class="gradebook-assessment-list">${period.assessments.map((assessment) => `<div><span>${escapeHtml(assessment.title)} · peso ${escapeHtml(assessment.weight)}</span><b>${assessment.score === null ? "Aguardando nota" : `${assessment.score.toFixed(2)}/10`}</b>${assessment.feedback ? `<small>${escapeHtml(assessment.feedback)}</small>` : ""}</div>`).join("")}${period.recovery !== null ? `<div><span>Recuperação do período</span><b>${period.recovery.toFixed(2)}/10</b></div>` : ""}</div></section>`).join("")}</div>
+          </article>`).join("") : '<p>Seu boletim aparecerá aqui quando sua matrícula e suas disciplinas forem configuradas pela escola.</p>'}
       </section>
       <section>
         <h2>Melhores resultados por disciplina</h2>

@@ -102,6 +102,7 @@
           <span class="teacher-label">Bem-vindo(a), professor</span>
           <h2>${escapeHtml(user.name)}</h2>
           <p>Escolha uma disciplina para começar a administrar sua área.</p>
+          <button type="button" class="teacher-button" data-open-gradebook>Boletim e notas</button>
         </div>
         <div class="teacher-welcome-icon">👨‍🏫</div>
       </section>
@@ -142,6 +143,59 @@
         showSubject(subject);
       });
     });
+    panel.querySelector("[data-open-gradebook]").addEventListener("click", renderGradebookCourses);
+  };
+
+  const renderGradebookCourses = async () => {
+    panel.innerHTML = `<button type="button" class="teacher-back" data-gradebook-home>← Voltar</button><section class="teacher-section"><div class="teacher-section-heading"><div><span class="teacher-label">Avaliações</span><h2>Minhas turmas</h2></div><p>Selecione uma turma e disciplina para lançar notas no boletim.</p></div><div data-gradebook-courses class="subject-grid"><p class="teacher-loading">Carregando turmas...</p></div></section>`;
+    panel.querySelector("[data-gradebook-home]").addEventListener("click", render);
+    const list = panel.querySelector("[data-gradebook-courses]");
+    try {
+      const data = await api("/api/gradebook?action=courses");
+      list.innerHTML = data.courses.length ? data.courses.map((course) => `
+        <article class="subject-card"><div class="subject-card-icon">📝</div><div class="subject-card-content"><span class="subject-label">${escapeHtml(course.academic_year_name)}</span><h3>${escapeHtml(course.subject_name)}</h3><p>${escapeHtml(course.class_name)} · ${course.student_count} estudantes</p><div class="subject-actions"><button type="button" class="teacher-button" data-gradebook-course="${escapeHtml(course.id)}">Abrir diário</button></div></div></article>
+      `).join("") : `<div class="teacher-empty compact"><h3>Nenhuma turma atribuída</h3><p>Peça ao administrador para vincular uma turma à sua disciplina.</p></div>`;
+      list.querySelectorAll("[data-gradebook-course]").forEach((button) => button.addEventListener("click", () => renderGradebookCourse(button.dataset.gradebookCourse)));
+    } catch (error) { list.innerHTML = `<p class="teacher-message error">${escapeHtml(error.message)}</p>`; }
+  };
+
+  const renderGradebookCourse = async (offeringId) => {
+    panel.innerHTML = `<button type="button" class="teacher-back" data-gradebook-courses-back>← Voltar às turmas</button><div data-gradebook-detail class="teacher-loading">Carregando diário...</div>`;
+    panel.querySelector("[data-gradebook-courses-back]").addEventListener("click", renderGradebookCourses);
+    const content = panel.querySelector("[data-gradebook-detail]");
+    try {
+      const data = await api(`/api/gradebook?action=course&offering=${encodeURIComponent(offeringId)}`);
+      const { course, periods, assessments, students, grades } = data;
+      const gradeFor = (assessmentId, enrollmentId) => grades.find((item) => item.assessment_id === assessmentId && item.enrollment_id === enrollmentId);
+      content.className = "gradebook-detail";
+      content.innerHTML = `
+        <section class="teacher-welcome"><div><span class="teacher-label">${escapeHtml(course.academic_year_name)} · ${escapeHtml(course.class_name)}</span><h2>${escapeHtml(course.subject_name)}</h2><p>${students.length} estudantes · Escala de 0 a 10</p></div><div class="teacher-welcome-icon">📊</div></section>
+        <section class="teacher-section"><div class="teacher-section-heading"><div><span class="teacher-label">Nova avaliação</span><h2>Criar avaliação ou recuperação</h2></div><p>Pesos relativos às demais avaliações do período.</p></div>
+          <form class="teacher-form" data-gradebook-new-assessment><input type="hidden" name="courseOfferingId" value="${escapeHtml(offeringId)}"><label>Título<input name="title" maxlength="160" required></label><label>Tipo<select name="assessmentType"><option value="regular">Avaliação regular</option><option value="period_recovery">Recuperação de período</option><option value="final_recovery">Recuperação final anual</option></select></label><label>Período<select name="gradingPeriodId"><option value="">Selecione um período</option>${periods.map((period) => `<option value="${escapeHtml(period.id)}">${escapeHtml(period.sequence)}. ${escapeHtml(period.name)} · peso ${escapeHtml(period.weight)}</option>`).join("")}</select></label><div class="teacher-form-row"><label>Peso<input name="weight" type="number" min="0.001" max="1000" step="0.001" value="1" required></label><label>Prazo opcional<input name="dueAt" type="datetime-local"></label></div><label>Descrição opcional<textarea name="description" rows="2"></textarea></label><div class="teacher-form-actions"><button class="teacher-button" type="submit">Criar avaliação</button></div><div class="teacher-message" data-gradebook-message aria-live="polite"></div></form></section>
+        <section class="teacher-section"><div class="teacher-section-heading"><div><span class="teacher-label">Diário</span><h2>Avaliações cadastradas</h2></div><p>As notas ficam visíveis aos estudantes somente depois da publicação.</p></div>
+          ${assessments.length ? assessments.map((assessment) => `
+            <article class="teacher-list-item grade-assessment"><div class="teacher-list-heading"><div><div class="teacher-badges"><span class="teacher-badge">${assessment.assessment_type === "regular" ? "Regular" : assessment.assessment_type === "period_recovery" ? "Recuperação do período" : "Recuperação final"}</span><span class="teacher-badge">Peso ${escapeHtml(assessment.weight)}</span><span class="teacher-badge">${escapeHtml(assessment.status)}</span></div><h3>${escapeHtml(assessment.title)}</h3><p>${escapeHtml(assessment.description || "")} ${assessment.due_at ? `Prazo: ${escapeHtml(formatDate(assessment.due_at))}` : ""}</p></div><button class="teacher-button" type="button" data-publish-assessment="${escapeHtml(assessment.id)}" ${assessment.status === "closed" ? "disabled" : ""}>Publicar notas</button></div>
+              ${students.length ? `<div class="grade-student-list">${students.map((student) => { const grade = gradeFor(assessment.id, student.enrollment_id); return `<form class="grade-student-row" data-save-grade data-assessment="${escapeHtml(assessment.id)}" data-enrollment="${escapeHtml(student.enrollment_id)}"><strong>${escapeHtml(student.student_name)}</strong><label>Nota<input name="score" type="number" min="0" max="10" step="0.01" value="${grade?.score ?? ""}" placeholder="Sem nota" ${assessment.status === "closed" ? "disabled" : ""}></label><label>Comentário<input name="feedback" maxlength="2000" value="${escapeHtml(grade?.feedback || "")}" ${assessment.status === "closed" ? "disabled" : ""}></label><div class="grade-row-actions"><button class="teacher-button" type="submit" ${assessment.status === "closed" ? "disabled" : ""}>Salvar</button><span class="teacher-message" data-row-message aria-live="polite"></span></div></form>`; }).join("")}</div>` : `<p class="teacher-empty compact">Nenhum aluno matriculado nesta turma.</p>`}
+            </article>`).join("") : `<div class="teacher-empty compact"><h3>Nenhuma avaliação criada</h3><p>Crie a primeira avaliação acima.</p></div>`}
+        </section>`;
+      content.querySelector("[data-gradebook-new-assessment]").addEventListener("submit", async (event) => {
+        event.preventDefault(); const form = event.currentTarget; const body = Object.fromEntries(new FormData(form));
+        if (body.dueAt) body.dueAt = new Date(body.dueAt).toISOString();
+        const type = body.assessmentType;
+        if (type === "final_recovery") body.gradingPeriodId = "";
+        try { await api("/api/gradebook?action=create-assessment", { method: "POST", body: JSON.stringify(body) }); await renderGradebookCourse(offeringId); }
+        catch (error) { showMessage(form.querySelector("[data-gradebook-message]"), error.message, "error"); }
+      });
+      content.querySelectorAll("[data-save-grade]").forEach((form) => form.addEventListener("submit", async (event) => {
+        event.preventDefault(); const row = event.currentTarget; const values = Object.fromEntries(new FormData(row));
+        try { await api("/api/gradebook?action=save-grade", { method: "POST", body: JSON.stringify({ assessmentId: row.dataset.assessment, enrollmentId: row.dataset.enrollment, ...values }) }); showMessage(row.querySelector("[data-row-message]"), "Nota salva.", "success"); }
+        catch (error) { showMessage(row.querySelector("[data-row-message]"), error.message, "error"); }
+      }));
+      content.querySelectorAll("[data-publish-assessment]").forEach((button) => button.addEventListener("click", async () => {
+        try { await api("/api/gradebook?action=publish-assessment", { method: "POST", body: JSON.stringify({ assessmentId: button.dataset.publishAssessment }) }); await renderGradebookCourse(offeringId); }
+        catch (error) { alert(error.message); }
+      }));
+    } catch (error) { content.innerHTML = `<section class="teacher-empty"><h2>Não foi possível abrir o diário</h2><p>${escapeHtml(error.message)}</p></section>`; }
   };
 
   const showSubject = async (subject) => {

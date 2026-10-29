@@ -475,6 +475,22 @@
   text-align: center;
 }
 
+.gradebook-detail { display: grid; gap: 28px; }
+.gradebook-detail .teacher-welcome { margin: 0; }
+.grade-assessment { display: grid; gap: 16px; margin: 14px 0; }
+.grade-assessment .teacher-list-heading { align-items: flex-start; }
+.grade-assessment .teacher-list-heading p { margin: 6px 0 0; }
+.grade-student-list { display: grid; gap: 10px; }
+.grade-student-row { display: grid; grid-template-columns: minmax(150px,1fr) 110px minmax(180px,1.4fr) auto; gap: 12px; align-items: end; padding: 12px; border: 1px solid var(--cor-borda); border-radius: 12px; background: rgba(255,255,255,.025); }
+.grade-student-row>strong { align-self: center; }
+.grade-student-row label { display: grid; gap: 5px; color: var(--cor-subtexto); font-size: .82rem; }
+.grade-student-row input { min-width: 0; width: 100%; padding: 9px; border: 1px solid var(--cor-borda); border-radius: 8px; background: #151525; color: var(--cor-texto); font: inherit; }
+.grade-student-row .teacher-button { padding: 9px 12px; }
+.grade-row-actions { display:grid; gap:4px; }
+.grade-row-actions .teacher-message { min-height:0; }
+.gradebook-detail .teacher-message { margin-top: 5px; }
+@media(max-width:760px){.grade-student-row{grid-template-columns:1fr 1fr}.grade-student-row>strong,.grade-student-row label:nth-of-type(2){grid-column:1/-1}.grade-assessment .teacher-list-heading{flex-direction:column}}
+
 @media (max-width: 760px) {
   .teacher-header {
     align-items: flex-start;

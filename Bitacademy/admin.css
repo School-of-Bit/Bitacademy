@@ -4,3 +4,4 @@
 .subject-count{color:#63728c;font-weight:600}.subject-admin-list .subject-form{scroll-margin-top:20px}
 .subject-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px}.subject-title-row h3{margin:0}.subject-title-row a{color:#3158b7;font-weight:700;text-decoration:none}
 .resource-actions{display:flex;gap:10px}.resource-actions .danger-button{background:#a83232}
+.gradebook-admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.gradebook-admin-grid>div>.subject-admin-list{margin-top:12px}.gradebook-admin-grid .teacher-card label{display:grid;gap:6px;margin:10px 0;color:#52627f;font-weight:600}.gradebook-admin-grid .teacher-card select{padding:8px;border:1px solid #ccd6e5;border-radius:7px;background:white;font:inherit}.gradebook-admin-grid>form{margin:0}@media(max-width:760px){.gradebook-admin-grid{grid-template-columns:1fr}}
