@@ -1478,6 +1478,7 @@ h3 {
 .gradebook-period-list { display:grid; gap:12px; margin-top:16px; }
 .gradebook-period-list>section { margin:0; padding:14px; border:1px solid var(--cor-borda); border-radius:12px; background:rgba(0,0,0,.12); }
 .gradebook-period-heading strong { color:var(--cor-texto); }
+.gradebook-component-list>section { margin-top:8px; }
 .gradebook-assessment-list { display:grid; gap:8px; margin-top:10px; }
 .gradebook-assessment-list>div { display:grid; grid-template-columns:1fr auto; gap:4px 12px; color:var(--cor-subtexto); font-size:.9rem; }
 .gradebook-assessment-list b { color:var(--cor-texto); }

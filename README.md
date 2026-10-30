@@ -129,7 +129,7 @@ O cadastro administrativo aponta para um arquivo HTML que já faz parte do proje
 
 Para implementar jogos ranqueados com pontuação validada no servidor, consulte [`docs/JOGOS_PARA_DESENVOLVEDORES.md`](docs/JOGOS_PARA_DESENVOLVEDORES.md). O painel registra o acesso ao arquivo, mas cada novo modo requer integração própria com a API e o armazenamento de sessões.
 
-A configuração e as regras do boletim estão em [`Bitacademy/docs/BOLETIM_E_NOTAS.md`](Bitacademy/docs/BOLETIM_E_NOTAS.md). Em bancos já configurados, execute `Bitacademy/database/gradebook.sql` no Neon para criar sua estrutura.
+A configuração e as regras do boletim estão em [`docs/BOLETIM_E_NOTAS.md`](docs/BOLETIM_E_NOTAS.md). Em bancos já configurados, execute novamente `Bitacademy/database/gradebook.sql` no Neon para criar as tabelas dos componentes avaliativos e associá-las às avaliações existentes.
 
 ## Publicação na Vercel
 

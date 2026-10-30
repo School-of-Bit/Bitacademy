@@ -110,12 +110,16 @@ async function updatePeriodStatus(body, res) {
       WHERE p.id = ${periodId} AND (
         NOT EXISTS (SELECT 1 FROM assessments a WHERE a.course_offering_id = o.id AND a.grading_period_id = p.id
           AND a.assessment_type = 'regular' AND a.status = 'published')
+        OR (SELECT COALESCE(SUM(ac.weight_percent), 0) FROM assessment_components ac
+          WHERE ac.course_offering_id = o.id AND ac.grading_period_id = p.id) <> 100
+        OR EXISTS (SELECT 1 FROM assessment_components ac WHERE ac.course_offering_id = o.id AND ac.grading_period_id = p.id
+          AND NOT EXISTS (SELECT 1 FROM assessments a WHERE a.component_id = ac.id AND a.assessment_type = 'regular' AND a.status = 'published'))
         OR EXISTS (SELECT 1 FROM assessments a JOIN student_enrollments se ON se.class_group_id = c.id AND se.status = 'active'
           LEFT JOIN grades g ON g.assessment_id = a.id AND g.enrollment_id = se.id
           WHERE a.course_offering_id = o.id AND a.grading_period_id = p.id
-            AND a.status = 'published' AND (g.id IS NULL OR g.score IS NULL))
+            AND a.status = 'published' AND (g.id IS NULL OR g.grade_status = 'pending'))
       ) LIMIT 1`;
-    if (incomplete.length) return res.status(409).json({ error: "Há disciplinas sem avaliação publicada ou notas pendentes. Complete o diário antes de encerrar o período." });
+    if (incomplete.length) return res.status(409).json({ error: "Há disciplinas com componentes incompletos, pesos diferentes de 100%, avaliações não publicadas ou notas pendentes. Complete o diário antes de encerrar o período." });
   }
   const rows = await sql`UPDATE grading_periods p SET status = ${status}
     FROM academic_years y WHERE p.id = ${periodId} AND p.academic_year_id = y.id AND y.status <> 'closed'
@@ -185,24 +189,84 @@ async function getCourseDetails(user, offeringId, res) {
     JOIN academic_years y ON y.id = c.academic_year_id JOIN subjects s ON s.id = o.subject_id
     WHERE o.id = ${offeringId} AND o.teacher_id = ${user.id} AND o.status = 'active' LIMIT 1`;
   if (!offering.length) return res.status(404).json({ error: "Turma não encontrada entre suas disciplinas." });
-  const [periods, assessments, students, grades] = await Promise.all([
+  const [periods, components, assessments, students, grades] = await Promise.all([
     sql`SELECT id, name, sequence, starts_on, ends_on, weight, status FROM grading_periods
       WHERE academic_year_id = ${offering[0].academic_year_id} ORDER BY sequence`,
-    sql`SELECT id, grading_period_id, title, description, assessment_type, weight, due_at, status
-      FROM assessments WHERE course_offering_id = ${offeringId} ORDER BY created_at DESC`,
+    sql`SELECT id, grading_period_id, name, weight_percent, status FROM assessment_components
+      WHERE course_offering_id = ${offeringId} ORDER BY grading_period_id, created_at`,
+    sql`SELECT a.id, a.grading_period_id, a.component_id, c.name AS component_name,
+        a.title, a.description, a.assessment_type, a.weight, a.due_at, a.status
+      FROM assessments a LEFT JOIN assessment_components c ON c.id = a.component_id
+      WHERE a.course_offering_id = ${offeringId} ORDER BY a.created_at DESC`,
     sql`SELECT e.id AS enrollment_id, u.id AS student_id, u.name AS student_name
       FROM student_enrollments e JOIN users u ON u.id = e.student_id
       WHERE e.class_group_id = ${offering[0].class_group_id} AND e.status = 'active' ORDER BY u.name`,
-    sql`SELECT g.id, g.enrollment_id, g.assessment_id, g.score, g.feedback
+    sql`SELECT g.id, g.enrollment_id, g.assessment_id, g.score, g.grade_status, g.feedback
       FROM grades g JOIN assessments a ON a.id = g.assessment_id
       WHERE a.course_offering_id = ${offeringId}`
   ]);
-  return res.status(200).json({ course: offering[0], periods, assessments, students, grades });
+  return res.status(200).json({ course: offering[0], periods, components, assessments, students, grades });
+}
+
+async function createComponent(user, body, res) {
+  const offeringId = String(body.courseOfferingId || "");
+  const periodId = String(body.gradingPeriodId || "");
+  const name = String(body.name || "").trim();
+  const weight = Number(body.weightPercent);
+  if (!UUID.test(offeringId) || !UUID.test(periodId)) return res.status(400).json({ error: "Selecione uma turma e um período válidos." });
+  if (name.length < 2 || name.length > 100) return res.status(400).json({ error: "O componente deve ter entre 2 e 100 caracteres." });
+  if (!Number.isFinite(weight) || weight <= 0 || weight > 100 || Math.abs(weight * 100 - Math.round(weight * 100)) > 1e-8) return res.status(400).json({ error: "O peso deve estar entre 0 e 100%, com no máximo duas casas decimais." });
+  const target = await sql`SELECT o.id FROM course_offerings o JOIN class_groups c ON c.id = o.class_group_id
+    JOIN grading_periods p ON p.academic_year_id = c.academic_year_id
+    WHERE o.id = ${offeringId} AND o.teacher_id = ${user.id} AND o.status = 'active'
+      AND p.id = ${periodId} AND p.status = 'open' LIMIT 1`;
+  if (!target.length) return res.status(404).json({ error: "Turma ou período não encontrado entre suas disciplinas." });
+  const locked = await sql`SELECT id FROM assessment_components WHERE course_offering_id = ${offeringId}
+    AND grading_period_id = ${periodId} AND status = 'locked' LIMIT 1`;
+  if (locked.length) return res.status(409).json({ error: "A composição foi congelada depois da primeira publicação." });
+  const total = await sql`SELECT COALESCE(SUM(weight_percent), 0)::numeric AS value FROM assessment_components
+    WHERE course_offering_id = ${offeringId} AND grading_period_id = ${periodId}`;
+  if (Number(total[0].value) + weight > 100) return res.status(400).json({ error: "A soma dos pesos dos componentes não pode ultrapassar 100%." });
+  const rows = await sql`INSERT INTO assessment_components (course_offering_id, grading_period_id, name, weight_percent)
+    VALUES (${offeringId}, ${periodId}, ${name}, ${weight}) RETURNING *`;
+  return res.status(201).json({ component: rows[0] });
+}
+
+async function updateComponent(user, body, res) {
+  const componentId = String(body.componentId || "");
+  const name = String(body.name || "").trim();
+  const weight = Number(body.weightPercent);
+  if (!UUID.test(componentId)) return res.status(400).json({ error: "Componente inválido." });
+  if (name.length < 2 || name.length > 100 || !Number.isFinite(weight) || weight <= 0 || weight > 100 || Math.abs(weight * 100 - Math.round(weight * 100)) > 1e-8) return res.status(400).json({ error: "Informe nome válido e peso entre 0 e 100%, com no máximo duas casas decimais." });
+  const current = await sql`SELECT c.id, c.course_offering_id, c.grading_period_id FROM assessment_components c
+    JOIN course_offerings o ON o.id = c.course_offering_id JOIN grading_periods p ON p.id = c.grading_period_id
+    WHERE c.id = ${componentId} AND o.teacher_id = ${user.id} AND c.status = 'draft' AND p.status = 'open' LIMIT 1`;
+  if (!current.length) return res.status(409).json({ error: "Componente não encontrado, bloqueado ou de período encerrado." });
+  const total = await sql`SELECT COALESCE(SUM(weight_percent), 0)::numeric AS value FROM assessment_components
+    WHERE course_offering_id = ${current[0].course_offering_id} AND grading_period_id = ${current[0].grading_period_id} AND id <> ${componentId}`;
+  if (Number(total[0].value) + weight > 100) return res.status(400).json({ error: "A soma dos pesos dos componentes não pode ultrapassar 100%." });
+  const rows = await sql`UPDATE assessment_components SET name = ${name}, weight_percent = ${weight}, updated_at = NOW()
+    WHERE id = ${componentId} AND status = 'draft' RETURNING *`;
+  if (!rows.length) return res.status(409).json({ error: "A composição foi congelada por uma publicação recente." });
+  return res.status(200).json({ component: rows[0] });
+}
+
+async function deleteComponent(user, body, res) {
+  const componentId = String(body.componentId || "");
+  if (!UUID.test(componentId)) return res.status(400).json({ error: "Componente inválido." });
+  const rows = await sql`DELETE FROM assessment_components c USING course_offerings o, grading_periods p
+    WHERE c.id = ${componentId} AND c.course_offering_id = o.id AND o.teacher_id = ${user.id}
+      AND c.grading_period_id = p.id AND c.status = 'draft' AND p.status = 'open'
+      AND NOT EXISTS (SELECT 1 FROM assessments a WHERE a.component_id = c.id)
+    RETURNING c.id`;
+  if (!rows.length) return res.status(409).json({ error: "O componente está bloqueado, possui avaliações ou não pertence às suas turmas." });
+  return res.status(200).json({ ok: true });
 }
 
 async function createAssessment(user, body, res) {
   const offeringId = String(body.courseOfferingId || "");
   const periodId = String(body.gradingPeriodId || "");
+  const componentId = String(body.componentId || "");
   const title = String(body.title || "").trim();
   const description = String(body.description || "").trim() || null;
   const type = String(body.assessmentType || "regular");
@@ -211,6 +275,7 @@ async function createAssessment(user, body, res) {
   if (!UUID.test(offeringId) || title.length < 2 || title.length > 160) return res.status(400).json({ error: "Informe uma turma e um título válidos." });
   if (!["regular", "period_recovery", "final_recovery"].includes(type)) return res.status(400).json({ error: "Tipo de avaliação inválido." });
   if ((type === "final_recovery" && periodId) || (type !== "final_recovery" && !UUID.test(periodId))) return res.status(400).json({ error: "Selecione o período para esta avaliação." });
+  if ((type === "regular" && !UUID.test(componentId)) || (type !== "regular" && componentId)) return res.status(400).json({ error: "Selecione um componente para a avaliação regular." });
   if (!Number.isFinite(weight) || weight <= 0 || weight > 1000) return res.status(400).json({ error: "O peso da avaliação deve ser maior que zero." });
   if (body.dueAt && Number.isNaN(dueAt.getTime())) return res.status(400).json({ error: "Data de entrega inválida." });
   const course = await sql`SELECT o.id, c.academic_year_id FROM course_offerings o JOIN class_groups c ON c.id = o.class_group_id
@@ -221,8 +286,17 @@ async function createAssessment(user, body, res) {
     const period = await sql`SELECT id FROM grading_periods WHERE id = ${periodId} AND academic_year_id = ${course[0].academic_year_id} AND status = 'open' LIMIT 1`;
     if (!period.length) return res.status(400).json({ error: "O período não pertence ao ano letivo ou está encerrado." });
   }
-  const created = await sql`INSERT INTO assessments (course_offering_id, grading_period_id, title, description, assessment_type, weight, due_at, created_by)
-    VALUES (${offeringId}, ${periodId || null}, ${title}, ${description}, ${type}, ${weight}, ${dueAt ? dueAt.toISOString() : null}, ${user.id}) RETURNING *`;
+  if (type === "regular") {
+    const component = await sql`SELECT id FROM assessment_components WHERE id = ${componentId}
+      AND course_offering_id = ${offeringId} AND grading_period_id = ${periodId} LIMIT 1`;
+    if (!component.length) return res.status(400).json({ error: "O componente não pertence a esta disciplina e período." });
+  }
+  if (type === "final_recovery") {
+    const openPeriods = await sql`SELECT id FROM grading_periods WHERE academic_year_id = ${course[0].academic_year_id} AND status <> 'closed' LIMIT 1`;
+    if (openPeriods.length) return res.status(409).json({ error: "Feche todos os períodos antes de criar a recuperação final." });
+  }
+  const created = await sql`INSERT INTO assessments (course_offering_id, grading_period_id, component_id, title, description, assessment_type, weight, due_at, created_by)
+    VALUES (${offeringId}, ${periodId || null}, ${componentId || null}, ${title}, ${description}, ${type}, ${weight}, ${dueAt ? dueAt.toISOString() : null}, ${user.id}) RETURNING *`;
   return res.status(201).json({ assessment: created[0] });
 }
 
@@ -230,8 +304,12 @@ async function updateGrade(user, body, res) {
   const assessmentId = String(body.assessmentId || "");
   const enrollmentId = String(body.enrollmentId || "");
   const score = body.score === "" || body.score === null || body.score === undefined ? null : Number(body.score);
+  const gradeStatus = String(body.gradeStatus || (score === null ? "pending" : "scored"));
   const feedback = String(body.feedback || "").trim() || null;
   if (!UUID.test(assessmentId) || !UUID.test(enrollmentId)) return res.status(400).json({ error: "Avaliação ou matrícula inválida." });
+  if (!["pending", "scored", "excused"].includes(gradeStatus)) return res.status(400).json({ error: "Situação da nota inválida." });
+  if (gradeStatus === "scored" && score === null) return res.status(400).json({ error: "Informe uma nota para uma avaliação corrigida." });
+  if (gradeStatus !== "scored" && score !== null) return res.status(400).json({ error: "Notas pendentes ou dispensadas não podem conter pontuação." });
   if (score !== null && (!Number.isFinite(score) || score < 0 || score > 10)) return res.status(400).json({ error: "A nota deve estar entre 0 e 10." });
   const target = await sql`SELECT a.id, a.status AS assessment_status, o.class_group_id, p.status AS period_status, y.status AS year_status
     FROM assessments a JOIN course_offerings o ON o.id = a.course_offering_id
@@ -242,19 +320,20 @@ async function updateGrade(user, body, res) {
   if (!target.length) return res.status(404).json({ error: "A avaliação ou aluno não pertence a uma turma sua." });
   if (target[0].assessment_status === "closed" || target[0].period_status === "closed" || target[0].year_status === "closed") return res.status(409).json({ error: "Este período está encerrado e não aceita alterações." });
   const saved = await sql`WITH previous AS (
-      SELECT id, score, feedback, TRUE AS existed FROM grades WHERE assessment_id = ${assessmentId} AND enrollment_id = ${enrollmentId}
+      SELECT id, score, grade_status, feedback, TRUE AS existed FROM grades WHERE assessment_id = ${assessmentId} AND enrollment_id = ${enrollmentId}
     ), changed AS (
-      INSERT INTO grades (assessment_id, enrollment_id, score, feedback, entered_by)
-      VALUES (${assessmentId}, ${enrollmentId}, ${score}, ${feedback}, ${user.id})
-      ON CONFLICT (assessment_id, enrollment_id) DO UPDATE SET score = EXCLUDED.score, feedback = EXCLUDED.feedback,
+      INSERT INTO grades (assessment_id, enrollment_id, score, grade_status, feedback, entered_by)
+      VALUES (${assessmentId}, ${enrollmentId}, ${score}, ${gradeStatus}, ${feedback}, ${user.id})
+      ON CONFLICT (assessment_id, enrollment_id) DO UPDATE SET score = EXCLUDED.score, grade_status = EXCLUDED.grade_status, feedback = EXCLUDED.feedback,
         entered_by = EXCLUDED.entered_by, updated_at = NOW()
       RETURNING *
     ), audit AS (
-      INSERT INTO grade_change_log (grade_id, changed_by, previous_score, new_score, previous_feedback, new_feedback)
-      SELECT changed.id, ${user.id}, previous.score, changed.score, previous.feedback, changed.feedback
+      INSERT INTO grade_change_log (grade_id, changed_by, previous_score, new_score, previous_grade_status, new_grade_status, previous_feedback, new_feedback)
+      SELECT changed.id, ${user.id}, previous.score, changed.score, previous.grade_status, changed.grade_status, previous.feedback, changed.feedback
       FROM changed LEFT JOIN previous ON TRUE
       WHERE NOT COALESCE(previous.existed, FALSE)
-        OR previous.score IS DISTINCT FROM changed.score OR previous.feedback IS DISTINCT FROM changed.feedback
+        OR previous.score IS DISTINCT FROM changed.score OR previous.grade_status IS DISTINCT FROM changed.grade_status
+        OR previous.feedback IS DISTINCT FROM changed.feedback
       RETURNING id
     ) SELECT changed.* FROM changed`;
   return res.status(200).json({ grade: saved[0] });
@@ -263,6 +342,20 @@ async function updateGrade(user, body, res) {
 async function publishAssessment(user, body, res) {
   const id = String(body.assessmentId || "");
   if (!UUID.test(id)) return res.status(400).json({ error: "Avaliação inválida." });
+  const target = await sql`SELECT a.id, a.assessment_type, a.component_id, a.grading_period_id, a.course_offering_id,
+      y.id AS academic_year_id, p.status AS period_status, y.status AS year_status
+    FROM assessments a JOIN course_offerings o ON o.id = a.course_offering_id
+    JOIN class_groups c ON c.id = o.class_group_id JOIN academic_years y ON y.id = c.academic_year_id
+    LEFT JOIN grading_periods p ON p.id = a.grading_period_id
+    WHERE a.id = ${id} AND o.teacher_id = ${user.id} AND o.status = 'active' LIMIT 1`;
+  if (!target.length || target[0].year_status === "closed" || target[0].period_status === "closed") return res.status(404).json({ error: "Avaliação não encontrada ou período encerrado." });
+  if (target[0].assessment_type !== "final_recovery") {
+    const totals = await sql`SELECT COALESCE(SUM(weight_percent), 0)::numeric AS value FROM assessment_components
+      WHERE course_offering_id = ${target[0].course_offering_id} AND grading_period_id = ${target[0].grading_period_id}`;
+    if (Number(totals[0].value) !== 100) return res.status(409).json({ error: "Os componentes avaliativos precisam somar exatamente 100% antes da publicação." });
+    await sql`UPDATE assessment_components SET status = 'locked', updated_at = NOW()
+      WHERE course_offering_id = ${target[0].course_offering_id} AND grading_period_id = ${target[0].grading_period_id}`;
+  }
   const rows = await sql`UPDATE assessments a SET status = 'published', updated_at = NOW()
     FROM course_offerings o, class_groups c, academic_years y
     WHERE a.id = ${id} AND a.course_offering_id = o.id AND o.teacher_id = ${user.id} AND o.status = 'active'
@@ -278,8 +371,9 @@ async function studentReport(user, res) {
       y.status AS year_status, y.passing_score, y.period_recovery_policy, y.final_recovery_policy,
       o.id AS offering_id, s.id AS subject_id, s.name AS subject_name,
       p.id AS period_id, p.name AS period_name, p.sequence, p.weight AS period_weight, p.status AS period_status,
-      a.id AS assessment_id, a.title AS assessment_title, a.assessment_type, a.weight AS assessment_weight,
-      a.due_at, g.score, g.feedback
+      a.id AS assessment_id, a.component_id, ac.name AS component_name, ac.weight_percent AS component_weight,
+      a.title AS assessment_title, a.assessment_type, a.weight AS assessment_weight,
+      a.due_at, g.score, g.grade_status, g.feedback
     FROM student_enrollments e JOIN class_groups c ON c.id = e.class_group_id
     JOIN academic_years y ON y.id = c.academic_year_id
     JOIN course_offerings o ON o.class_group_id = c.id AND o.status = 'active'
@@ -287,6 +381,7 @@ async function studentReport(user, res) {
     LEFT JOIN grading_periods p ON p.academic_year_id = y.id
     LEFT JOIN assessments a ON a.course_offering_id = o.id AND a.status = 'published'
       AND (a.grading_period_id = p.id OR (a.grading_period_id IS NULL AND a.assessment_type = 'final_recovery'))
+    LEFT JOIN assessment_components ac ON ac.id = a.component_id
     LEFT JOIN grades g ON g.assessment_id = a.id AND g.enrollment_id = e.id
     WHERE e.student_id = ${user.id} AND e.status = 'active'
     ORDER BY y.starts_on DESC, s.name, p.sequence, a.created_at`;
@@ -308,23 +403,32 @@ async function studentReport(user, res) {
     }
     if (!report.periods.has(row.period_id)) report.periods.set(row.period_id, {
       id: row.period_id, name: row.period_name, sequence: Number(row.sequence), weight: Number(row.period_weight),
-      status: row.period_status, assessments: [], recovery: null, average: null
+      status: row.period_status, components: new Map(), recovery: null, average: null
     });
     const period = report.periods.get(row.period_id);
     if (!row.assessment_id) continue;
     const assessment = {
       id: row.assessment_id, title: row.assessment_title, type: row.assessment_type,
       weight: Number(row.assessment_weight), score: row.score === null ? null : Number(row.score),
-      feedback: row.feedback, dueAt: row.due_at
+      feedback: row.feedback, gradeStatus: row.grade_status || (row.score === null ? "pending" : "scored"), dueAt: row.due_at
     };
     if (assessment.type === "period_recovery") period.recovery = assessment.score;
-    else period.assessments.push(assessment);
+    else if (assessment.type === "regular" && row.component_id) {
+      if (!period.components.has(row.component_id)) period.components.set(row.component_id, {
+        id: row.component_id, name: row.component_name, weight: Number(row.component_weight), assessments: []
+      });
+      period.components.get(row.component_id).assessments.push(assessment);
+    }
   }
   const reports = [...reportMap.values()].map((report) => {
     const periods = [...report.periods.values()].map((period) => {
-      const baseAverage = weightedAverage(period.assessments, "score");
+      const components = [...period.components.values()].map((component) => ({
+        ...component,
+        average: weightedAverage(component.assessments, "score")
+      }));
+      const baseAverage = weightedAverage(components, "average");
       period.average = applyRecovery(baseAverage, period.recovery, report.periodRecoveryPolicy);
-      return { ...period, baseAverage, average: period.average };
+      return { ...period, components, baseAverage, average: period.average };
     });
     const allPeriodsEvaluated = periods.length > 0 && periods.every((period) => period.average !== null && period.status === "closed");
     const annualAverage = weightedAverage(periods, "average");
@@ -372,8 +476,11 @@ module.exports = async function handler(req, res) {
       if (action === "enroll-student") return enrollStudent(body, res);
       return assignCourse(body, res);
     }
-    if (["create-assessment", "save-grade", "publish-assessment"].includes(action)) {
+    if (["create-component", "update-component", "delete-component", "create-assessment", "save-grade", "publish-assessment"].includes(action)) {
       if (user.account_type !== "Professor") return res.status(403).json({ error: "Apenas professores podem lançar notas." });
+      if (action === "create-component") return createComponent(user, body, res);
+      if (action === "update-component") return updateComponent(user, body, res);
+      if (action === "delete-component") return deleteComponent(user, body, res);
       if (action === "create-assessment") return createAssessment(user, body, res);
       if (action === "save-grade") return updateGrade(user, body, res);
       return publishAssessment(user, body, res);

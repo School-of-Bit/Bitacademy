@@ -76,10 +76,24 @@ CREATE TABLE IF NOT EXISTS course_offerings (
     CONSTRAINT course_offering_id_class_unique UNIQUE (id, class_group_id)
 );
 
+CREATE TABLE IF NOT EXISTS assessment_components (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    course_offering_id UUID NOT NULL REFERENCES course_offerings(id) ON DELETE RESTRICT,
+    grading_period_id UUID NOT NULL REFERENCES grading_periods(id) ON DELETE RESTRICT,
+    name VARCHAR(100) NOT NULL,
+    weight_percent NUMERIC(5,2) NOT NULL CHECK (weight_percent > 0 AND weight_percent <= 100),
+    status VARCHAR(12) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'locked')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT assessment_component_unique UNIQUE (course_offering_id, grading_period_id, name),
+    CONSTRAINT assessment_component_id_period_unique UNIQUE (id, grading_period_id)
+);
+
 CREATE TABLE IF NOT EXISTS assessments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     course_offering_id UUID NOT NULL REFERENCES course_offerings(id) ON DELETE RESTRICT,
     grading_period_id UUID REFERENCES grading_periods(id) ON DELETE RESTRICT,
+    component_id UUID REFERENCES assessment_components(id) ON DELETE RESTRICT,
     title VARCHAR(160) NOT NULL,
     description TEXT,
     assessment_type VARCHAR(20) NOT NULL DEFAULT 'regular'
@@ -94,20 +108,69 @@ CREATE TABLE IF NOT EXISTS assessments (
     CONSTRAINT assessment_recovery_period_check CHECK (
         (assessment_type IN ('regular', 'period_recovery') AND grading_period_id IS NOT NULL)
         OR (assessment_type = 'final_recovery' AND grading_period_id IS NULL)
+    ),
+    CONSTRAINT assessment_component_type_check CHECK (
+        (assessment_type = 'regular' AND component_id IS NOT NULL)
+        OR (assessment_type <> 'regular' AND component_id IS NULL)
     )
 );
+
+-- Add the component link to deployments that already ran an earlier gradebook migration.
+ALTER TABLE assessments ADD COLUMN IF NOT EXISTS component_id UUID REFERENCES assessment_components(id) ON DELETE RESTRICT;
+
+-- Existing regular assessments retain their old behavior inside a default 100% component.
+INSERT INTO assessment_components (course_offering_id, grading_period_id, name, weight_percent, status)
+SELECT course_offering_id, grading_period_id, 'Avaliações', 100,
+       CASE WHEN BOOL_OR(status = 'published') THEN 'locked' ELSE 'draft' END
+FROM assessments
+WHERE assessment_type = 'regular'
+GROUP BY course_offering_id, grading_period_id
+ON CONFLICT (course_offering_id, grading_period_id, name) DO NOTHING;
+
+UPDATE assessments a SET component_id = c.id
+FROM assessment_components c
+WHERE a.assessment_type = 'regular' AND a.component_id IS NULL
+  AND c.course_offering_id = a.course_offering_id AND c.grading_period_id = a.grading_period_id
+  AND c.name = 'Avaliações';
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'assessment_component_type_check') THEN
+    ALTER TABLE assessments ADD CONSTRAINT assessment_component_type_check CHECK (
+      (assessment_type = 'regular' AND component_id IS NOT NULL)
+      OR (assessment_type <> 'regular' AND component_id IS NULL)
+    );
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS grades (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     assessment_id UUID NOT NULL REFERENCES assessments(id) ON DELETE RESTRICT,
     enrollment_id UUID NOT NULL REFERENCES student_enrollments(id) ON DELETE RESTRICT,
     score NUMERIC(4,2) CHECK (score BETWEEN 0 AND 10),
+    grade_status VARCHAR(12) NOT NULL DEFAULT 'pending'
+        CHECK (grade_status IN ('pending', 'scored', 'excused')),
     feedback TEXT,
     entered_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     entered_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    CONSTRAINT grade_per_assessment_student_unique UNIQUE (assessment_id, enrollment_id)
+    CONSTRAINT grade_per_assessment_student_unique UNIQUE (assessment_id, enrollment_id),
+    CONSTRAINT grade_status_score_check CHECK (
+        (grade_status = 'scored' AND score IS NOT NULL)
+        OR (grade_status IN ('pending', 'excused') AND score IS NULL)
+    )
 );
+
+ALTER TABLE grades ADD COLUMN IF NOT EXISTS grade_status VARCHAR(12) NOT NULL DEFAULT 'pending';
+UPDATE grades SET grade_status = CASE WHEN score IS NULL THEN 'pending' ELSE 'scored' END
+WHERE grade_status = 'pending' AND score IS NOT NULL;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'grade_status_score_check') THEN
+    ALTER TABLE grades ADD CONSTRAINT grade_status_score_check CHECK (
+      (grade_status = 'scored' AND score IS NOT NULL)
+      OR (grade_status IN ('pending', 'excused') AND score IS NULL)
+    );
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS grade_change_log (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -115,10 +178,15 @@ CREATE TABLE IF NOT EXISTS grade_change_log (
     changed_by UUID NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     previous_score NUMERIC(4,2),
     new_score NUMERIC(4,2),
+    previous_grade_status VARCHAR(12),
+    new_grade_status VARCHAR(12),
     previous_feedback TEXT,
     new_feedback TEXT,
     changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE grade_change_log ADD COLUMN IF NOT EXISTS previous_grade_status VARCHAR(12);
+ALTER TABLE grade_change_log ADD COLUMN IF NOT EXISTS new_grade_status VARCHAR(12);
 
 CREATE INDEX IF NOT EXISTS idx_periods_year_order ON grading_periods(academic_year_id, sequence);
 CREATE INDEX IF NOT EXISTS idx_classes_year_status ON class_groups(academic_year_id, status);
@@ -126,6 +194,7 @@ CREATE INDEX IF NOT EXISTS idx_enrollments_student_status ON student_enrollments
 CREATE UNIQUE INDEX IF NOT EXISTS idx_one_active_class_per_student_year
     ON student_enrollments(student_id, academic_year_id) WHERE status = 'active';
 CREATE INDEX IF NOT EXISTS idx_offerings_teacher_status ON course_offerings(teacher_id, status);
+CREATE INDEX IF NOT EXISTS idx_assessment_components_offering_period ON assessment_components(course_offering_id, grading_period_id);
 CREATE INDEX IF NOT EXISTS idx_assessments_offering_period ON assessments(course_offering_id, grading_period_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_one_period_recovery_per_offering
     ON assessments(course_offering_id, grading_period_id) WHERE assessment_type = 'period_recovery';

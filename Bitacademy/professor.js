@@ -165,24 +165,85 @@
     const content = panel.querySelector("[data-gradebook-detail]");
     try {
       const data = await api(`/api/gradebook?action=course&offering=${encodeURIComponent(offeringId)}`);
-      const { course, periods, assessments, students, grades } = data;
+      const { course, periods, components, assessments, students, grades } = data;
       const gradeFor = (assessmentId, enrollmentId) => grades.find((item) => item.assessment_id === assessmentId && item.enrollment_id === enrollmentId);
+      const componentOptions = components.map((component) => `<option value="${escapeHtml(component.id)}" data-period="${escapeHtml(component.grading_period_id)}">${escapeHtml(component.name)} · ${escapeHtml(component.weight_percent)}%</option>`).join("");
+      const componentPanels = periods.map((period) => {
+        const rows = components.filter((component) => component.grading_period_id === period.id);
+        const total = rows.reduce((sum, component) => sum + Number(component.weight_percent), 0);
+        return `<article class="component-period"><div class="teacher-list-heading"><div><h3>${escapeHtml(period.sequence)}. ${escapeHtml(period.name)}</h3><p>Pesos configurados: ${total.toFixed(2)}% / 100%</p></div><span>${rows.some((component) => component.status === "locked") ? "Composição congelada" : "Rascunho"}</span></div>
+          ${rows.length ? rows.map((component) => `<form class="component-edit-row" data-update-component data-component="${escapeHtml(component.id)}"><label>Componente<input name="name" maxlength="100" value="${escapeHtml(component.name)}" ${component.status === "locked" ? "disabled" : ""}></label><label>Peso (%)<input name="weightPercent" type="number" min="0.01" max="100" step="0.01" value="${escapeHtml(component.weight_percent)}" ${component.status === "locked" ? "disabled" : ""}></label><button type="submit" class="teacher-button" ${component.status === "locked" ? "disabled" : ""}>Salvar</button><button type="button" class="teacher-button secondary" data-delete-component="${escapeHtml(component.id)}" ${component.status === "locked" ? "disabled" : ""}>Remover</button><small data-component-message></small></form>`).join("") : `<p class="teacher-empty compact">Nenhum componente configurado.</p>`}
+          ${rows.some((component) => component.status === "locked") ? `<p class="teacher-message info">Os pesos foram congelados após a primeira publicação de nota neste período.</p>` : ""}
+        </article>`;
+      }).join("");
       content.className = "gradebook-detail";
       content.innerHTML = `
         <section class="teacher-welcome"><div><span class="teacher-label">${escapeHtml(course.academic_year_name)} · ${escapeHtml(course.class_name)}</span><h2>${escapeHtml(course.subject_name)}</h2><p>${students.length} estudantes · Escala de 0 a 10</p></div><div class="teacher-welcome-icon">📊</div></section>
-        <section class="teacher-section"><div class="teacher-section-heading"><div><span class="teacher-label">Nova avaliação</span><h2>Criar avaliação ou recuperação</h2></div><p>Pesos relativos às demais avaliações do período.</p></div>
-          <form class="teacher-form" data-gradebook-new-assessment><input type="hidden" name="courseOfferingId" value="${escapeHtml(offeringId)}"><label>Título<input name="title" maxlength="160" required></label><label>Tipo<select name="assessmentType"><option value="regular">Avaliação regular</option><option value="period_recovery">Recuperação de período</option><option value="final_recovery">Recuperação final anual</option></select></label><label>Período<select name="gradingPeriodId"><option value="">Selecione um período</option>${periods.map((period) => `<option value="${escapeHtml(period.id)}">${escapeHtml(period.sequence)}. ${escapeHtml(period.name)} · peso ${escapeHtml(period.weight)}</option>`).join("")}</select></label><div class="teacher-form-row"><label>Peso<input name="weight" type="number" min="0.001" max="1000" step="0.001" value="1" required></label><label>Prazo opcional<input name="dueAt" type="datetime-local"></label></div><label>Descrição opcional<textarea name="description" rows="2"></textarea></label><div class="teacher-form-actions"><button class="teacher-button" type="submit">Criar avaliação</button></div><div class="teacher-message" data-gradebook-message aria-live="polite"></div></form></section>
+        <section class="teacher-section"><div class="teacher-section-heading"><div><span class="teacher-label">Composição da nota</span><h2>Componentes avaliativos</h2></div><p>Crie categorias livres como Trabalhos, Provas ou Competências. Os pesos devem totalizar 100% em cada período. Ao publicar a primeira avaliação do período, essa composição será congelada.</p></div>
+          <form class="teacher-form component-create-form" data-create-component><label>Período<select name="gradingPeriodId" required><option value="">Selecione</option>${periods.filter((period) => period.status === "open").map((period) => `<option value="${escapeHtml(period.id)}">${escapeHtml(period.sequence)}. ${escapeHtml(period.name)}</option>`).join("")}</select></label><label>Nome do componente<input name="name" maxlength="100" required placeholder="Ex.: Trabalhos"></label><label>Peso do período (%)<input name="weightPercent" type="number" min="0.01" max="100" step="0.01" required placeholder="Ex.: 40"></label><button class="teacher-button" type="submit">Adicionar componente</button><span class="teacher-message" data-component-create-message aria-live="polite"></span></form>
+          <div class="component-period-list">${componentPanels}</div></section>
+        <section class="teacher-section"><div class="teacher-section-heading"><div><span class="teacher-label">Nova avaliação</span><h2>Criar avaliação ou recuperação</h2></div><p>O peso da avaliação é relativo aos outros itens do mesmo componente.</p></div>
+          <form class="teacher-form" data-gradebook-new-assessment><input type="hidden" name="courseOfferingId" value="${escapeHtml(offeringId)}"><label>Título<input name="title" maxlength="160" required></label><label>Tipo<select name="assessmentType" data-assessment-type><option value="regular">Avaliação regular</option><option value="period_recovery">Recuperação de período</option><option value="final_recovery">Recuperação final anual</option></select></label><label data-assessment-period-field>Período<select name="gradingPeriodId" data-assessment-period><option value="">Selecione um período</option>${periods.map((period) => `<option value="${escapeHtml(period.id)}">${escapeHtml(period.sequence)}. ${escapeHtml(period.name)} · peso anual ${escapeHtml(period.weight)}</option>`).join("")}</select></label><label data-assessment-component-field>Componente<select name="componentId" data-assessment-component><option value="">Selecione um componente</option>${componentOptions}</select></label><div class="teacher-form-row"><label>Peso interno<input name="weight" type="number" min="0.001" max="1000" step="0.001" value="1" required></label><label>Prazo opcional<input name="dueAt" type="datetime-local"></label></div><label>Descrição opcional<textarea name="description" rows="2"></textarea></label><div class="teacher-form-actions"><button class="teacher-button" type="submit">Criar avaliação</button></div><div class="teacher-message" data-gradebook-message aria-live="polite"></div></form></section>
         <section class="teacher-section"><div class="teacher-section-heading"><div><span class="teacher-label">Diário</span><h2>Avaliações cadastradas</h2></div><p>As notas ficam visíveis aos estudantes somente depois da publicação.</p></div>
           ${assessments.length ? assessments.map((assessment) => `
-            <article class="teacher-list-item grade-assessment"><div class="teacher-list-heading"><div><div class="teacher-badges"><span class="teacher-badge">${assessment.assessment_type === "regular" ? "Regular" : assessment.assessment_type === "period_recovery" ? "Recuperação do período" : "Recuperação final"}</span><span class="teacher-badge">Peso ${escapeHtml(assessment.weight)}</span><span class="teacher-badge">${escapeHtml(assessment.status)}</span></div><h3>${escapeHtml(assessment.title)}</h3><p>${escapeHtml(assessment.description || "")} ${assessment.due_at ? `Prazo: ${escapeHtml(formatDate(assessment.due_at))}` : ""}</p></div><button class="teacher-button" type="button" data-publish-assessment="${escapeHtml(assessment.id)}" ${assessment.status === "closed" ? "disabled" : ""}>Publicar notas</button></div>
-              ${students.length ? `<div class="grade-student-list">${students.map((student) => { const grade = gradeFor(assessment.id, student.enrollment_id); return `<form class="grade-student-row" data-save-grade data-assessment="${escapeHtml(assessment.id)}" data-enrollment="${escapeHtml(student.enrollment_id)}"><strong>${escapeHtml(student.student_name)}</strong><label>Nota<input name="score" type="number" min="0" max="10" step="0.01" value="${grade?.score ?? ""}" placeholder="Sem nota" ${assessment.status === "closed" ? "disabled" : ""}></label><label>Comentário<input name="feedback" maxlength="2000" value="${escapeHtml(grade?.feedback || "")}" ${assessment.status === "closed" ? "disabled" : ""}></label><div class="grade-row-actions"><button class="teacher-button" type="submit" ${assessment.status === "closed" ? "disabled" : ""}>Salvar</button><span class="teacher-message" data-row-message aria-live="polite"></span></div></form>`; }).join("")}</div>` : `<p class="teacher-empty compact">Nenhum aluno matriculado nesta turma.</p>`}
+            <article class="teacher-list-item grade-assessment"><div class="teacher-list-heading"><div><div class="teacher-badges"><span class="teacher-badge">${assessment.assessment_type === "regular" ? escapeHtml(assessment.component_name || "Regular") : assessment.assessment_type === "period_recovery" ? "Recuperação do período" : "Recuperação final"}</span><span class="teacher-badge">Peso interno ${escapeHtml(assessment.weight)}</span><span class="teacher-badge">${escapeHtml(assessment.status)}</span></div><h3>${escapeHtml(assessment.title)}</h3><p>${escapeHtml(assessment.description || "")} ${assessment.due_at ? `Prazo: ${escapeHtml(formatDate(assessment.due_at))}` : ""}</p></div><button class="teacher-button" type="button" data-publish-assessment="${escapeHtml(assessment.id)}" ${assessment.status === "closed" ? "disabled" : ""}>Publicar notas</button></div>
+              ${students.length ? `<div class="grade-student-list">${students.map((student) => { const grade = gradeFor(assessment.id, student.enrollment_id); const gradeStatus = grade?.grade_status || (grade?.score !== null && grade?.score !== undefined ? "scored" : "pending"); const disabled = assessment.status === "closed"; return `<form class="grade-student-row" data-save-grade data-assessment="${escapeHtml(assessment.id)}" data-enrollment="${escapeHtml(student.enrollment_id)}"><strong>${escapeHtml(student.student_name)}</strong><label>Situação<select name="gradeStatus" data-grade-status ${disabled ? "disabled" : ""}><option value="pending" ${gradeStatus === "pending" ? "selected" : ""}>Pendente</option><option value="scored" ${gradeStatus === "scored" ? "selected" : ""}>Corrigida</option><option value="excused" ${gradeStatus === "excused" ? "selected" : ""}>Dispensada</option></select></label><label>Nota<input name="score" data-grade-score type="number" min="0" max="10" step="0.01" value="${grade?.score ?? ""}" placeholder="Nota de 0 a 10" ${disabled || gradeStatus !== "scored" ? "disabled" : ""}></label><label>Comentário<input name="feedback" maxlength="2000" value="${escapeHtml(grade?.feedback || "")}" ${disabled ? "disabled" : ""}></label><div class="grade-row-actions"><button class="teacher-button" type="submit" ${disabled ? "disabled" : ""}>Salvar</button><span class="teacher-message" data-row-message aria-live="polite"></span></div></form>`; }).join("")}</div>` : `<p class="teacher-empty compact">Nenhum aluno matriculado nesta turma.</p>`}
             </article>`).join("") : `<div class="teacher-empty compact"><h3>Nenhuma avaliação criada</h3><p>Crie a primeira avaliação acima.</p></div>`}
         </section>`;
-      content.querySelector("[data-gradebook-new-assessment]").addEventListener("submit", async (event) => {
+      const assessmentForm = content.querySelector("[data-gradebook-new-assessment]");
+      const typeSelect = assessmentForm.querySelector("[data-assessment-type]");
+      const periodSelect = assessmentForm.querySelector("[data-assessment-period]");
+      const componentSelect = assessmentForm.querySelector("[data-assessment-component]");
+      const syncAssessmentFields = () => {
+        const regular = typeSelect.value === "regular";
+        const finalRecovery = typeSelect.value === "final_recovery";
+        periodSelect.disabled = finalRecovery;
+        periodSelect.required = !finalRecovery;
+        assessmentForm.querySelector("[data-assessment-period-field]").hidden = finalRecovery;
+        componentSelect.disabled = !regular;
+        componentSelect.required = regular;
+        assessmentForm.querySelector("[data-assessment-component-field]").hidden = !regular;
+        if (!regular) componentSelect.value = "";
+        if (finalRecovery) periodSelect.value = "";
+      };
+      const filterComponents = () => {
+        Array.from(componentSelect.options).forEach((option) => {
+          if (!option.value) return;
+          option.hidden = option.dataset.period !== periodSelect.value;
+        });
+        if (componentSelect.selectedOptions[0]?.dataset.period !== periodSelect.value) componentSelect.value = "";
+      };
+      typeSelect.addEventListener("change", syncAssessmentFields);
+      periodSelect.addEventListener("change", filterComponents);
+      syncAssessmentFields();
+      filterComponents();
+
+      content.querySelector("[data-create-component]").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const body = Object.fromEntries(new FormData(form));
+        body.courseOfferingId = offeringId;
+        try { await api("/api/gradebook?action=create-component", { method: "POST", body: JSON.stringify(body) }); await renderGradebookCourse(offeringId); }
+        catch (error) { showMessage(form.querySelector("[data-component-create-message]"), error.message, "error"); }
+      });
+      content.querySelectorAll("[data-update-component]").forEach((form) => form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const row = event.currentTarget;
+        const body = Object.fromEntries(new FormData(row));
+        body.componentId = row.dataset.component;
+        try { await api("/api/gradebook?action=update-component", { method: "POST", body: JSON.stringify(body) }); await renderGradebookCourse(offeringId); }
+        catch (error) { showMessage(row.querySelector("[data-component-message]"), error.message, "error"); }
+      }));
+      content.querySelectorAll("[data-delete-component]").forEach((button) => button.addEventListener("click", async () => {
+        try { await api("/api/gradebook?action=delete-component", { method: "POST", body: JSON.stringify({ componentId: button.dataset.deleteComponent }) }); await renderGradebookCourse(offeringId); }
+        catch (error) { alert(error.message); }
+      }));
+      assessmentForm.addEventListener("submit", async (event) => {
         event.preventDefault(); const form = event.currentTarget; const body = Object.fromEntries(new FormData(form));
         if (body.dueAt) body.dueAt = new Date(body.dueAt).toISOString();
         const type = body.assessmentType;
         if (type === "final_recovery") body.gradingPeriodId = "";
+        if (type !== "regular") body.componentId = "";
         try { await api("/api/gradebook?action=create-assessment", { method: "POST", body: JSON.stringify(body) }); await renderGradebookCourse(offeringId); }
         catch (error) { showMessage(form.querySelector("[data-gradebook-message]"), error.message, "error"); }
       });
@@ -190,6 +251,11 @@
         event.preventDefault(); const row = event.currentTarget; const values = Object.fromEntries(new FormData(row));
         try { await api("/api/gradebook?action=save-grade", { method: "POST", body: JSON.stringify({ assessmentId: row.dataset.assessment, enrollmentId: row.dataset.enrollment, ...values }) }); showMessage(row.querySelector("[data-row-message]"), "Nota salva.", "success"); }
         catch (error) { showMessage(row.querySelector("[data-row-message]"), error.message, "error"); }
+      }));
+      content.querySelectorAll("[data-grade-status]").forEach((select) => select.addEventListener("change", () => {
+        const score = select.form.querySelector("[data-grade-score]");
+        score.disabled = select.value !== "scored";
+        if (select.value !== "scored") score.value = "";
       }));
       content.querySelectorAll("[data-publish-assessment]").forEach((button) => button.addEventListener("click", async () => {
         try { await api("/api/gradebook?action=publish-assessment", { method: "POST", body: JSON.stringify({ assessmentId: button.dataset.publishAssessment }) }); await renderGradebookCourse(offeringId); }
