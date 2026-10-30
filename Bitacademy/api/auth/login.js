@@ -51,6 +51,9 @@ module.exports = async function handler(req, res) {
     });
   } catch (error) {
     console.error("Login failed:", error);
+    if (error?.message?.includes("JWT_SECRET")) {
+      return res.status(500).json({ error: "Configuração de sessão ausente nesta implantação. Configure JWT_SECRET ou JWT_SECRET_KEY para o ambiente correto e publique novamente." });
+    }
     return res.status(500).json({
       error: "Não foi possível realizar o login."
     });

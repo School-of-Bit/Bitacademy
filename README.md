@@ -133,7 +133,7 @@ A configuração e as regras do boletim estão em [`Bitacademy/docs/BOLETIM_E_NO
 
 ## Publicação na Vercel
 
-Importe o repositório na Vercel e configure o **Root Directory** como `Bitacademy`. Cadastre `DATABASE_URL` e `JWT_SECRET` nas variáveis de ambiente dos ambientes desejados e publique. O arquivo `vercel.json` direciona a raiz do site para `Bitacademy.html`.
+Importe o repositório na Vercel e configure o **Root Directory** como `Bitacademy`. Cadastre `DATABASE_URL` e `JWT_SECRET` (ou `JWT_SECRET_KEY`) nas variáveis de ambiente dos ambientes desejados e publique novamente após alterar os valores. Vercel aplica as variáveis atualizadas somente a novos deployments; selecione os ambientes corretos (Production/Preview) e redeploy. Use o mesmo segredo estável em todas as funções e ambientes que precisam validar a mesma sessão. Alterar esse segredo invalida os cookies de sessão existentes. O arquivo `vercel.json` direciona a raiz do site para `Bitacademy.html`.
 
 ## Equipe
 
