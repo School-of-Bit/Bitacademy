@@ -3,19 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bitacademy</title>
+    <title>BitAcademy — Portal de Aprendizado</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="home-page">
     <header class="home-topbar">
         <a class="brand-link" href="Bitacademy.html" aria-label="BitAcademy página inicial">
             <span class="brand-mark">BA</span>
-            <strong>BitAcademy</strong>
+            <div class="brand-text">
+                <strong>BitAcademy</strong>
+                <small>Portal de Estudos</small>
+            </div>
         </a>
         <nav class="home-nav" aria-label="Navegação principal">
-            <a href="#trilhas">Trilhas</a>
+            <a href="#trilhas">Como usar</a>
             <a href="#disciplinas">Disciplinas</a>
-            <a href="#quizzes">Quizzes</a>
+            <a href="#quizzes">Quizzes &amp; Jogos</a>
             <a href="sobre-mim.html">Equipe</a>
             <span data-auth-status><a href="login.html">Entrar</a></span>
         </nav>
@@ -24,12 +27,12 @@
     <main class="home-main">
         <section id="introducao" class="learning-hero">
             <div class="hero-copy">
-                <p class="eyebrow">Portal de aprendizado</p>
+                <p class="eyebrow">Portal de aprendizado interativo</p>
                 <h1>Estude, pratique e acompanhe sua evolução em um só lugar.</h1>
-                <p>O BitAcademy organiza disciplinas cadastradas no sistema, materiais dos professores e quizzes em uma jornada simples de estudo.</p>
+                <p>O BitAcademy reúne disciplinas dinâmicas, materiais publicados pelos seus professores, boletim escolar, quizzes temáticos e jogos competitivos validados em tempo real.</p>
                 <div class="intro-actions">
-                    <a class="primary-link" href="#trilhas">Começar estudos</a>
-                    <a class="secondary-link" href="perfil.html">Ver meu perfil</a>
+                    <a class="primary-link" href="#disciplinas">Explorar disciplinas</a>
+                    <a class="secondary-link" href="#quizzes">Praticar agora</a>
                 </div>
             </div>
             <figure class="hero-visual" aria-label="Painel visual de estudos">
@@ -38,20 +41,28 @@
                         <span></span>
                         <span></span>
                         <span></span>
+                        <small class="board-title">Painel do Estudante</small>
                     </div>
                     <div class="board-row active">
-                        <b>Matemática</b>
-                        <small>Quiz disponível</small>
+                        <div>
+                            <b>Matemática Infinita</b>
+                            <small>Modo competitivo ranqueado</small>
+                        </div>
+                        <span class="board-pill">⚡ Ao vivo</span>
                     </div>
                     <div class="board-row">
-                        <b>Ciências</b>
-                        <small>Conteúdo guiado</small>
+                        <div>
+                            <b>Materiais &amp; Boletim</b>
+                            <small>Conteúdo guiado pelos professores</small>
+                        </div>
+                        <span class="board-pill subtle">8 matérias</span>
                     </div>
-                    <div class="board-chart">
-                        <span style="height: 42%"></span>
-                        <span style="height: 64%"></span>
-                        <span style="height: 78%"></span>
-                        <span style="height: 52%"></span>
+                    <div class="board-chart" aria-hidden="true">
+                        <span style="height: 45%"></span>
+                        <span style="height: 68%"></span>
+                        <span style="height: 84%"></span>
+                        <span style="height: 60%"></span>
+                        <span style="height: 92%"></span>
                     </div>
                 </div>
             </figure>
@@ -59,63 +70,63 @@
 
         <section class="home-overview" aria-label="Resumo do portal">
             <article>
-                <strong>8</strong>
+                <strong data-overview-subjects>8</strong>
                 <span>disciplinas organizadas</span>
             </article>
             <article>
                 <strong>8</strong>
-                <span>quizzes para revisar</span>
+                <span>quizzes temáticos com gabarito</span>
             </article>
             <article>
-                <strong>1</strong>
-                <span>perfil com histórico</span>
+                <strong>100%</strong>
+                <span>progresso, ranking e boletim no perfil</span>
             </article>
         </section>
 
         <section id="trilhas" class="tab-section">
             <div class="section-heading">
-                <p class="eyebrow">Como usar</p>
+                <p class="eyebrow">Jornada do estudante</p>
                 <h2>Escolha o que você quer fazer agora</h2>
-                <p>As abas separam a experiência por objetivo, então o estudante encontra o próximo passo sem precisar adivinhar.</p>
+                <p>Alterne entre os modos de estudo, prática gamificada e acompanhamento acadêmico.</p>
             </div>
 
             <div class="learning-tabs" role="tablist" aria-label="Modos de uso do portal">
-                <button type="button" class="active" data-home-tab="estudar">Estudar</button>
-                <button type="button" data-home-tab="praticar">Praticar</button>
-                <button type="button" data-home-tab="acompanhar">Acompanhar</button>
+                <button type="button" class="active" data-home-tab="estudar">1. Estudar</button>
+                <button type="button" data-home-tab="praticar">2. Praticar &amp; Jogar</button>
+                <button type="button" data-home-tab="acompanhar">3. Acompanhar Boletim</button>
             </div>
 
             <div class="tab-panels">
                 <article class="tab-panel active" data-home-panel="estudar">
                     <div>
                         <h3>Conteúdo por disciplina</h3>
-                        <p>Comece por uma matéria, leia os tópicos principais e avance para o quiz quando sentir segurança.</p>
+                        <p>Acesse os textos base e os materiais complementares publicados pelos professores de cada matéria antes de testar seus conhecimentos.</p>
                         <a class="secondary-link" href="#disciplinas">Explorar matérias</a>
                     </div>
                     <div class="panel-visual subject-preview" aria-hidden="true">
-                        <span>Português</span>
-                        <span>História</span>
-                        <span>Geografia</span>
+                        <span>📚 Português &amp; Literatura</span>
+                        <span>🔬 Ciências da Natureza</span>
+                        <span>📜 História &amp; Geografia</span>
                     </div>
                 </article>
 
                 <article class="tab-panel" data-home-panel="praticar" hidden>
                     <div>
-                        <h3>Quizzes de fixação</h3>
-                        <p>Responda perguntas rápidas, receba feedback imediato e identifique quais assuntos merecem revisão.</p>
-                        <a class="secondary-link" href="#quizzes">Ver quizzes</a>
+                        <h3>Quizzes de fixação e Matemática Infinita</h3>
+                        <p>Responda questões com explicação detalhada ou desafie o relógio no modo infinito para subir no ranking oficial da escola.</p>
+                        <a class="secondary-link" href="#quizzes">Ir para Quizzes &amp; Jogos</a>
                     </div>
                     <div class="panel-visual quiz-preview" aria-hidden="true">
-                        <b>3/5</b>
-                        <span>resultado exemplo</span>
+                        <b>5/5</b>
+                        <span>feedback imediato + ranking</span>
                     </div>
                 </article>
 
                 <article class="tab-panel" data-home-panel="acompanhar" hidden>
                     <div>
-                        <h3>Perfil do estudante</h3>
-                        <p>Ao entrar com uma conta, os resultados ficam salvos para o usuário comparar tentativas e acompanhar progresso.</p>
-                        <a class="secondary-link" href="perfil.html">Abrir perfil</a>
+                        <h3>Perfil, recordes e boletim escolar</h3>
+                        <p>Consulte suas notas por período, situação nas disciplinas, atividades propostas pelos professores e seus melhores resultados nos quizzes.</p>
+                        <a class="secondary-link" href="perfil.html">Abrir meu perfil</a>
                     </div>
                     <div class="panel-visual progress-preview" aria-hidden="true">
                         <span></span>
@@ -128,73 +139,92 @@
 
         <section id="disciplinas" class="subjects-section">
             <div class="section-heading">
-                <p class="eyebrow">Biblioteca</p>
+                <p class="eyebrow">Biblioteca acadêmica</p>
                 <h2>Disciplinas disponíveis</h2>
-                <p>Escolha uma matéria para ver os materiais publicados pelos professores e acessar o conteúdo de estudo.</p>
+                <p>Escolha uma matéria para ler os conteúdos publicados pelos professores e acessar as atividades interativas.</p>
             </div>
             <p class="catalog-status" data-subject-catalog-status aria-live="polite"></p>
 
             <div class="subject-grid" data-subject-catalog>
-                <article class="subject-card">
+                <article class="subject-card" data-accent="artes">
                     <span class="subject-icon">🎨</span>
                     <strong>Artes</strong>
                     <span>Expressão, movimentos artísticos e criatividade.</span>
-                    <a href="materia.html?slug=artes">Estudar</a>
+                    <a href="materia.html?slug=artes">Estudar →</a>
                 </article>
-                <article class="subject-card">
+                <article class="subject-card" data-accent="ciencias">
                     <span class="subject-icon">🔬</span>
                     <strong>Ciências</strong>
                     <span>Natureza, corpo humano, química e fenômenos físicos.</span>
-                    <a href="materia.html?slug=ciencias">Estudar</a>
+                    <a href="materia.html?slug=ciencias">Estudar →</a>
                 </article>
-                <article class="subject-card">
+                <article class="subject-card" data-accent="filosofia">
                     <span class="subject-icon">💭</span>
                     <strong>Filosofia</strong>
                     <span>Pensamento crítico, ética e grandes questões humanas.</span>
-                    <a href="materia.html?slug=filosofia">Estudar</a>
+                    <a href="materia.html?slug=filosofia">Estudar →</a>
                 </article>
-                <article class="subject-card">
+                <article class="subject-card" data-accent="geografia">
                     <span class="subject-icon">🌎</span>
                     <strong>Geografia</strong>
                     <span>Espaço geográfico, clima, relevo e sociedade.</span>
-                    <a href="materia.html?slug=geografia">Estudar</a>
+                    <a href="materia.html?slug=geografia">Estudar →</a>
                 </article>
-                <article class="subject-card">
+                <article class="subject-card" data-accent="historia">
                     <span class="subject-icon">📜</span>
                     <strong>História</strong>
                     <span>Processos, eventos e transformações da humanidade.</span>
-                    <a href="materia.html?slug=historia">Estudar</a>
+                    <a href="materia.html?slug=historia">Estudar →</a>
                 </article>
-                <article class="subject-card">
+                <article class="subject-card" data-accent="ingles">
                     <span class="subject-icon">🗣</span>
                     <strong>Inglês</strong>
                     <span>Gramática, vocabulário e comunicação em outro idioma.</span>
-                    <a href="materia.html?slug=ingles">Estudar</a>
+                    <a href="materia.html?slug=ingles">Estudar →</a>
                 </article>
-                <article class="subject-card">
+                <article class="subject-card" data-accent="matematica">
                     <span class="subject-icon">➗</span>
                     <strong>Matemática</strong>
                     <span>Números, lógica, álgebra, geometria e estatística.</span>
-                    <a href="materia.html?slug=matematica">Estudar</a>
+                    <a href="materia.html?slug=matematica">Estudar →</a>
                 </article>
-                <article class="subject-card">
+                <article class="subject-card" data-accent="portugues">
                     <span class="subject-icon">📚</span>
                     <strong>Português</strong>
                     <span>Leitura, escrita, gramática e interpretação de textos.</span>
-                    <a href="materia.html?slug=portugues">Estudar</a>
+                    <a href="materia.html?slug=portugues">Estudar →</a>
                 </article>
             </div>
         </section>
 
-        <section id="quizzes" class="quiz-callout">
-            <div>
-                <p class="eyebrow">Prática rápida</p>
-                <h2>Teste o que você aprendeu</h2>
-                <p>Os quizzes ajudam a revisar o conteúdo e salvam resultados no perfil quando o usuário está logado.</p>
+        <section id="quizzes" class="practice-hub">
+            <div class="section-heading">
+                <p class="eyebrow">Arena de prática</p>
+                <h2>Quizzes temáticos e jogos competitivos</h2>
+                <p>Pratique o conteúdo de cada disciplina ou desafie seus colegas no ranking em tempo real.</p>
             </div>
-            <div class="quiz-actions">
-                <a class="primary-link" href="Quiz/quiz-matematica.html">Abrir quiz</a>
-                <a class="secondary-link" href="login.html">Criar conta</a>
+
+            <div class="math-game-banner">
+                <div>
+                    <span class="game-tag">⚡ Destaque · Modo Competitivo</span>
+                    <h3>Matemática Infinita</h3>
+                    <p>Resolva cálculos contra o relógio! Acertos somam tempo extra, aumentam seu combo e gravam seu recorde oficial no servidor.</p>
+                </div>
+                <div class="quiz-actions">
+                    <a class="primary-link" href="Jogos/matematica-infinita.html">Jogar Matemática Infinita</a>
+                    <a class="secondary-link" href="materia.html?slug=matematica">Revisar Matemática</a>
+                </div>
+            </div>
+
+            <div class="quiz-Quick-grid" aria-label="Atalhos para os quizzes">
+                <a class="quiz-pill-card" href="Quiz/quiz-artes.html"><span>🎨</span><div><strong>Quiz de Artes</strong><small>Movimentos e expressão</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-ciencias.html"><span>⚛️</span><div><strong>Quiz de Ciências</strong><small>Biologia, física e química</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-filosofia.html"><span>🧠</span><div><strong>Quiz de Filosofia</strong><small>Ética e pensamento</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-geografia.html"><span>🌎</span><div><strong>Quiz de Geografia</strong><small>Clima, relevo e espaço</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-historia.html"><span>📜</span><div><strong>Quiz de História</strong><small>Marcos da humanidade</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-ingles.html"><span>🗣️</span><div><strong>Quiz de Inglês</strong><small>Gramática e vocabulário</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-matematica.html"><span>📐</span><div><strong>Quiz de Matemática</strong><small>Álgebra, geometria e lógica</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-portugues.html"><span>🖋️</span><div><strong>Quiz de Português</strong><small>Gramática e literatura</small></div></a>
             </div>
         </section>
     </main>

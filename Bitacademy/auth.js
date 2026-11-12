@@ -7,7 +7,7 @@ window.BitAcademyAuth = (() => {
     const path = window.location.pathname;
     return path.includes("/Quiz/") || path.includes("/Jogos/") ? "../" : "";
   };
-  const escapeHtml = (value) => String(value)
+  const escapeHtml = (value) => String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -141,16 +141,19 @@ window.BitAcademyAuth = (() => {
       }
       const firstName = escapeHtml(user.name.split(" ")[0]);
       const areaByRole = {
-        Professor: { href: "professor.html", label: "Área do professor" },
-        Administrador: { href: "admin.html", label: "Painel administrativo" }
+        Professor: { href: "professor.html", label: "Área do Professor" },
+        Administrador: { href: "admin.html", label: "Painel Admin" }
       };
       const roleArea = areaByRole[user.type];
       const currentPage = window.location.pathname.split("/").pop().toLowerCase();
       const areaLink = roleArea && currentPage !== roleArea.href
-        ? `<a href="${prefix}${roleArea.href}">${roleArea.label}</a>`
+        ? `<a class="auth-role-link" href="${prefix}${roleArea.href}">${roleArea.label}</a>`
         : "";
       container.innerHTML = `
-        <a href="${prefix}perfil.html">Olá, ${firstName} (${escapeHtml(user.type)})</a>
+        <a class="auth-user-pill" href="${prefix}perfil.html">
+          <span>Olá, ${firstName}</span>
+          <span class="auth-role-badge">${escapeHtml(user.type)}</span>
+        </a>
         ${areaLink}
         <button type="button" data-auth-logout>Sair</button>
       `;
@@ -170,8 +173,23 @@ window.BitAcademyAuth = (() => {
 
     if (user.type === "Administrador") {
       container.innerHTML = `
-        <section class="profile-hero"><div><p class="eyebrow">Perfil Administrador</p><h2>${escapeHtml(user.name)}</h2><p>${escapeHtml(user.email)}</p></div><a class="primary-link" href="admin.html">Abrir painel administrativo</a></section>
-        <section class="profile-next-step"><p class="eyebrow">Acesso administrativo</p><h2>Gerencie a plataforma</h2><p>Cadastre disciplinas, gerencie usuários e organize os vínculos dos professores.</p><a class="secondary-link" href="admin.html">Ir para Administração</a></section>
+        <section class="profile-hero">
+          <div>
+            <p class="eyebrow">Perfil Administrador</p>
+            <h2>${escapeHtml(user.name)}</h2>
+            <p>${escapeHtml(user.email)}</p>
+          </div>
+          <a class="primary-link" href="admin.html">Abrir painel administrativo</a>
+        </section>
+        <section class="profile-card-section">
+          <p class="eyebrow">Gestão da plataforma</p>
+          <h2>Administração BitAcademy</h2>
+          <p>Gerencie contas de usuários, professores, catálogo de disciplinas, anos letivos, turmas, matrículas e recursos interativos.</p>
+          <div class="intro-actions" style="margin-top: 16px;">
+            <a class="primary-link" href="admin.html">Ir para Administração</a>
+            <a class="secondary-link" href="Bitacademy.html#disciplinas">Ver catálogo público</a>
+          </div>
+        </section>
       `;
       return;
     }
@@ -179,8 +197,22 @@ window.BitAcademyAuth = (() => {
     if (user.type === "Professor") {
       const subjects = Array.isArray(user.subjects) ? user.subjects : [];
       container.innerHTML = `
-        <section class="profile-hero"><div><p class="eyebrow">Perfil Professor</p><h2>${escapeHtml(user.name)}</h2><p>${escapeHtml(user.email)}</p></div><a class="primary-link" href="professor.html">Abrir área do professor</a></section>
-        <section class="profile-next-step"><p class="eyebrow">Gestão acadêmica</p><h2>${subjects.length} ${subjects.length === 1 ? "disciplina vinculada" : "disciplinas vinculadas"}</h2><p>${subjects.length ? subjects.map((subject) => escapeHtml(subject.name)).join(" · ") : "Aguarde o administrador vincular disciplinas à sua conta."}</p><a class="secondary-link" href="professor.html">Gerenciar materiais e atividades</a></section>
+        <section class="profile-hero">
+          <div>
+            <p class="eyebrow">Perfil Professor</p>
+            <h2>${escapeHtml(user.name)}</h2>
+            <p>${escapeHtml(user.email)}</p>
+          </div>
+          <a class="primary-link" href="professor.html">Abrir Área do Professor</a>
+        </section>
+        <section class="profile-card-section">
+          <p class="eyebrow">Gestão acadêmica</p>
+          <h2>${subjects.length} ${subjects.length === 1 ? "disciplina vinculada" : "disciplinas vinculadas"}</h2>
+          <p>${subjects.length ? subjects.map((subject) => escapeHtml(subject.name)).join(" · ") : "Aguarde o administrador vincular disciplinas à sua conta."}</p>
+          <div class="intro-actions" style="margin-top: 16px;">
+            <a class="primary-link" href="professor.html">Gerenciar materiais, atividades e boletim</a>
+          </div>
+        </section>
       `;
       return;
     }
@@ -188,7 +220,7 @@ window.BitAcademyAuth = (() => {
     try {
       profileData = await api("profile");
     } catch (error) {
-      container.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
+      container.innerHTML = `<section class="profile-card-section"><p>${escapeHtml(error.message)}</p></section>`;
       return;
     }
 
@@ -212,6 +244,19 @@ window.BitAcademyAuth = (() => {
       ? Math.round(results.reduce((sum, result) => sum + result.percent, 0) / results.length)
       : 0;
 
+    const statusBadgeForReport = (report) => {
+      if (report.finalScore === null) {
+        return `<span class="grade-status-badge in_progress">Em curso</span>`;
+      }
+      if (report.result === "passed") {
+        return `<span class="grade-status-badge passed">Aprovado</span>`;
+      }
+      if (report.result === "recovery_pending") {
+        return `<span class="grade-status-badge recovery_pending">Recuperação final pendente</span>`;
+      }
+      return `<span class="grade-status-badge not_passed">Não aprovado</span>`;
+    };
+
     container.innerHTML = `
       <section class="profile-hero">
         <div>
@@ -219,44 +264,138 @@ window.BitAcademyAuth = (() => {
           <h2>${escapeHtml(user.name)}</h2>
           <p>${escapeHtml(user.email)}</p>
         </div>
-        <a class="primary-link" href="Bitacademy.html#disciplinas">Continuar estudando</a>
-      </section>
-      <section class="profile-dashboard">
-        <div class="profile-summary">
-          <article><span>Disciplinas com recorde</span><strong>${results.length}</strong></article>
-          <article><span>Média geral</span><strong>${average}%</strong></article>
-          <article><span>Melhor resultado</span><strong>${bestPercent}%</strong></article>
-          <article><span>Recorde infinito</span><strong>${bestGameScore}</strong></article>
-        </div>
-        <div class="profile-next-step">
-          <p class="eyebrow">Próximo passo</p>
-          <h2>${results.length ? "Melhore seus recordes" : "Faça seu primeiro quiz"}</h2>
-          <p>${results.length ? "Seu melhor resultado em cada disciplina aparece aqui." : "Ao finalizar um quiz logado, seu melhor resultado aparece automaticamente aqui."}</p>
-          <a class="secondary-link" href="Jogos/matematica-infinita.html">Jogar modo infinito</a>
+        <div class="intro-actions">
+          <a class="primary-link" href="Bitacademy.html#disciplinas">Continuar estudando</a>
+          <a class="secondary-link" href="Jogos/matematica-infinita.html">Jogar Matemática Infinita</a>
         </div>
       </section>
-      <section class="gradebook-reports">
-        <p class="eyebrow">Vida escolar</p><h2>Boletim</h2>
-        ${gradeReportError ? `<p>${escapeHtml(gradeReportError)}</p>` : gradeReports.length ? gradeReports.map((report) => `
-          <article class="gradebook-report-card"><div class="gradebook-report-heading"><div><strong>${escapeHtml(report.subject)}</strong><span>${escapeHtml(report.className)} · ${escapeHtml(report.year)}</span></div><b>${report.finalScore === null ? `Média parcial: ${report.annualAverage === null ? "—" : `${report.annualAverage.toFixed(2)}/10`}` : `${report.finalScore.toFixed(2)}/10 · ${report.result === "passed" ? "Aprovado" : report.result === "recovery_pending" ? "Recuperação final pendente" : "Não aprovado"}`}</b></div>
-            ${report.finalRecovery !== null ? `<p>Nota de recuperação final: ${report.finalRecovery.toFixed(2)}/10 · política ${escapeHtml(report.finalRecoveryPolicy === "higher" ? "maior nota" : "média")}</p>` : ""}
-            <div class="gradebook-period-list">${report.periods.map((period) => `<section><div class="gradebook-period-heading"><strong>${escapeHtml(period.sequence)}. ${escapeHtml(period.name)}</strong><span>Peso ${escapeHtml(period.weight)} · ${period.average === null ? "Sem média" : `${period.average.toFixed(2)}/10`}</span></div><div class="gradebook-component-list">${period.components.map((component) => `<section><div class="gradebook-period-heading"><strong>${escapeHtml(component.name)}</strong><span>Peso ${escapeHtml(component.weight)}% · ${component.average === null ? "Sem média" : `${component.average.toFixed(2)}/10`}</span></div><div class="gradebook-assessment-list">${component.assessments.map((assessment) => `<div><span>${escapeHtml(assessment.title)} · peso interno ${escapeHtml(assessment.weight)}</span><b>${assessment.gradeStatus === "excused" ? "Dispensado" : assessment.score === null ? "Aguardando nota" : `${assessment.score.toFixed(2)}/10`}</b>${assessment.feedback ? `<small>${escapeHtml(assessment.feedback)}</small>` : ""}</div>`).join("")}</div></section>`).join("")}${period.recovery !== null ? `<div class="gradebook-assessment-list"><div><span>Recuperação do período</span><b>${period.recovery.toFixed(2)}/10</b></div></div>` : ""}</div></section>`).join("")}</div>
-          </article>`).join("") : '<p>Seu boletim aparecerá aqui quando sua matrícula e suas disciplinas forem configuradas pela escola.</p>'}
+
+      <nav class="profile-tabs" role="tablist" aria-label="Seções do perfil do estudante">
+        <button type="button" class="active" data-profile-tab="resumo">Visão Geral &amp; Recordes</button>
+        <button type="button" data-profile-tab="boletim">Boletim Escolar (${gradeReports.length})</button>
+        <button type="button" data-profile-tab="atividades">Atividades (${availableActivities.length})</button>
+      </nav>
+
+      <section class="profile-tab-panel" data-profile-panel="resumo">
+        <div class="profile-dashboard">
+          <div class="profile-summary">
+            <article><span>Disciplinas com recorde</span><strong>${results.length}</strong></article>
+            <article><span>Média nos quizzes</span><strong>${average}%</strong></article>
+            <article><span>Melhor desempenho</span><strong>${bestPercent}%</strong></article>
+            <article><span>Recorde Matemática Infinita</span><strong>${bestGameScore}</strong></article>
+          </div>
+          <div class="profile-next-step">
+            <div>
+              <p class="eyebrow">Próximo passo</p>
+              <h2>${results.length ? "Supere seus recordes" : "Faça seu primeiro quiz"}</h2>
+              <p>${results.length ? "Seus melhores resultados por disciplina ficam registrados aqui e contam para o ranking oficial." : "Ao finalizar qualquer quiz conectado à sua conta, sua maior pontuação aparece automaticamente aqui."}</p>
+            </div>
+            <a class="primary-link" href="Bitacademy.html#quizzes">Ir para Arena de Prática</a>
+          </div>
+        </div>
+
+        <div class="profile-card-section" style="margin-top: 24px;">
+          <p class="eyebrow">Histórico gamificado</p>
+          <h2>Melhores resultados por disciplina</h2>
+          ${results.length ? `<div class="result-list" style="margin-top: 14px;">${results.map((result) => `
+            <article>
+              <div>
+                <strong>${escapeHtml(result.titulo)}</strong>
+                <span>Registrado em ${new Date(result.date).toLocaleDateString("pt-BR")}</span>
+              </div>
+              <b>${result.score}/${result.total} (${result.percent}%)</b>
+            </article>
+          `).join("")}</div>` : '<p>Você ainda não concluiu nenhum quiz. Escolha uma disciplina e comece quando quiser.</p>'}
+        </div>
       </section>
-      <section>
-        <h2>Melhores resultados por disciplina</h2>
-        ${results.length ? `<div class="result-list">${results.map((result) => `
-          <article><div><strong>${escapeHtml(result.titulo)}</strong><span>${new Date(result.date).toLocaleDateString("pt-BR")}</span></div><b>${result.score}/${result.total} (${result.percent}%)</b></article>
-        `).join("")}</div>` : '<p>Você ainda não concluiu nenhum quiz. Escolha uma disciplina e comece quando quiser.</p>'}
+
+      <section class="profile-tab-panel profile-card-section" data-profile-panel="boletim" hidden>
+        <p class="eyebrow">Vida escolar</p>
+        <h2>Boletim Acadêmico</h2>
+        <p style="margin-bottom: 16px;">Acompanhe suas médias por período, notas de componentes avaliativos e situação anual em cada disciplina.</p>
+        <div class="gradebook-reports">
+          ${gradeReportError ? `<p>${escapeHtml(gradeReportError)}</p>` : gradeReports.length ? gradeReports.map((report) => {
+            const displayScore = report.finalScore !== null ? report.finalScore : report.annualAverage;
+            const meterWidth = displayScore !== null ? Math.min(100, Math.max(0, displayScore * 10)) : 0;
+            return `
+              <article class="gradebook-report-card">
+                <div class="gradebook-report-heading">
+                  <div>
+                    <strong>${escapeHtml(report.subject)}</strong>
+                    <span>${escapeHtml(report.className)} · Ano letivo ${escapeHtml(report.year)} · Média mínima ${escapeHtml(report.passingScore)}/10</span>
+                  </div>
+                  <div class="grade-status-group">
+                    <b class="grade-score-pill">${report.finalScore === null ? `Média parcial: ${report.annualAverage === null ? "—" : `${report.annualAverage.toFixed(2)}/10`}` : `Final: ${report.finalScore.toFixed(2)}/10`}</b>
+                    ${statusBadgeForReport(report)}
+                  </div>
+                </div>
+                <div class="grade-meter" aria-hidden="true"><div class="grade-meter-fill" style="width: ${meterWidth}%"></div></div>
+                ${report.finalRecovery !== null ? `<p style="margin-top: 10px;">Nota de recuperação final: <strong>${report.finalRecovery.toFixed(2)}/10</strong> · Política: ${escapeHtml(report.finalRecoveryPolicy === "higher" ? "maior nota" : "média")}</p>` : ""}
+                <div class="gradebook-period-list">
+                  ${report.periods.map((period) => `
+                    <section>
+                      <div class="gradebook-period-heading">
+                        <strong>${escapeHtml(period.sequence)}. ${escapeHtml(period.name)}</strong>
+                        <span>Peso ${escapeHtml(period.weight)} · ${period.average === null ? "Sem média fechada" : `Média: ${period.average.toFixed(2)}/10`}</span>
+                      </div>
+                      <div class="gradebook-component-list">
+                        ${period.components.map((component) => `
+                          <section>
+                            <div class="gradebook-period-heading">
+                              <strong>${escapeHtml(component.name)}</strong>
+                              <span>Peso ${escapeHtml(component.weight)}% · ${component.average === null ? "Sem média" : `${component.average.toFixed(2)}/10`}</span>
+                            </div>
+                            <div class="gradebook-assessment-list">
+                              ${component.assessments.map((assessment) => `
+                                <div>
+                                  <span>${escapeHtml(assessment.title)} · peso interno ${escapeHtml(assessment.weight)}</span>
+                                  <b>${assessment.gradeStatus === "excused" ? "Dispensado" : assessment.score === null ? "Aguardando nota" : `${assessment.score.toFixed(2)}/10`}</b>
+                                  ${assessment.feedback ? `<small>💬 Feedback: ${escapeHtml(assessment.feedback)}</small>` : ""}
+                                </div>
+                              `).join("")}
+                            </div>
+                          </section>
+                        `).join("")}
+                        ${period.recovery !== null ? `<div class="gradebook-assessment-list"><div><span>Recuperação do período</span><b>${period.recovery.toFixed(2)}/10</b></div></div>` : ""}
+                      </div>
+                    </section>
+                  `).join("")}
+                </div>
+              </article>
+            `;
+          }).join("") : '<p>Seu boletim aparecerá aqui quando sua matrícula e suas disciplinas forem configuradas pela escola.</p>'}
+        </div>
       </section>
-      <section class="profile-activities">
+
+      <section class="profile-tab-panel profile-card-section" data-profile-panel="atividades" hidden>
+        <p class="eyebrow">Tarefas &amp; Trabalhos</p>
         <h2>Atividades disponíveis</h2>
-        <p>Estas propostas são visíveis a todos os alunos porque o sistema ainda não organiza matrículas por turma. A entrega online ainda não está disponível.</p>
+        <p style="margin-bottom: 16px;">Confira as propostas e orientações publicadas pelos professores de cada disciplina.</p>
         ${activitiesError ? `<p>${escapeHtml(activitiesError)}</p>` : availableActivities.length ? `<div class="result-list">${availableActivities.map((activity) => `
-          <article><div><strong>${escapeHtml(activity.title)}</strong><span>${escapeHtml(activity.subject_name)} · ${escapeHtml(activity.teacher_name)} · ${activity.activity_type === "automatic" ? "Atividade automática" : "Correção manual"}</span><p>${escapeHtml(activity.description)}</p><a href="materia.html?slug=${encodeURIComponent(activity.subject_slug)}">Estudar disciplina</a></div><b>${activity.due_at ? `Prazo: ${new Date(activity.due_at).toLocaleDateString("pt-BR")}` : "Sem prazo"} · ${escapeHtml(activity.max_score)} pontos</b></article>
+          <article>
+            <div>
+              <strong>${escapeHtml(activity.title)}</strong>
+              <span>${escapeHtml(activity.subject_name)} · Prof. ${escapeHtml(activity.teacher_name)} · ${activity.activity_type === "automatic" ? "Atividade automática" : "Correção pelo professor"}</span>
+              <p>${escapeHtml(activity.description)}</p>
+              <a href="materia.html?slug=${encodeURIComponent(activity.subject_slug)}">Acessar disciplina →</a>
+            </div>
+            <b>${activity.due_at ? `Prazo: ${new Date(activity.due_at).toLocaleDateString("pt-BR")}` : "Sem prazo fixo"} · ${escapeHtml(activity.max_score)} pts</b>
+          </article>
         `).join("")}</div>` : '<p>Nenhuma atividade foi disponibilizada pelos professores até o momento.</p>'}
       </section>
     `;
+
+    const profileTabs = container.querySelectorAll("[data-profile-tab]");
+    const profilePanels = container.querySelectorAll("[data-profile-panel]");
+    profileTabs.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        const target = tab.dataset.profileTab;
+        profileTabs.forEach((btn) => btn.classList.toggle("active", btn.dataset.profileTab === target));
+        profilePanels.forEach((panel) => {
+          panel.hidden = panel.dataset.profilePanel !== target;
+        });
+      });
+    });
   };
 
   const bindLoginPage = () => {
@@ -350,72 +489,20 @@ window.BitAcademyAuth = (() => {
       const data = await api("academic?action=subjects");
       const subjects = data.subjects || [];
       grid.innerHTML = subjects.length ? subjects.map((subject) => `
-        <article class="subject-card">
+        <article class="subject-card" data-accent="${escapeHtml(subject.slug)}">
           <span class="subject-icon">${escapeHtml(subject.icon || "📘")}</span>
           <strong>${escapeHtml(subject.name)}</strong>
           <span>${escapeHtml(subject.description || "Conteúdos e materiais para estudar esta disciplina.")}</span>
-          <a href="materia.html?slug=${encodeURIComponent(subject.slug)}">Estudar</a>
+          <a href="materia.html?slug=${encodeURIComponent(subject.slug)}">Estudar →</a>
         </article>
       `).join("") : '<p>Nenhuma disciplina disponível no momento.</p>';
-      const count = document.querySelector(".home-overview article:first-child strong");
+      const count = document.querySelector("[data-overview-subjects], .home-overview article:first-child strong");
       if (count) count.textContent = subjects.length;
-      if (status) status.textContent = `${subjects.length} disciplinas carregadas do catálogo.`;
+      if (status) status.textContent = `${subjects.length} disciplinas sincronizadas do catálogo.`;
     } catch (error) {
-      if (status) status.textContent = "Não foi possível atualizar o catálogo do banco. Exibindo as matérias já disponíveis neste site.";
+      if (status) status.textContent = "Exibindo as disciplinas disponíveis no portal.";
       console.warn("Não foi possível carregar o catálogo de disciplinas:", error.message);
     }
-  };
-
-  const bindSubjectExperience = () => {
-    const page = document.body;
-    if (!page.classList.contains("subject-page")) return;
-    const header = document.querySelector("header");
-    const nav = document.querySelector("nav");
-    const main = document.querySelector("main");
-    const intro = document.getElementById("introducao");
-    if (!header || !nav || !main || !intro) return;
-
-    const title = page.dataset.subjectTitle || "Disciplina";
-    const icon = page.dataset.subjectIcon || "📘";
-    const area = page.dataset.subjectArea || "Trilha de estudo";
-    const accent = page.dataset.subjectAccent || "#6366f1";
-    const quizHref = page.dataset.subjectQuiz || "#";
-    const topicLinks = Array.from(nav.querySelectorAll("a[href^='#']")).slice(0, 3);
-    const firstTopicHref = topicLinks[0]?.getAttribute("href") || "#introducao";
-
-    page.style.setProperty("--subject-accent", accent);
-    header.classList.add("subject-hero");
-    nav.classList.add("subject-nav");
-    main.classList.add("subject-main");
-    nav.childNodes.forEach((node) => {
-      if (node.nodeType === Node.TEXT_NODE && node.textContent.includes("|")) node.textContent = " ";
-    });
-
-    if (!header.querySelector(".subject-visual")) {
-      header.insertAdjacentHTML("beforeend", `
-        <div class="subject-visual" aria-hidden="true">
-          <div class="visual-card main"><span>${icon}</span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(area)}</small></div>
-          <div class="visual-card mini top">${topicLinks[0] ? escapeHtml(topicLinks[0].textContent) : "Conceitos"}</div>
-          <div class="visual-card mini middle">${topicLinks[1] ? escapeHtml(topicLinks[1].textContent) : "Exemplos"}</div>
-          <div class="visual-card mini bottom">${topicLinks[2] ? escapeHtml(topicLinks[2].textContent) : "Prática"}</div>
-        </div>
-      `);
-    }
-
-    if (!document.querySelector(".subject-path")) {
-      intro.insertAdjacentHTML("afterend", `
-        <section class="subject-path" aria-label="Trilha sugerida">
-          <article><span>1</span><div><strong>Entenda a base</strong><p>Leia a introdução para saber por que esta matéria importa.</p></div><a href="#introducao">Abrir</a></article>
-          <article><span>2</span><div><strong>Explore os tópicos</strong><p>Avance pelos assuntos principais em uma ordem mais clara.</p></div><a href="${firstTopicHref}">Ver tópicos</a></article>
-          <article><span>3</span><div><strong>Pratique</strong><p>Finalize com quiz ou jogo para testar sua retenção.</p></div><a href="${quizHref}">Praticar</a></article>
-        </section>
-      `);
-    }
-
-    Array.from(main.querySelectorAll("section")).forEach((section) => {
-      const special = section.classList.contains("subject-path") || section.classList.contains("math-game-callout");
-      if (section.id !== "introducao" && !special) section.classList.add("subject-topic");
-    });
   };
 
   document.addEventListener("click", (event) => {
@@ -426,7 +513,6 @@ window.BitAcademyAuth = (() => {
     await ready;
     bindLoginPage();
     bindHomeTabs();
-    bindSubjectExperience();
     renderAuthStatus();
     loadSubjectCatalog();
     await renderProfile();
@@ -435,6 +521,7 @@ window.BitAcademyAuth = (() => {
   return {
     ready,
     getCurrentUser,
+    renderAuthStatus,
     getGameRanking,
     getProgress,
     getQuizRanking,

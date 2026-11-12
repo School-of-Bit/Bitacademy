@@ -3,35 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sobre Nós - Bitacademy</title>
+    <title>Sobre Nós &amp; Equipe — BitAcademy</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <header>
-        <h1><span class="page-icon">👥</span> Sobre Nós</h1>
-        <p>Conheça nossa equipe e o propósito do Bitacademy</p>
+<body class="home-page about-page">
+    <header class="home-topbar">
+        <a class="brand-link" href="Bitacademy.html" aria-label="BitAcademy página inicial">
+            <span class="brand-mark">BA</span>
+            <div class="brand-text">
+                <strong>BitAcademy</strong>
+                <small>Portal de Estudos</small>
+            </div>
+        </a>
+        <nav class="home-nav" aria-label="Navegação principal">
+            <a href="Bitacademy.html#disciplinas">Disciplinas</a>
+            <a href="Bitacademy.html#quizzes">Quizzes &amp; Jogos</a>
+            <a href="sobre-mim.html" aria-current="page">Equipe</a>
+            <span data-auth-status><a href="login.html">Entrar</a></span>
+        </nav>
     </header>
-    <nav>
-        <a href="Bitacademy.html">Página Inicial</a> |
-        <a href="materia.html?slug=matematica">Matemática</a> |
-        <a href="materia.html?slug=portugues">Português</a> |
-        <a href="materia.html?slug=ciencias">Ciências</a> |
-        <span data-auth-status></span>
-    </nav>
-    <main>
-        <section id="quem-somos">
-            <h2>Quem Somos</h2>
-            <p>Somos uma equipe apaixonada por educação e tecnologia, formada por profissionais dedicados a criar soluções inovadoras para o aprendizado. 
-            Nosso time é composto por educadores, desenvolvedores e designers que acreditam que aprender pode ser divertido e interativo.</p>
+
+    <main class="home-main about-main">
+        <section class="about-hero">
+            <div>
+                <p class="eyebrow">Propósito &amp; Identidade</p>
+                <h1>Educação interativa, acessível e gamificada.</h1>
+                <p>O BitAcademy nasceu como um projeto acadêmico dedicado a unir o estudo estruturado das disciplinas escolares com a motivação dos quizzes, rankings e desafios em tempo real.</p>
+            </div>
+            <div class="about-pillars">
+                <article>
+                    <span>🎯</span>
+                    <strong>Estudo Guiado</strong>
+                    <small>Materiais e atividades publicados pelos professores de cada matéria.</small>
+                </article>
+                <article>
+                    <span>⚡</span>
+                    <strong>Gamificação Real</strong>
+                    <small>Quizzes temáticos e jogos com validação e ranking no servidor.</small>
+                </article>
+                <article>
+                    <span>📊</span>
+                    <strong>Gestão Escolar</strong>
+                    <small>Diário de classe, períodos configuráveis e boletim completo para o aluno.</small>
+                </article>
+            </div>
         </section>
-        <section id="motivo">
-            <h2>Por que criamos o Bitacademy?</h2>
-            <p>O Bitacademy nasceu da ideia de tornar o aprendizado mais acessível, criativo e envolvente. Queremos oferecer uma plataforma onde estudantes possam explorar conteúdos de forma interativa, com quizes, mini jogos e atividades que tornam o processo de aprendizado mais dinâmico e divertido.</p>
-            <p>Nosso objetivo é ajudar os jovens a desenvolverem suas habilidades enquanto se divertem, criando uma experiência única de aprendizado que vai além dos métodos tradicionais.</p>
+
+        <section id="quem-somos" class="about-card-section">
+            <div class="section-heading">
+                <p class="eyebrow">Nossa Missão</p>
+                <h2>Por que criamos o BitAcademy?</h2>
+                <p>Acreditamos que aprender pode ser dinâmico e transparente tanto para quem estuda quanto para quem ensina.</p>
+            </div>
+            <div class="about-story-grid">
+                <article class="about-story-card">
+                    <h3>Quem Somos</h3>
+                    <p>Somos uma equipe apaixonada por educação e tecnologia, dedicada a construir soluções digitais que aproximam estudantes e professores. Combinamos desenvolvimento web moderno, banco de dados em nuvem e design focado na experiência do estudante.</p>
+                </article>
+                <article class="about-story-card">
+                    <h3>Nosso Diferencial</h3>
+                    <p>Mais do que um repositório de textos, o BitAcademy integra leitura, fixação imediata por quizzes, competição saudável em jogos educativos e acompanhamento formal de notas e boletins em uma única plataforma leve e responsiva.</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="equipe" class="about-card-section">
+            <div class="section-heading">
+                <p class="eyebrow">Desenvolvedores</p>
+                <h2>Equipe do Projeto</h2>
+                <p>Conheça os integrantes responsáveis pela idealização, arquitetura e desenvolvimento do BitAcademy.</p>
+            </div>
+            <div class="team-grid">
+                <article class="team-card">
+                    <div class="team-avatar">RC</div>
+                    <strong>Rodrigo Cernigoi</strong>
+                    <span>Desenvolvimento &amp; Arquitetura</span>
+                </article>
+                <article class="team-card">
+                    <div class="team-avatar">AF</div>
+                    <strong>Arthur Fita</strong>
+                    <span>Desenvolvimento &amp; Interface</span>
+                </article>
+                <article class="team-card">
+                    <div class="team-avatar">DA</div>
+                    <strong>David Almeida</strong>
+                    <span>Desenvolvimento &amp; Sistemas</span>
+                </article>
+                <article class="team-card">
+                    <div class="team-avatar">GD</div>
+                    <strong>Gabriel Duarte</strong>
+                    <span>Desenvolvimento &amp; Conteúdo</span>
+                </article>
+                <article class="team-card">
+                    <div class="team-avatar">GJ</div>
+                    <strong>Gabriel de Jesus</strong>
+                    <span>Desenvolvimento &amp; Experiência</span>
+                </article>
+            </div>
         </section>
     </main>
+
     <footer>
-        <p>&copy; 2026 BitAcademy. Todos os direitos reservados.</p>
+        <p>&copy; 2026 BitAcademy. Projeto acadêmico sem fins comerciais.</p>
     </footer>
     <script src="auth.js"></script>
 </body>

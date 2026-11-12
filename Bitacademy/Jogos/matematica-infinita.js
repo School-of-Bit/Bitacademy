@@ -9,6 +9,7 @@ class MathInfiniteGame {
 
     this.elements = {
       time: document.getElementById("time-left"),
+      timeBar: document.getElementById("time-bar"),
       score: document.getElementById("score"),
       streak: document.getElementById("streak"),
       level: document.getElementById("level-label"),
@@ -64,7 +65,8 @@ class MathInfiniteGame {
       this.elements.form.querySelector("button").disabled = false;
       this.elements.start.disabled = true;
       this.elements.reset.disabled = false;
-      this.elements.feedback.textContent = "Valendo!";
+      this.elements.feedback.textContent = "Valendo! Digite o resultado e pressione Enter.";
+      this.elements.answer.focus();
       this.timer = setInterval(() => this.tick(), 1000);
     } catch (error) {
       this.elements.start.disabled = false;
@@ -137,7 +139,7 @@ class MathInfiniteGame {
       }
       this.elements.feedback.textContent = game.accepted === false
         ? "A resposta já havia sido enviada. Questão atualizada."
-        : game.wasCorrect ? "Acertou! +4s" : `Errou. A resposta era ${game.correctAnswer}. -5s`;
+        : game.wasCorrect ? "✨ Acertou! +4s" : `⚠️ Errou. A resposta era ${game.correctAnswer}. -5s`;
       this.elements.answer.disabled = false;
       this.elements.form.querySelector("button").disabled = false;
       this.elements.reset.disabled = false;
@@ -187,8 +189,8 @@ class MathInfiniteGame {
     this.elements.reset.disabled = true;
     if (!result.recorded) this.elements.feedback.textContent = "Fim de jogo! Nenhum ponto foi marcado.";
     else this.elements.feedback.textContent = result.improved
-      ? "Fim de jogo! Recorde atualizado no ranking."
-      : "Fim de jogo! Seu recorde no ranking continua sendo sua melhor pontuação.";
+      ? "🏆 Fim de jogo! Novo recorde registrado no ranking."
+      : "Fim de jogo! Seu recorde no ranking continua sendo sua maior pontuação.";
     this.render();
     await this.renderRanking();
   }
@@ -198,7 +200,18 @@ class MathInfiniteGame {
     this.elements.score.textContent = this.state.score;
     this.elements.streak.textContent = this.state.streak;
     this.elements.level.textContent = `Nível ${this.state.level}`;
-    document.body.classList.toggle("danger-time", this.state.timeLeft <= 8);
+    if (this.elements.timeBar) {
+      const pct = Math.min(100, Math.max(0, (this.state.timeLeft / 45) * 100));
+      this.elements.timeBar.style.width = `${pct}%`;
+    }
+    document.body.classList.toggle("danger-time", this.state.timeLeft <= 8 && this.isRunning);
+  }
+
+  medalForRank(index) {
+    if (index === 0) return "🥇";
+    if (index === 1) return "🥈";
+    if (index === 2) return "🥉";
+    return String(index + 1);
   }
 
   async renderRanking() {
@@ -206,12 +219,12 @@ class MathInfiniteGame {
       await window.BitAcademyAuth?.ready;
       const scores = await window.BitAcademyAuth?.getGameRanking("math-infinite", 8) || [];
       if (!scores.length) {
-        this.elements.ranking.innerHTML = "<p>Nenhuma pontuação registrada ainda.</p>";
+        this.elements.ranking.innerHTML = "<p>Nenhuma pontuação registrada ainda. Seja o primeiro!</p>";
         return;
       }
       this.elements.ranking.innerHTML = scores.map((score, index) => `
-        <article>
-          <span>${index + 1}</span>
+        <article class="${index < 3 ? `podium-${index + 1}` : ""}">
+          <span>${this.medalForRank(index)}</span>
           <div>
             <strong>${this.escapeHtml(score.playerName)}</strong>
             <small>${new Date(score.date).toLocaleDateString("pt-BR")} · ${score.correct} acertos</small>

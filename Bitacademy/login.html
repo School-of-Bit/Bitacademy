@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Entrar - Bitacademy</title>
+    <title>Entrar — BitAcademy</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="login-page">
     <main class="login-shell">
         <section class="login-card" aria-labelledby="login-titulo">
             <div class="login-brand">
-                <span class="brand-mark">BA</span>
+                <a href="Bitacademy.html" class="brand-mark" aria-label="Voltar para a página inicial">BA</a>
                 <div>
                     <p class="eyebrow">Portal de acesso</p>
                     <h1 id="login-titulo">Entrar no BitAcademy</h1>
@@ -19,7 +19,7 @@
 
             <div class="auth-tabs" role="tablist" aria-label="Acesso de usuários">
                 <button type="button" class="active" data-auth-tab="login">Entrar</button>
-                <button type="button" data-auth-tab="cadastro">Cadastrar</button>
+                <button type="button" data-auth-tab="cadastro">Criar conta</button>
             </div>
 
             <p class="form-message" data-auth-message aria-live="polite"></p>
@@ -32,13 +32,19 @@
                 <input type="email" id="login-email" name="email" placeholder="seunome@escola.com" maxlength="255" autocomplete="email" required>
 
                 <label for="login-senha">Senha</label>
-                <div class="password-field"><input type="password" id="login-senha" name="senha" placeholder="Digite sua senha" autocomplete="current-password" required><button type="button" class="password-toggle" data-password-toggle="login-senha" aria-label="Mostrar senha">Mostrar</button></div>
-
-                <div class="login-options">
-                    <div class="login-help-links"><button type="button" data-forgot-password>Esqueceu sua senha?</button><a href="Bitacademy.html">Entrar como visitante</a></div>
+                <div class="password-field">
+                    <input type="password" id="login-senha" name="senha" placeholder="Digite sua senha" autocomplete="current-password" required>
+                    <button type="button" class="password-toggle" data-password-toggle="login-senha" aria-label="Mostrar senha">Mostrar</button>
                 </div>
 
-                <button type="submit">Entrar</button>
+                <div class="login-options">
+                    <div class="login-help-links">
+                        <button type="button" data-forgot-password>Esqueceu sua senha?</button>
+                        <a href="Bitacademy.html">← Voltar como visitante</a>
+                    </div>
+                </div>
+
+                <button type="submit">Entrar na plataforma</button>
             </form>
 
             <form class="login-form" data-register-form data-auth-panel="cadastro" hidden>
@@ -49,23 +55,30 @@
                 <input type="email" id="cadastro-email" name="email" placeholder="seunome@escola.com" maxlength="255" autocomplete="email" required>
 
                 <label for="cadastro-senha">Senha</label>
-                <div class="password-field"><input type="password" id="cadastro-senha" name="senha" placeholder="Crie uma senha forte" minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="password-rules" required><button type="button" class="password-toggle" data-password-toggle="cadastro-senha" aria-label="Mostrar senha">Mostrar</button></div>
+                <div class="password-field">
+                    <input type="password" id="cadastro-senha" name="senha" placeholder="Crie uma senha forte" minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="password-rules" required>
+                    <button type="button" class="password-toggle" data-password-toggle="cadastro-senha" aria-label="Mostrar senha">Mostrar</button>
+                </div>
                 <small id="password-rules" class="password-rules">Use 8 a 72 caracteres, com letra maiúscula, minúscula, número e símbolo.</small>
 
                 <label for="cadastro-confirma-senha">Confirmar senha</label>
-                <div class="password-field"><input type="password" id="cadastro-confirma-senha" name="confirmaSenha" placeholder="Digite a senha novamente" minlength="8" maxlength="72" autocomplete="new-password" required><button type="button" class="password-toggle" data-password-toggle="cadastro-confirma-senha" aria-label="Mostrar confirmação da senha">Mostrar</button></div>
+                <div class="password-field">
+                    <input type="password" id="cadastro-confirma-senha" name="confirmaSenha" placeholder="Digite a senha novamente" minlength="8" maxlength="72" autocomplete="new-password" required>
+                    <button type="button" class="password-toggle" data-password-toggle="cadastro-confirma-senha" aria-label="Mostrar confirmação da senha">Mostrar</button>
+                </div>
 
-                <button type="submit">Criar conta</button>
+                <button type="submit">Criar conta de estudante</button>
             </form>
         </section>
 
         <aside class="access-panel" aria-label="Informações sobre o acesso">
-            <h2>Um acesso para aprender</h2>
-            <p>Crie sua conta de aluno para estudar conteúdos e responder quizzes. Contas de professor são criadas pela administração da plataforma.</p>
+            <p class="eyebrow">Jornada integrada</p>
+            <h2>Um único acesso para aprender e evoluir</h2>
+            <p>Crie sua conta gratuita de aluno para estudar conteúdos das disciplinas, registrar recordes nos quizzes e acompanhar seu boletim escolar.</p>
             <ul>
-                <li>Ambiente simples para estudantes</li>
-                <li>Conteúdos e quizzes por disciplina</li>
-                <li>Acompanhe seu progresso no perfil</li>
+                <li>Materiais de estudo publicados pelos professores</li>
+                <li>Quizzes temáticos e Matemática Infinita com ranking oficial</li>
+                <li>Boletim escolar detalhado por período e componente</li>
             </ul>
         </aside>
     </main>

@@ -3,75 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matemática Infinita - BitAcademy</title>
+    <title>Matemática Infinita — BitAcademy</title>
     <link rel="stylesheet" href="jogos.css">
 </head>
 <body>
     <main class="game-shell">
         <section class="game-panel" aria-labelledby="game-title">
             <div class="game-top">
-                <a class="back-link" href="../materia.html?slug=matematica">Voltar para Matemática</a>
+                <div class="game-top-links">
+                    <a class="back-link" href="../materia.html?slug=matematica">← Matemática</a>
+                    <a class="back-link" href="../Bitacademy.html">Página Inicial</a>
+                </div>
                 <span data-auth-status></span>
             </div>
 
             <header class="game-hero">
                 <div>
-                    <p class="eyebrow">Modo infinito</p>
+                    <p class="eyebrow">Modo competitivo infinito</p>
                     <h1 id="game-title">Matemática Infinita</h1>
-                    <p>Resolva o máximo de contas antes do tempo acabar. Acertos dão tempo extra, erros tiram tempo.</p>
+                    <p>Resolva o máximo de contas antes do tempo acabar. Acertos concedem <strong>+4s</strong>, erros descontam <strong>-5s</strong>.</p>
                 </div>
                 <div class="battle-badge">
-                    <span>Em breve</span>
-                    <strong>Modo batalha</strong>
+                    <span>Validado no Servidor</span>
+                    <strong>Ranking Oficial</strong>
                 </div>
             </header>
 
             <div class="game-stats" aria-label="Status da partida">
                 <article>
-                    <span>Tempo</span>
+                    <span>⏱️ Tempo restante</span>
                     <strong id="time-left">30s</strong>
+                    <div class="time-progress" aria-hidden="true">
+                        <div id="time-bar" class="time-progress-fill" style="width: 100%"></div>
+                    </div>
                 </article>
                 <article>
-                    <span>Pontos</span>
+                    <span>⭐ Pontos</span>
                     <strong id="score">0</strong>
                 </article>
                 <article>
-                    <span>Sequência</span>
+                    <span>🔥 Sequência</span>
                     <strong id="streak">0</strong>
                 </article>
             </div>
 
             <section class="challenge-card" aria-live="polite">
                 <div class="challenge-meta">
-                    <span id="level-label">Nível 1</span>
+                    <span id="level-label" class="level-pill">Nível 1</span>
                     <span id="feedback">Pronto para começar?</span>
                 </div>
                 <div id="question" class="question">?</div>
                 <form id="answer-form" class="answer-form">
-                    <label for="answer">Resposta</label>
+                    <label for="answer">Sua resposta</label>
                     <div>
-                        <input type="number" id="answer" name="answer" inputmode="numeric" autocomplete="off" disabled>
+                        <input type="number" id="answer" name="answer" inputmode="numeric" autocomplete="off" placeholder="Digite o resultado..." disabled>
                         <button type="submit" disabled>Responder</button>
                     </div>
                 </form>
             </section>
 
             <div class="game-actions">
-                <button id="start-game" type="button">Começar partida</button>
+                <button id="start-game" type="button">⚡ Começar partida</button>
                 <button id="reset-game" type="button" class="secondary" disabled>Reiniciar</button>
             </div>
         </section>
 
         <aside class="ranking-panel" aria-labelledby="ranking-title">
             <div>
-                <p class="eyebrow">Competição local</p>
-                <h2 id="ranking-title">Ranking</h2>
-                <p>As melhores pontuações ficam salvas neste navegador. Quando o modo batalha chegar, esta área já vira a base do placar competitivo.</p>
+                <p class="eyebrow">Placar da plataforma</p>
+                <h2 id="ranking-title">🏆 Ranking Oficial</h2>
+                <p>Os melhores recordes por estudante são validados pelo servidor e ficam salvos no banco de dados do BitAcademy.</p>
             </div>
             <div id="ranking-list" class="ranking-list"></div>
             <section class="battle-preview">
-                <h3>Próxima evolução</h3>
-                <p>Partidas entre jogadores, ranking por quiz e por modo infinito, salas privadas e disputas por tempo.</p>
+                <h3>💡 Dica de pontuação</h3>
+                <p>Manter uma sequência alta de acertos aumenta o nível do desafio e multiplica os pontos ganhos a cada resposta certa.</p>
             </section>
         </aside>
     </main>
