@@ -160,7 +160,7 @@ window.BitAcademyAuth = (() => {
     });
   };
 
-  const renderProfile = async () => {
+  const renderProfile = async (activeTab = "resumo") => {
     const container = document.querySelector("[data-profile]");
     if (!container) return;
 
@@ -369,31 +369,209 @@ window.BitAcademyAuth = (() => {
 
       <section class="profile-tab-panel profile-card-section" data-profile-panel="atividades" hidden>
         <p class="eyebrow">Tarefas &amp; Trabalhos</p>
-        <h2>Atividades disponíveis</h2>
-        <p style="margin-bottom: 16px;">Confira as propostas e orientações publicadas pelos professores de cada disciplina.</p>
-        ${activitiesError ? `<p>${escapeHtml(activitiesError)}</p>` : availableActivities.length ? `<div class="result-list">${availableActivities.map((activity) => `
-          <article>
-            <div>
-              <strong>${escapeHtml(activity.title)}</strong>
-              <span>${escapeHtml(activity.subject_name)} · Prof. ${escapeHtml(activity.teacher_name)} · ${activity.activity_type === "automatic" ? "Atividade automática" : "Correção pelo professor"}</span>
-              <p>${escapeHtml(activity.description)}</p>
-              <a href="materia.html?slug=${encodeURIComponent(activity.subject_slug)}">Acessar disciplina →</a>
-            </div>
-            <b>${activity.due_at ? `Prazo: ${new Date(activity.due_at).toLocaleDateString("pt-BR")}` : "Sem prazo fixo"} · ${escapeHtml(activity.max_score)} pts</b>
-          </article>
-        `).join("")}</div>` : '<p>Nenhuma atividade foi disponibilizada pelos professores até o momento.</p>'}
+        <h2>Atividades &amp; Entregas</h2>
+        <p style="margin-bottom: 20px;">Confira as orientações publicadas pelos seus professores, envie seus trabalhos e acompanhe correções e notas integradas ao boletim.</p>
+        ${activitiesError ? `<p class="form-feedback error">${escapeHtml(activitiesError)}</p>` : availableActivities.length ? `
+          <div class="activity-student-grid">
+            ${availableActivities.map((activity) => {
+              const isGraded = activity.submission_status === "graded";
+              const isSubmitted = activity.submission_status === "submitted";
+              const isPending = !isGraded && !isSubmitted;
+
+              let statusBadge = "";
+              if (isGraded) {
+                statusBadge = `<span class="submission-badge graded">✓ Avaliada</span>`;
+              } else if (isSubmitted) {
+                statusBadge = `<span class="submission-badge submitted">⏳ Entregue</span>`;
+              } else {
+                statusBadge = `<span class="submission-badge pending">⚠️ Pendente</span>`;
+              }
+
+              const formattedDue = activity.due_at ? new Date(activity.due_at).toLocaleDateString("pt-BR") : "Sem prazo fixo";
+              const isOverdue = activity.due_at && new Date(activity.due_at) < new Date() && isPending;
+
+              return `
+                <article class="activity-student-card ${isOverdue ? 'overdue' : ''}">
+                  <header class="activity-card-header">
+                    <div>
+                      <div class="activity-pill-tags">
+                        <span class="pill-tag">${escapeHtml(activity.subject_name)}</span>
+                        <span class="pill-tag subtle">Prof. ${escapeHtml(activity.teacher_name)}</span>
+                        ${activity.assessment_id ? `<span class="pill-tag gradebook-badge">📊 Boletim Oficial</span>` : ""}
+                        ${activity.activity_type === "automatic" ? `<span class="pill-tag auto-badge">⚡ Automática</span>` : ""}
+                      </div>
+                      <h3 class="activity-card-title">${escapeHtml(activity.title)}</h3>
+                    </div>
+                    <div class="activity-card-header-status">
+                      ${statusBadge}
+                      <span class="activity-due-text ${isOverdue ? 'text-danger' : ''}">${isOverdue ? '⚠️ Expirou em: ' : 'Prazo: '}${formattedDue}</span>
+                    </div>
+                  </header>
+
+                  <div class="activity-card-description">
+                    <p>${escapeHtml(activity.description)}</p>
+                  </div>
+
+                  <div class="activity-submission-zone">
+                    ${isGraded ? `
+                      <div class="submission-graded-box">
+                        <div class="submission-score-row">
+                          <div>
+                            <span class="submission-score-label">Nota atribuída pelo professor:</span>
+                            <div class="submission-score-value">
+                              <strong>${Number(activity.submission_score).toFixed(2)}</strong> <span class="max-score">/ ${activity.assessment_id ? '10.00' : `${activity.max_score} pts`}</span>
+                            </div>
+                          </div>
+                          ${activity.graded_at ? `<span class="submission-graded-date">Avaliado em ${new Date(activity.graded_at).toLocaleDateString("pt-BR")}</span>` : ""}
+                        </div>
+                        ${activity.submission_feedback ? `
+                          <div class="submission-feedback-quote">
+                            <span class="feedback-icon">💬</span>
+                            <div>
+                              <strong>Comentário &amp; Orientações:</strong>
+                              <p>${escapeHtml(activity.submission_feedback)}</p>
+                            </div>
+                          </div>
+                        ` : ""}
+                        <div class="submission-records">
+                          ${activity.submission_link ? `<p class="submission-record-link"><strong>Link entregue:</strong> <a href="${escapeHtml(activity.submission_link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(activity.submission_link)} ↗</a></p>` : ""}
+                          ${activity.submission_content ? `<div class="submission-record-content"><strong>Conteúdo entregue:</strong><pre class="submission-content-box">${escapeHtml(activity.submission_content)}</pre></div>` : ""}
+                        </div>
+                      </div>
+                    ` : isSubmitted ? `
+                      <div class="submission-submitted-box">
+                        <div class="submission-submitted-header">
+                          <p><strong>Trabalho entregue com sucesso!</strong> Aguardando avaliação do professor.</p>
+                          ${activity.submitted_at ? `<span class="submitted-timestamp">Envio: ${new Date(activity.submitted_at).toLocaleString("pt-BR")}</span>` : ""}
+                        </div>
+                        <div class="submission-records">
+                          ${activity.submission_link ? `<p class="submission-record-link"><strong>Link enviado:</strong> <a href="${escapeHtml(activity.submission_link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(activity.submission_link)} ↗</a></p>` : ""}
+                          ${activity.submission_content ? `<div class="submission-record-content"><strong>Texto/Resposta:</strong><pre class="submission-content-box">${escapeHtml(activity.submission_content)}</pre></div>` : ""}
+                        </div>
+                        <div style="margin-top: 14px;">
+                          <button type="button" class="btn-subtle" data-toggle-submission="${activity.id}">✏️ Atualizar ou reenviar trabalho</button>
+                        </div>
+                        <div data-submission-form-container="${activity.id}" style="display: none; margin-top: 14px;">
+                          <form class="activity-submit-form" data-activity-submit-form data-activity-id="${activity.id}">
+                            <label>
+                              <span>Atualizar texto ou anotações</span>
+                              <textarea name="content" rows="3" placeholder="Escreva sua resposta ou considerações...">${escapeHtml(activity.submission_content || "")}</textarea>
+                            </label>
+                            <label>
+                              <span>Atualizar link do trabalho (Google Drive, GitHub, Notion, etc.)</span>
+                              <input type="url" name="link" value="${escapeHtml(activity.submission_link || "")}" placeholder="https://..." />
+                            </label>
+                            <div class="form-feedback" data-submission-msg></div>
+                            <div class="form-actions-inline">
+                              <button type="submit" class="primary-button small">Salvar Nova Versão</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    ` : `
+                      <div class="submission-pending-box">
+                        <p class="submission-pending-prompt">Envie sua resposta ou link do trabalho para avaliação:</p>
+                        <form class="activity-submit-form" data-activity-submit-form data-activity-id="${activity.id}">
+                          <label>
+                            <span>Texto da resposta / Resolução</span>
+                            <textarea name="content" rows="3" placeholder="Escreva aqui sua resposta, reflexão ou anotações..."></textarea>
+                          </label>
+                          <label>
+                            <span>Link do trabalho externo (Google Docs/Drive, GitHub, PDF, etc.)</span>
+                            <input type="url" name="link" placeholder="https://..." />
+                          </label>
+                          <div class="form-feedback" data-submission-msg></div>
+                          <div class="form-actions-inline">
+                            <button type="submit" class="primary-button small">Enviar Atividade</button>
+                          </div>
+                        </form>
+                      </div>
+                    `}
+                  </div>
+
+                  <footer class="activity-card-footer">
+                    <a href="materia.html?slug=${encodeURIComponent(activity.subject_slug)}" class="card-link-muted">Ver material da disciplina →</a>
+                    <span class="activity-points-pill">${escapeHtml(activity.max_score)} pts máx</span>
+                  </footer>
+                </article>
+              `;
+            }).join("")}
+          </div>
+        ` : '<p>Nenhuma atividade foi disponibilizada pelos professores até o momento.</p>'}
       </section>
     `;
 
     const profileTabs = container.querySelectorAll("[data-profile-tab]");
     const profilePanels = container.querySelectorAll("[data-profile-panel]");
+
+    const switchTab = (target) => {
+      profileTabs.forEach((btn) => btn.classList.toggle("active", btn.dataset.profileTab === target));
+      profilePanels.forEach((panel) => {
+        panel.hidden = panel.dataset.profilePanel !== target;
+      });
+    };
+
+    switchTab(activeTab);
+
     profileTabs.forEach((tab) => {
-      tab.addEventListener("click", () => {
-        const target = tab.dataset.profileTab;
-        profileTabs.forEach((btn) => btn.classList.toggle("active", btn.dataset.profileTab === target));
-        profilePanels.forEach((panel) => {
-          panel.hidden = panel.dataset.profilePanel !== target;
-        });
+      tab.addEventListener("click", () => switchTab(tab.dataset.profileTab));
+    });
+
+    container.querySelectorAll("[data-activity-submit-form]").forEach((form) => {
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const activityId = form.dataset.activityId;
+        const content = form.content ? form.content.value.trim() : "";
+        const link = form.link ? form.link.value.trim() : "";
+        const submitBtn = form.querySelector("button[type='submit']");
+        const msgEl = form.querySelector("[data-submission-msg]");
+
+        if (!content && !link) {
+          if (msgEl) {
+            msgEl.textContent = "Por favor, preencha ao menos uma resposta em texto ou informe um link.";
+            msgEl.className = "form-feedback error";
+          }
+          return;
+        }
+
+        try {
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = "Enviando...";
+          }
+          if (msgEl) {
+            msgEl.textContent = "";
+            msgEl.className = "form-feedback";
+          }
+
+          await api("academic?action=submit-activity", {
+            method: "POST",
+            body: JSON.stringify({ activityId, content, link })
+          });
+
+          await renderProfile("atividades");
+        } catch (err) {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "Tentar novamente";
+          }
+          if (msgEl) {
+            msgEl.textContent = err.message || "Erro ao enviar atividade.";
+            msgEl.className = "form-feedback error";
+          }
+        }
+      });
+    });
+
+    container.querySelectorAll("[data-toggle-submission]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.toggleSubmission;
+        const target = container.querySelector(`[data-submission-form-container="${id}"]`);
+        if (target) {
+          const isHidden = target.style.display === "none";
+          target.style.display = isHidden ? "block" : "none";
+          btn.textContent = isHidden ? "✕ Cancelar edição" : "✏️ Atualizar ou reenviar trabalho";
+        }
       });
     });
   };

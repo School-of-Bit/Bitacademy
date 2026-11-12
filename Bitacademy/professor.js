@@ -103,9 +103,9 @@
         <div>
           <span class="teacher-label">Bem-vindo(a), professor(a)</span>
           <h2>${escapeHtml(user.name)}</h2>
-          <p>Escolha uma disciplina abaixo para publicar materiais ou acesse o diário de turmas para lançar notas no boletim.</p>
+          <p>Escolha uma disciplina abaixo para gerenciar conteúdos e atividades ou abra o diário de turmas para lançar notas.</p>
           <div class="teacher-welcome-actions">
-            <button type="button" class="teacher-button" data-open-gradebook>📊 Abrir Boletim e Diário de Notas</button>
+            <button type="button" class="teacher-button" data-open-gradebook>📊 Abrir Diário de Turmas &amp; Boletim</button>
           </div>
         </div>
         <div class="teacher-welcome-icon">👨‍🏫</div>
@@ -132,7 +132,7 @@
             <span class="teacher-label">Gestão acadêmica</span>
             <h2>Minhas disciplinas</h2>
           </div>
-          <p>Os recursos de materiais, rascunhos e atividades ficam organizados dentro de cada disciplina.</p>
+          <p>Os materiais, rascunhos, tarefas e correção de entregas ficam organizados dentro de cada disciplina.</p>
         </div>
         <div class="subject-grid">
           ${subjectCards}
@@ -488,14 +488,14 @@
         <div>
           <span class="teacher-label">Gestão da Disciplina</span>
           <h2>${escapeHtml(subject.name)}</h2>
-          <p>Publique materiais de estudo, salve rascunhos e cadastre atividades para os estudantes.</p>
+          <p>Publique materiais de estudo, salve rascunhos e cadastre atividades integradas ao boletim.</p>
         </div>
         <div class="teacher-welcome-icon">📖</div>
       </section>
       <section class="teacher-tabs" aria-label="Seções da disciplina">
         <button class="active" type="button" data-tab="overview">Visão geral</button>
         <button type="button" data-tab="materials">Materiais de estudo</button>
-        <button type="button" data-tab="activities">Atividades propostas</button>
+        <button type="button" data-tab="activities">Atividades &amp; Entregas</button>
       </section>
       <div data-subject-content>
         <div class="teacher-loading">Carregando disciplina...</div>
@@ -572,8 +572,8 @@
           </article>
           <article>
             <span>📝</span>
-            <h3>Atividades</h3>
-            <p>Cadastre listas, trabalhos e orientações com prazo e pontuação máxima visíveis no perfil dos alunos.</p>
+            <h3>Atividades &amp; Entregas</h3>
+            <p>Cadastre tarefas vinculadas às turmas, receba entregas com links e lance notas direto no boletim.</p>
           </article>
           <article>
             <span>📊</span>
@@ -718,74 +718,176 @@
   };
 
   const renderActivities = async (subject, content) => {
-    const data = await api(`/api/academic?resource=activities&action=list&subject=${encodeURIComponent(subject.slug)}`);
-    const activities = data.activities || [];
+    const [actData, coursesData] = await Promise.all([
+      api(`/api/academic?resource=activities&action=list&subject=${encodeURIComponent(subject.slug)}`),
+      api("/api/gradebook?action=courses").catch(() => ({ courses: [] }))
+    ]);
+    const activities = actData.activities || [];
+    const relevantCourses = (coursesData.courses || []).filter((c) => c.subject_name.toLowerCase() === subject.name.toLowerCase());
 
     content.innerHTML = `
       <section class="teacher-section">
         <div class="teacher-section-heading">
           <div>
             <span class="teacher-label">Tarefas e propostas</span>
-            <h2>Atividades</h2>
+            <h2>Atividades &amp; Entregas</h2>
           </div>
-          <p>Cadastre atividades e orientações que ficarão visíveis na aba de atividades do perfil dos estudantes.</p>
+          <p>Cadastre atividades integradas ao diário de classe. Ao corrigir entregas, a nota é sincronizada automaticamente com o boletim do aluno.</p>
         </div>
 
         <form class="teacher-form" data-activity-form>
           <div class="teacher-form-heading">
             <h3>Nova atividade</h3>
-            <p>Defina as informações básicas da atividade, prazo e pontuação máxima.</p>
+            <p>Defina o título, descrição e, se desejar, vincule a uma turma para que vire uma avaliação no boletim.</p>
           </div>
-          <label>Título<input name="title" maxlength="200" required placeholder="Ex.: Trabalho sobre funções"></label>
-          <label>Descrição<textarea name="description" rows="5" required placeholder="Explique o que os alunos deverão fazer..."></textarea></label>
+          <label>Título<input name="title" maxlength="200" required placeholder="Ex.: Trabalho sobre Equações do 2º Grau"></label>
+          <label>Descrição e orientações<textarea name="description" rows="4" required placeholder="Explique o que os alunos deverão entregar, critérios e orientações..."></textarea></label>
+
           <div class="teacher-form-row">
             <label>Tipo
               <select name="activityType">
-                <option value="manual">Correção manual</option>
-                <option value="automatic">Correção automática</option>
+                <option value="manual">Correção manual pelo professor</option>
+                <option value="automatic">Atividade de resposta automática</option>
               </select>
             </label>
-            <label>Nota máxima<input name="maxScore" type="number" min="0.01" max="100" step="0.01" value="10" required></label>
+            <label>Nota máxima (Escala 0 a 10)<input name="maxScore" type="number" min="0.01" max="10" step="0.01" value="10" required></label>
           </div>
-          <label>Prazo opcional<input name="dueAt" type="datetime-local"></label>
+
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-top: 4px;">
+            <input type="checkbox" name="linkToGradebook" data-toggle-gradebook ${relevantCourses.length ? "checked" : "disabled"}>
+            <span><strong>Vincular diretamente ao Diário de Classe/Boletim</strong> ${relevantCourses.length ? "(cria avaliação regular automaticamente)" : "(requer uma turma atribuída no ano letivo)"}</span>
+          </label>
+
+          <div class="teacher-form-row" data-gradebook-fields ${relevantCourses.length ? "" : "hidden"}>
+            <label>Turma / Oferta
+              <select name="courseOfferingId" data-offering-select>
+                <option value="">Selecione uma turma...</option>
+                ${relevantCourses.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.class_name)} (${escapeHtml(c.academic_year_name)})</option>`).join("")}
+              </select>
+            </label>
+            <label>Período avaliativo
+              <select name="gradingPeriodId" data-period-select disabled>
+                <option value="">Selecione a turma primeiro</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="teacher-form-row" data-gradebook-component-field ${relevantCourses.length ? "" : "hidden"}>
+            <label>Componente do Boletim
+              <select name="componentId" data-component-select disabled>
+                <option value="">Selecione a turma primeiro</option>
+              </select>
+            </label>
+            <label>Prazo de entrega opcional<input name="dueAt" type="datetime-local"></label>
+          </div>
+
           <div class="teacher-form-actions"><button class="teacher-button" type="submit">Criar atividade</button></div>
           <div class="teacher-message" data-activity-message aria-live="polite"></div>
         </form>
 
         <div class="teacher-list-heading">
-          <h3>Atividades criadas</h3>
+          <h3>Atividades cadastradas</h3>
           <span>${activities.length} ${activities.length === 1 ? "atividade" : "atividades"}</span>
         </div>
         <div class="teacher-list">
           ${activities.length ? activities.map((activity) => `
-            <article class="teacher-list-item">
-              <div>
-                <div class="teacher-badges">
-                  <span class="teacher-badge">${activity.activity_type === "automatic" ? "Automática" : "Manual"}</span>
-                  <span class="teacher-badge">${escapeHtml(activity.max_score)} pts</span>
+            <article class="teacher-list-item" data-activity-item="${escapeHtml(activity.id)}">
+              <div class="material-summary-header">
+                <div>
+                  <div class="teacher-badges">
+                    <span class="teacher-badge">${activity.activity_type === "automatic" ? "Automática" : "Correção manual"}</span>
+                    <span class="teacher-badge">${escapeHtml(activity.max_score)} pts</span>
+                    ${activity.class_name ? `<span class="teacher-badge published">Turma: ${escapeHtml(activity.class_name)}</span>` : '<span class="teacher-badge">Geral</span>'}
+                    ${activity.assessment_id ? '<span class="teacher-badge published">✓ Vinculada ao Boletim</span>' : ''}
+                  </div>
+                  <h3>${escapeHtml(activity.title)}</h3>
+                  <p>${escapeHtml(activity.description)}</p>
+                  <small>${activity.due_at ? `📅 Prazo: ${escapeHtml(formatDate(activity.due_at))}` : "Sem prazo definido"}</small>
                 </div>
-                <h3>${escapeHtml(activity.title)}</h3>
-                <p>${escapeHtml(activity.description)}</p>
-                <small>${activity.due_at ? `📅 Prazo: ${escapeHtml(formatDate(activity.due_at))}` : "Sem prazo definido"}</small>
+                <div class="subject-actions" style="margin: 0;">
+                  <button type="button" class="teacher-button" data-open-submissions="${escapeHtml(activity.id)}">
+                    📋 Mesa de Correção (${activity.submission_count ?? 0} entregas)
+                  </button>
+                </div>
+              </div>
+              <div class="submissions-drawer" data-submissions-drawer="${escapeHtml(activity.id)}" hidden style="margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--cor-borda);">
+                <div class="teacher-loading">Carregando entregas dos alunos...</div>
               </div>
             </article>
           `).join("") : `
-            <div class="teacher-empty compact"><span class="teacher-icon">📝</span><h3>Nenhuma atividade criada</h3><p>Use o formulário acima para criar a primeira atividade.</p></div>
+            <div class="teacher-empty compact"><span class="teacher-icon">📝</span><h3>Nenhuma atividade criada</h3><p>Use o formulário acima para criar a primeira atividade desta disciplina.</p></div>
           `}
         </div>
       </section>
     `;
 
-    content.querySelector("[data-activity-form]").addEventListener("submit", async (event) => {
+    const form = content.querySelector("[data-activity-form]");
+    const toggleGb = form.querySelector("[data-toggle-gradebook]");
+    const gbFields = form.querySelector("[data-gradebook-fields]");
+    const gbCompField = form.querySelector("[data-gradebook-component-field]");
+    const offeringSelect = form.querySelector("[data-offering-select]");
+    const periodSelect = form.querySelector("[data-period-select]");
+    const componentSelect = form.querySelector("[data-component-select]");
+
+    toggleGb?.addEventListener("change", () => {
+      const active = toggleGb.checked;
+      gbFields.hidden = !active;
+      gbCompField.hidden = !active;
+      offeringSelect.required = active;
+      periodSelect.required = active;
+      componentSelect.required = active;
+    });
+
+    let currentOfferingCache = {};
+    offeringSelect?.addEventListener("change", async () => {
+      const offId = offeringSelect.value;
+      if (!offId) {
+        periodSelect.disabled = true;
+        periodSelect.innerHTML = '<option value="">Selecione a turma primeiro</option>';
+        componentSelect.disabled = true;
+        componentSelect.innerHTML = '<option value="">Selecione a turma primeiro</option>';
+        return;
+      }
+      periodSelect.disabled = true;
+      periodSelect.innerHTML = '<option value="">Carregando períodos...</option>';
+      componentSelect.disabled = true;
+      try {
+        const details = await api(`/api/gradebook?action=course&offering=${encodeURIComponent(offId)}`);
+        currentOfferingCache[offId] = details;
+        const periods = (details.periods || []).filter((p) => p.status === "open");
+        periodSelect.disabled = false;
+        periodSelect.innerHTML = '<option value="">Selecione um período aberto...</option>' + periods.map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.sequence)}. ${escapeHtml(p.name)}</option>`).join("");
+        componentSelect.innerHTML = '<option value="">Selecione o período primeiro</option>';
+      } catch (err) {
+        periodSelect.innerHTML = '<option value="">Erro ao carregar períodos</option>';
+      }
+    });
+
+    periodSelect?.addEventListener("change", () => {
+      const offId = offeringSelect.value;
+      const periodId = periodSelect.value;
+      const details = currentOfferingCache[offId];
+      if (!details || !periodId) {
+        componentSelect.disabled = true;
+        componentSelect.innerHTML = '<option value="">Selecione o período</option>';
+        return;
+      }
+      const comps = (details.components || []).filter((c) => c.grading_period_id === periodId);
+      componentSelect.disabled = false;
+      componentSelect.innerHTML = comps.length
+        ? '<option value="">Selecione o componente...</option>' + comps.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)} (${escapeHtml(c.weight_percent)}%)</option>`).join("")
+        : '<option value="">Nenhum componente cadastrado neste período</option>';
+    });
+
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const form = event.currentTarget;
       const button = form.querySelector("button[type=submit]");
       const message = form.querySelector("[data-activity-message]");
       const formData = new FormData(form);
       const dueAt = formData.get("dueAt");
 
       button.disabled = true;
-      showMessage(message, "Criando atividade...", "info");
+      showMessage(message, "Criando atividade e gerando avaliação no boletim...", "info");
 
       try {
         await api("/api/academic?resource=activities&action=create", {
@@ -796,18 +898,122 @@
             description: formData.get("description"),
             activityType: formData.get("activityType"),
             maxScore: formData.get("maxScore"),
-            dueAt: dueAt ? new Date(dueAt).toISOString() : null
+            dueAt: dueAt ? new Date(dueAt).toISOString() : null,
+            linkToGradebook: toggleGb?.checked ?? false,
+            courseOfferingId: formData.get("courseOfferingId"),
+            gradingPeriodId: formData.get("gradingPeriodId"),
+            componentId: formData.get("componentId")
           })
         });
         showMessage(message, "Atividade criada com sucesso!", "success");
         form.reset();
-        form.querySelector("[name=maxScore]").value = "10";
         setTimeout(() => switchTab(subject, "activities"), 500);
       } catch (error) {
         showMessage(message, error.message, "error");
         button.disabled = false;
       }
     });
+
+    content.querySelectorAll("[data-open-submissions]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const actId = btn.dataset.openSubmissions;
+        const drawer = content.querySelector(`[data-submissions-drawer="${actId}"]`);
+        if (!drawer.hidden) {
+          drawer.hidden = true;
+          btn.textContent = `📋 Mesa de Correção`;
+          return;
+        }
+        drawer.hidden = false;
+        btn.textContent = `▲ Fechar Correção`;
+        await renderSubmissionsDrawer(actId, drawer);
+      });
+    });
+  };
+
+  const renderSubmissionsDrawer = async (activityId, container) => {
+    container.innerHTML = '<div class="teacher-loading">Carregando submissões dos alunos...</div>';
+    try {
+      const data = await api(`/api/academic?action=activity-submissions&activityId=${encodeURIComponent(activityId)}`);
+      const { activity, students } = data;
+
+      if (!students || !students.length) {
+        container.innerHTML = `<p class="teacher-empty compact">Nenhum aluno vinculado ou nenhuma entrega realizada ainda.</p>`;
+        return;
+      }
+
+      container.innerHTML = `
+        <div class="teacher-section-heading" style="margin-bottom: 12px;">
+          <div>
+            <span class="teacher-label">Mesa de Correção e Avaliação</span>
+            <h3 style="margin: 2px 0;">Entregas de ${escapeHtml(activity.title)}</h3>
+          </div>
+          ${activity.assessment_id ? '<span class="teacher-badge published">⚡ Notas sincronizadas com o Boletim</span>' : '<span class="teacher-badge">Atividade avulsa</span>'}
+        </div>
+        <div class="grade-student-list">
+          ${students.map((st) => {
+            const hasSubmitted = Boolean(st.submitted_at);
+            const isGraded = st.submission_status === "graded";
+            return `
+              <form class="grade-student-row" data-grade-submission data-activity="${escapeHtml(activity.id)}" data-enrollment="${escapeHtml(st.enrollment_id)}">
+                <div>
+                  <strong>${escapeHtml(st.student_name)}</strong>
+                  <small style="display: block; color: var(--cor-subtexto);">${escapeHtml(st.student_email)}</small>
+                  <div style="margin-top: 6px;">
+                    ${hasSubmitted
+                      ? `<span class="teacher-badge published">Entregue em ${escapeHtml(formatDate(st.submitted_at))}</span>`
+                      : '<span class="teacher-badge">Pendente de entrega</span>'}
+                    ${st.link ? `<a href="${escapeHtml(st.link)}" target="_blank" rel="noopener noreferrer" style="color: var(--cor-ciano); font-weight: 800; font-size: 0.85rem; margin-left: 6px;">Abrir trabalho anexo ↗</a>` : ""}
+                  </div>
+                  ${st.content ? `<div style="margin-top: 6px; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.03); font-size: 0.88rem; color: var(--cor-texto); white-space: pre-wrap;">${escapeHtml(st.content)}</div>` : ""}
+                </div>
+
+                <label>Nota (0-10)
+                  <input name="score" type="number" min="0" max="10" step="0.01" value="${st.score ?? ""}" placeholder="0 a 10" required>
+                </label>
+
+                <label style="grid-column: span 2;">Feedback ao aluno
+                  <input name="feedback" maxlength="2000" value="${escapeHtml(st.feedback || "")}" placeholder="Orientações ou elogios do professor...">
+                </label>
+
+                <div class="grade-row-actions">
+                  <button class="teacher-button" type="submit">${isGraded ? "Atualizar nota" : "Lançar nota"}</button>
+                  <span class="teacher-message" data-sub-message aria-live="polite"></span>
+                </div>
+              </form>
+            `;
+          }).join("")}
+        </div>
+      `;
+
+      container.querySelectorAll("[data-grade-submission]").forEach((subForm) => {
+        subForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const formEl = e.currentTarget;
+          const msg = formEl.querySelector("[data-sub-message]");
+          const btn = formEl.querySelector("button[type=submit]");
+          const body = {
+            activityId: formEl.dataset.activity,
+            enrollmentId: formEl.dataset.enrollment,
+            score: formEl.score.value,
+            feedback: formEl.feedback.value
+          };
+          btn.disabled = true;
+          try {
+            const res = await api("/api/academic?action=grade-submission", {
+              method: "POST",
+              body: JSON.stringify(body)
+            });
+            showMessage(msg, res.gradeSynced ? "✓ Nota salva & Boletim sincronizado" : "✓ Nota salva", "success");
+          } catch (err) {
+            showMessage(msg, err.message, "error");
+          } finally {
+            btn.disabled = false;
+          }
+        });
+      });
+    } catch (err) {
+      container.innerHTML = `<p class="teacher-message error">${escapeHtml(err.message)}</p>`;
+    }
   };
 
   document.addEventListener("DOMContentLoaded", render);
