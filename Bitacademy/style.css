@@ -38,10 +38,48 @@ html {
 
 body {
   font-family: var(--fonte);
-  background: var(--cor-bg);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(99, 102, 241, 0.14), transparent 36%),
+    radial-gradient(circle at 88% 14%, rgba(34, 211, 238, 0.1), transparent 34%),
+    var(--cor-bg);
+  background-attachment: fixed;
   color: var(--cor-texto);
   padding: 20px;
   min-height: 100vh;
+}
+
+/* --- Lucide Icons System --- */
+.lucide {
+  display: inline-block;
+  vertical-align: -0.18em;
+  flex-shrink: 0;
+  stroke: currentColor;
+  transition: transform 0.2s ease;
+}
+
+.lucide-holder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.primary-link,
+.secondary-link,
+.primary-button,
+.btn-subtle,
+.learning-tabs button,
+.profile-tabs button,
+.board-pill,
+.game-tag,
+.reading-badge,
+.material-back,
+.material-practice-jump,
+.card-link-muted,
+.subject-card a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 @keyframes aparecerSuave {
@@ -483,6 +521,27 @@ p {
 
 .home-overview article {
   padding: 22px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.home-overview article:hover {
+  transform: translateY(-2px);
+  border-color: rgba(34, 211, 238, 0.35);
+}
+
+.overview-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.16), rgba(99, 102, 241, 0.16));
+  border: 1px solid rgba(34, 211, 238, 0.28);
+  color: var(--cor-ciano);
+  flex-shrink: 0;
 }
 
 .home-overview strong {
@@ -591,6 +650,13 @@ p {
   color: var(--cor-texto);
   font-weight: 800;
   font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subject-preview span .lucide {
+  color: var(--cor-ciano);
 }
 
 .quiz-preview b {
@@ -670,13 +736,21 @@ p {
 .subject-card:nth-child(8), .subject-card[data-accent="portugues"] { --card-accent: #ef4444; }
 
 .subject-icon {
-  width: 46px;
-  height: 46px;
+  width: 48px;
+  height: 48px;
   display: grid;
   place-items: center;
-  border-radius: 13px;
-  background: color-mix(in srgb, var(--card-accent, var(--cor-destaque)) 20%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--card-accent, var(--cor-destaque)) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--card-accent, var(--cor-destaque)) 38%, transparent);
+  color: var(--card-accent, var(--cor-ciano));
   font-size: 1.35rem;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.subject-card:hover .subject-icon {
+  transform: scale(1.07) rotate(-2deg);
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--card-accent, var(--cor-destaque)) 28%, transparent);
 }
 
 .subject-card strong {

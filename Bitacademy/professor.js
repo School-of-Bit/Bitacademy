@@ -61,7 +61,7 @@
     if (user.type !== "Professor") {
       panel.innerHTML = `
         <section class="teacher-empty">
-          <span class="teacher-icon">🔒</span>
+          <span class="teacher-icon"><i data-lucide="lock" data-lucide-size="32"></i></span>
           <h2>Área restrita</h2>
           <p>Esta página está disponível somente para contas de professor.</p>
           <a class="teacher-button" href="perfil.html">Voltar ao perfil</a>
@@ -78,21 +78,21 @@
     const subjectCards = subjects.length
       ? subjects.map((subject) => `
           <article class="subject-card">
-            <div class="subject-card-icon">📚</div>
+            <div class="subject-card-icon">${window.BitAcademyIcons ? window.BitAcademyIcons.forSubject(subject.slug, subject.icon, 26) : '<i data-lucide="book-open" data-lucide-size="26"></i>'}</div>
             <div class="subject-card-content">
               <span class="teacher-label">Disciplina vinculada</span>
               <h3>${escapeHtml(subject.name)}</h3>
               <p>Gerencie materiais de estudo, rascunhos e atividades avaliativas desta disciplina.</p>
               <div class="subject-actions">
                 <button type="button" class="teacher-button" data-subject-action="${escapeHtml(subject.slug)}">Gerenciar disciplina</button>
-                <a class="teacher-button secondary" href="materia.html?slug=${encodeURIComponent(subject.slug)}">Ver página pública ↗</a>
+                <a class="teacher-button secondary" href="materia.html?slug=${encodeURIComponent(subject.slug)}">Ver página pública <i data-lucide="external-link" data-lucide-size="14"></i></a>
               </div>
             </div>
           </article>
         `).join("")
       : `
         <section class="teacher-empty" style="grid-column: 1 / -1;">
-          <span class="teacher-icon">📚</span>
+          <span class="teacher-icon"><i data-lucide="book-open" data-lucide-size="32"></i></span>
           <h2>Nenhuma disciplina vinculada</h2>
           <p>Sua conta de professor ainda não possui uma disciplina associada. Solicite o vínculo ao administrador.</p>
         </section>
@@ -105,10 +105,10 @@
           <h2>${escapeHtml(user.name)}</h2>
           <p>Escolha uma disciplina abaixo para gerenciar conteúdos e atividades ou abra o diário de turmas para lançar notas.</p>
           <div class="teacher-welcome-actions">
-            <button type="button" class="teacher-button" data-open-gradebook>📊 Abrir Diário de Turmas &amp; Boletim</button>
+            <button type="button" class="teacher-button" data-open-gradebook><i data-lucide="bar-chart-3" data-lucide-size="18"></i> Abrir Diário de Turmas &amp; Boletim</button>
           </div>
         </div>
-        <div class="teacher-welcome-icon">👨‍🏫</div>
+        <div class="teacher-welcome-icon"><i data-lucide="graduation-cap" data-lucide-size="36"></i></div>
       </section>
 
       <section class="teacher-overview">
@@ -172,13 +172,13 @@
       const data = await api("/api/gradebook?action=courses");
       list.innerHTML = data.courses.length ? data.courses.map((course) => `
         <article class="subject-card">
-          <div class="subject-card-icon">📝</div>
+          <div class="subject-card-icon"><i data-lucide="file-spreadsheet" data-lucide-size="26"></i></div>
           <div class="subject-card-content">
             <span class="teacher-label">Ano letivo ${escapeHtml(course.academic_year_name)}</span>
             <h3>${escapeHtml(course.subject_name)}</h3>
             <p>${escapeHtml(course.class_name)} · ${course.student_count} ${course.student_count === 1 ? "estudante matriculado" : "estudantes matriculados"}</p>
             <div class="subject-actions">
-              <button type="button" class="teacher-button" data-gradebook-course="${escapeHtml(course.id)}">Abrir diário de notas</button>
+              <button type="button" class="teacher-button" data-gradebook-course="${escapeHtml(course.id)}"><i data-lucide="bar-chart-3" data-lucide-size="16"></i> Abrir diário de notas</button>
             </div>
           </div>
         </article>
@@ -294,7 +294,7 @@
             <h2>${escapeHtml(course.subject_name)}</h2>
             <p>${students.length} ${students.length === 1 ? "estudante matriculado" : "estudantes matriculados"} · Média mínima de aprovação: ${escapeHtml(course.passing_score)}/10</p>
           </div>
-          <div class="teacher-welcome-icon">📊</div>
+          <div class="teacher-welcome-icon"><i data-lucide="bar-chart-3" data-lucide-size="36"></i></div>
         </section>
 
         <section class="teacher-section">
@@ -305,7 +305,7 @@
             </div>
             <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
               <p style="margin: 0;">Acompanhe as médias parciais e finais calculadas e identifique estudantes que precisam de recuperação.</p>
-              ${studentSummaries.length ? `<button type="button" class="teacher-button secondary" data-export-csv>📥 Exportar Pauta (CSV)</button>` : ""}
+              ${studentSummaries.length ? `<button type="button" class="teacher-button secondary" data-export-csv><i data-lucide="download" data-lucide-size="16"></i> Exportar Pauta (CSV)</button>` : ""}
             </div>
           </div>
           ${pautaTableHtml}
@@ -708,12 +708,12 @@
           <h2>${escapeHtml(subject.name)}</h2>
           <p>Publique materiais de estudo, salve rascunhos e cadastre atividades integradas ao boletim.</p>
         </div>
-        <div class="teacher-welcome-icon">📖</div>
+        <div class="teacher-welcome-icon">${window.BitAcademyIcons ? window.BitAcademyIcons.forSubject(subject.slug, subject.icon, 36) : '<i data-lucide="book-open" data-lucide-size="36"></i>'}</div>
       </section>
       <section class="teacher-tabs" aria-label="Seções da disciplina">
-        <button class="active" type="button" data-tab="overview">Visão geral</button>
-        <button type="button" data-tab="materials">Materiais de estudo</button>
-        <button type="button" data-tab="activities">Atividades &amp; Entregas</button>
+        <button class="active" type="button" data-tab="overview"><i data-lucide="layers" data-lucide-size="16"></i> Visão geral</button>
+        <button type="button" data-tab="materials"><i data-lucide="file-text" data-lucide-size="16"></i> Materiais de estudo</button>
+        <button type="button" data-tab="activities"><i data-lucide="clipboard-list" data-lucide-size="16"></i> Atividades &amp; Entregas</button>
       </section>
       <div data-subject-content>
         <div class="teacher-loading">Carregando disciplina...</div>
@@ -784,17 +784,17 @@
         </div>
         <div class="teacher-feature-grid">
           <article>
-            <span>📄</span>
+            <span><i data-lucide="file-text" data-lucide-size="24"></i></span>
             <h3>Materiais de Estudo</h3>
             <p>Publique textos, resumos e links complementares. Use o modo rascunho enquanto prepara o conteúdo.</p>
           </article>
           <article>
-            <span>📝</span>
+            <span><i data-lucide="clipboard-check" data-lucide-size="24"></i></span>
             <h3>Atividades &amp; Entregas</h3>
             <p>Cadastre tarefas vinculadas às turmas, receba entregas com links e lance notas direto no boletim.</p>
           </article>
           <article>
-            <span>📊</span>
+            <span><i data-lucide="bar-chart-3" data-lucide-size="24"></i></span>
             <h3>Boletim &amp; Notas</h3>
             <p>Configure componentes avaliativos e lance notas por período no Diário de Classe.</p>
           </article>

@@ -11,7 +11,7 @@
         <section class="game-panel" aria-labelledby="game-title">
             <div class="game-top">
                 <div class="game-top-links">
-                    <a class="back-link" href="../materia.html?slug=matematica">← Matemática</a>
+                    <a class="back-link" href="../materia.html?slug=matematica"><i data-lucide="arrow-left" data-lucide-size="16"></i> Matemática</a>
                     <a class="back-link" href="../Bitacademy.html">Página Inicial</a>
                 </div>
                 <span data-auth-status></span>
@@ -24,25 +24,25 @@
                     <p>Resolva o máximo de contas antes do tempo acabar. Acertos concedem <strong>+4s</strong>, erros descontam <strong>-5s</strong>.</p>
                 </div>
                 <div class="battle-badge">
-                    <span>Validado no Servidor</span>
+                    <span><i data-lucide="shield-check" data-lucide-size="14"></i> Validado no Servidor</span>
                     <strong>Ranking Oficial</strong>
                 </div>
             </header>
 
             <div class="game-stats" aria-label="Status da partida">
                 <article>
-                    <span>⏱️ Tempo restante</span>
+                    <span><i data-lucide="timer" data-lucide-size="16"></i> Tempo restante</span>
                     <strong id="time-left">30s</strong>
                     <div class="time-progress" aria-hidden="true">
                         <div id="time-bar" class="time-progress-fill" style="width: 100%"></div>
                     </div>
                 </article>
                 <article>
-                    <span>⭐ Pontos</span>
+                    <span><i data-lucide="star" data-lucide-size="16"></i> Pontos</span>
                     <strong id="score">0</strong>
                 </article>
                 <article>
-                    <span>🔥 Sequência</span>
+                    <span><i data-lucide="flame" data-lucide-size="16"></i> Sequência</span>
                     <strong id="streak">0</strong>
                 </article>
             </div>
@@ -63,20 +63,20 @@
             </section>
 
             <div class="game-actions">
-                <button id="start-game" type="button">⚡ Começar partida</button>
-                <button id="reset-game" type="button" class="secondary" disabled>Reiniciar</button>
+                <button id="start-game" type="button"><i data-lucide="zap" data-lucide-size="18"></i> Começar partida</button>
+                <button id="reset-game" type="button" class="secondary" disabled><i data-lucide="rotate-ccw" data-lucide-size="16"></i> Reiniciar</button>
             </div>
         </section>
 
         <aside class="ranking-panel" aria-labelledby="ranking-title">
             <div>
                 <p class="eyebrow">Placar da plataforma</p>
-                <h2 id="ranking-title">🏆 Ranking Oficial</h2>
+                <h2 id="ranking-title"><i data-lucide="trophy" data-lucide-size="22"></i> Ranking Oficial</h2>
                 <p>Os melhores recordes por estudante são validados pelo servidor e ficam salvos no banco de dados do BitAcademy.</p>
             </div>
             <div id="ranking-list" class="ranking-list"></div>
             <section class="battle-preview">
-                <h3>💡 Dica de pontuação</h3>
+                <h3><i data-lucide="lightbulb" data-lucide-size="18"></i> Dica de pontuação</h3>
                 <p>Manter uma sequência alta de acertos aumenta o nível do desafio e multiplica os pontos ganhos a cada resposta certa.</p>
             </section>
         </aside>

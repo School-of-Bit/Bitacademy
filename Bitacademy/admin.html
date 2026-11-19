@@ -31,35 +31,35 @@
         <h1>Administração da Plataforma</h1>
         <span>Gerencie professores, usuários, catálogo de disciplinas, períodos letivos, turmas e recursos interativos.</span>
       </div>
-      <div class="welcome-badge">🛡️ Acesso Administrador</div>
+      <div class="welcome-badge"><i data-lucide="shield-check" data-lucide-size="18"></i> Acesso Administrador</div>
     </section>
 
     <section class="stats" aria-label="Resumo da plataforma">
       <article>
-        <span>Professores ativos</span>
+        <span><i data-lucide="graduation-cap" data-lucide-size="16"></i> Professores ativos</span>
         <strong data-teacher-count>—</strong>
       </article>
       <article>
-        <span>Disciplinas no catálogo</span>
+        <span><i data-lucide="book-marked" data-lucide-size="16"></i> Disciplinas no catálogo</span>
         <strong data-subject-count>—</strong>
       </article>
       <article>
-        <span>Contas registradas</span>
+        <span><i data-lucide="users" data-lucide-size="16"></i> Contas registradas</span>
         <strong data-user-count>—</strong>
       </article>
       <article>
-        <span>Recursos interativos</span>
+        <span><i data-lucide="gamepad-2" data-lucide-size="16"></i> Recursos interativos</span>
         <strong data-resource-count>—</strong>
       </article>
     </section>
 
     <nav class="admin-tabs" aria-label="Módulos administrativos">
-      <button type="button" class="active" data-admin-tab="professores">👨‍🏫 Professores</button>
-      <button type="button" data-admin-tab="usuarios">👥 Usuários</button>
-      <button type="button" data-admin-tab="disciplinas">📚 Disciplinas</button>
-      <button type="button" data-admin-tab="boletim">📊 Boletim &amp; Turmas</button>
-      <button type="button" data-admin-tab="recursos">🎮 Quizzes &amp; Jogos</button>
-      <button type="button" data-admin-tab="todos">Ver tudo</button>
+      <button type="button" class="active" data-admin-tab="professores"><i data-lucide="graduation-cap" data-lucide-size="16"></i> Professores</button>
+      <button type="button" data-admin-tab="usuarios"><i data-lucide="users" data-lucide-size="16"></i> Usuários</button>
+      <button type="button" data-admin-tab="disciplinas"><i data-lucide="book-marked" data-lucide-size="16"></i> Disciplinas</button>
+      <button type="button" data-admin-tab="boletim"><i data-lucide="bar-chart-3" data-lucide-size="16"></i> Boletim &amp; Turmas</button>
+      <button type="button" data-admin-tab="recursos"><i data-lucide="gamepad-2" data-lucide-size="16"></i> Quizzes &amp; Jogos</button>
+      <button type="button" data-admin-tab="todos"><i data-lucide="layers" data-lucide-size="16"></i> Ver tudo</button>
     </nav>
 
     <section id="professores" class="admin-section" data-admin-panel="professores">
@@ -68,7 +68,7 @@
           <p class="eyebrow">Gestão acadêmica</p>
           <h2>Professores e vínculo de disciplinas</h2>
         </div>
-        <button type="button" class="secondary-btn" data-refresh>↻ Atualizar</button>
+        <button type="button" class="secondary-btn" data-refresh><i data-lucide="refresh-cw" data-lucide-size="15"></i> Atualizar</button>
       </div>
       <p class="message" data-message aria-live="polite">Carregando dados administrativos...</p>
 
@@ -94,7 +94,7 @@
           <p class="eyebrow">Contas cadastradas</p>
           <h2>Gerenciamento de usuários</h2>
         </div>
-        <button type="button" class="secondary-btn" data-load-users>↻ Atualizar usuários</button>
+        <button type="button" class="secondary-btn" data-load-users><i data-lucide="refresh-cw" data-lucide-size="15"></i> Atualizar usuários</button>
       </div>
       <label class="user-search">
         Buscar por nome, e-mail ou perfil
@@ -155,7 +155,7 @@
           <p class="eyebrow">Organização escolar</p>
           <h2>Anos letivos, turmas e matrículas</h2>
         </div>
-        <button type="button" class="secondary-btn" data-load-gradebook>↻ Atualizar boletim</button>
+        <button type="button" class="secondary-btn" data-load-gradebook><i data-lucide="refresh-cw" data-lucide-size="15"></i> Atualizar boletim</button>
       </div>
       <p>Configure períodos avaliativos com qualquer duração e ordem, defina a política de recuperação e gerencie turmas e ofertas.</p>
       <p class="message" data-gradebook-message aria-live="polite"></p>
@@ -241,7 +241,7 @@
           <p class="eyebrow">Biblioteca interativa</p>
           <h2>Quizzes e jogos por disciplina</h2>
         </div>
-        <button type="button" class="secondary-btn" data-load-resources>↻ Atualizar recursos</button>
+        <button type="button" class="secondary-btn" data-load-resources><i data-lucide="refresh-cw" data-lucide-size="15"></i> Atualizar recursos</button>
       </div>
       <p>Associe páginas HTML existentes no projeto (como <code>Quiz/quiz-historia.html</code> ou <code>Jogos/matematica-infinita.html</code>) às respectivas disciplinas.</p>
 

@@ -55,8 +55,9 @@
   width: 76px;
   height: 76px;
   border-radius: 20px;
-  background: rgba(99, 102, 241, 0.18);
-  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(34, 211, 238, 0.14));
+  border: 1px solid rgba(34, 211, 238, 0.35);
+  color: var(--cor-ciano);
   font-size: 2rem;
   flex-shrink: 0;
 }
@@ -137,7 +138,9 @@
   width: 56px;
   height: 56px;
   border-radius: 15px;
-  background: rgba(99, 102, 241, 0.16);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(34, 211, 238, 0.12));
+  border: 1px solid rgba(99, 102, 241, 0.32);
+  color: var(--cor-ciano);
   font-size: 1.5rem;
   flex-shrink: 0;
 }

@@ -42,6 +42,20 @@ body {
   display: none !important;
 }
 
+.lucide {
+  display: inline-block;
+  vertical-align: -0.18em;
+  flex-shrink: 0;
+  stroke: currentColor;
+}
+
+.lucide-holder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
 #quiz-app {
   max-width: 780px;
   margin: 0 auto;

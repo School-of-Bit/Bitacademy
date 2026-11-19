@@ -32,6 +32,20 @@ body {
   font-family: var(--fonte);
 }
 
+.lucide {
+  display: inline-block;
+  vertical-align: -0.18em;
+  flex-shrink: 0;
+  stroke: currentColor;
+}
+
+.lucide-holder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
 .game-shell {
   width: min(1180px, 100%);
   display: grid;
