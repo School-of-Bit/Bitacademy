@@ -68,6 +68,11 @@ window.BitAcademyIcons = (() => {
     "eye-off": '<path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/>',
     "log-out": '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
     "log-in": '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/>',
+    "mail": '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+    "user-plus": '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>',
+    "key-round": '<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>',
+    "circle": '<circle cx="12" cy="12" r="9"/>',
+    "help-circle": '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
     "play": '<polygon points="6 3 20 12 6 21 6 3"/>',
     "layers": '<path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/>',
     "trending-up": '<polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>'
@@ -1054,8 +1059,91 @@ window.BitAcademyAuth = (() => {
   const bindLoginPage = () => {
     const tabs = document.querySelectorAll("[data-auth-tab]");
     const panels = document.querySelectorAll("[data-auth-panel]");
+    const messageBox = document.querySelector("[data-auth-message-box]");
+    const messageIcon = document.querySelector("[data-auth-message-icon]");
     const message = document.querySelector("[data-auth-message]");
     const recoveryNotice = document.querySelector("[data-recovery-notice]");
+    if (!tabs.length && !panels.length) return;
+
+    const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+    const setBannerMessage = (text, type = "error") => {
+      if (!message) return;
+      message.textContent = text || "";
+      if (!messageBox) return;
+      if (!text) {
+        messageBox.hidden = true;
+        messageBox.className = "form-message-banner";
+        return;
+      }
+      messageBox.hidden = false;
+      messageBox.className = `form-message-banner is-${type}`;
+      if (messageIcon) {
+        const iconName = type === "success" ? "check-circle-2" : "alert-circle";
+        messageIcon.innerHTML = window.BitAcademyIcons.svg(iconName, 18);
+      }
+      window.BitAcademyMotion?.drawerIn(messageBox);
+    };
+
+    const getFieldGroup = (input) => input?.closest(".field-group");
+
+    const clearFieldState = (input) => {
+      const group = getFieldGroup(input);
+      if (!group) return;
+      group.classList.remove("is-error", "is-valid");
+      const statusEl = group.querySelector("[data-input-status]");
+      if (statusEl) statusEl.innerHTML = "";
+      const errorEl = group.querySelector("[data-field-error]");
+      if (errorEl && !errorEl.hasAttribute("data-match-status")) {
+        errorEl.textContent = "";
+      }
+    };
+
+    const setFieldError = (input, errorText, shouldShake = true) => {
+      const group = getFieldGroup(input);
+      if (!group) return;
+      group.classList.remove("is-valid");
+      group.classList.add("is-error");
+      const statusEl = group.querySelector("[data-input-status]");
+      if (statusEl) {
+        statusEl.innerHTML = window.BitAcademyIcons.svg("alert-circle", 17);
+      }
+      const errorEl = group.querySelector("[data-field-error]");
+      if (errorEl) {
+        errorEl.innerHTML = `${window.BitAcademyIcons.svg("alert-circle", 13)} <span>${escapeHtml(errorText)}</span>`;
+      }
+      if (shouldShake) {
+        const target = group.querySelector(".input-with-icon") || group;
+        window.BitAcademyMotion?.shake(target);
+      }
+    };
+
+    const setFieldValid = (input) => {
+      const group = getFieldGroup(input);
+      if (!group) return;
+      group.classList.remove("is-error");
+      group.classList.add("is-valid");
+      const statusEl = group.querySelector("[data-input-status]");
+      if (statusEl) {
+        statusEl.innerHTML = window.BitAcademyIcons.svg("check-circle-2", 17);
+        window.BitAcademyMotion?.pop(statusEl);
+      }
+      const errorEl = group.querySelector("[data-field-error]");
+      if (errorEl && !errorEl.hasAttribute("data-match-status")) {
+        errorEl.textContent = "";
+      }
+    };
+
+    const evaluatePasswordRules = (pwd) => {
+      const byteLength = new TextEncoder().encode(pwd).length;
+      return {
+        length: pwd.length >= 8 && byteLength <= 72,
+        upper: /[A-Z]/.test(pwd),
+        lower: /[a-z]/.test(pwd),
+        number: /\d/.test(pwd),
+        symbol: /[^A-Za-z0-9À-ÿ]/.test(pwd)
+      };
+    };
 
     const showPanel = (target) => {
       tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.authTab === target));
@@ -1064,68 +1152,330 @@ window.BitAcademyAuth = (() => {
         panel.hidden = !isMatch;
         if (isMatch) window.BitAcademyMotion?.panelIn(panel);
       });
-      if (message) message.textContent = "";
+      setBannerMessage("");
       if (recoveryNotice) recoveryNotice.hidden = true;
     };
 
     tabs.forEach((tab) => tab.addEventListener("click", () => showPanel(tab.dataset.authTab)));
+
     document.querySelector("[data-forgot-password]")?.addEventListener("click", () => {
       if (recoveryNotice) {
         recoveryNotice.hidden = !recoveryNotice.hidden;
         if (!recoveryNotice.hidden) window.BitAcademyMotion?.drawerIn(recoveryNotice);
       }
-      if (message) message.textContent = "";
+      setBannerMessage("");
     });
-    document.querySelectorAll("[data-password-toggle]").forEach((button) => button.addEventListener("click", () => {
-      const input = document.getElementById(button.dataset.passwordToggle);
-      if (!input) return;
-      const show = input.type === "password";
-      input.type = show ? "text" : "password";
-      button.textContent = show ? "Ocultar" : "Mostrar";
-      button.setAttribute("aria-label", `${show ? "Ocultar" : "Mostrar"} senha`);
-    }));
 
+    // Toggle Mostrar / Ocultar senha com ícones eye e eye-off
+    document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const input = document.getElementById(button.dataset.passwordToggle);
+        if (!input) return;
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        button.innerHTML = `${window.BitAcademyIcons.svg(show ? "eye-off" : "eye", 16)} <span>${show ? "Ocultar" : "Mostrar"}</span>`;
+        button.setAttribute("aria-label", `${show ? "Ocultar" : "Mostrar"} senha`);
+        window.BitAcademyMotion?.pop(button);
+      });
+    });
+
+    // Detector de Caps Lock em campos de senha
+    document.querySelectorAll('.login-form input[type="password"]').forEach((pwdInput) => {
+      const group = getFieldGroup(pwdInput);
+      const capsWarning = group?.querySelector("[data-caps-warning]");
+      if (!capsWarning) return;
+      const checkCaps = (event) => {
+        if (typeof event.getModifierState !== "function") return;
+        const isCaps = event.getModifierState("CapsLock");
+        capsWarning.hidden = !isCaps;
+      };
+      pwdInput.addEventListener("keydown", checkCaps);
+      pwdInput.addEventListener("keyup", checkCaps);
+      pwdInput.addEventListener("blur", () => { capsWarning.hidden = true; });
+    });
+
+    // Validação guiada em tempo real para campos de Nome e E-mail
+    document.querySelectorAll('#login-email, #cadastro-email').forEach((emailInput) => {
+      emailInput.addEventListener("input", () => {
+        const val = emailInput.value.trim();
+        if (!val) {
+          clearFieldState(emailInput);
+          return;
+        }
+        if (EMAIL_REGEX.test(val)) {
+          setFieldValid(emailInput);
+        } else if (getFieldGroup(emailInput)?.classList.contains("is-error")) {
+          clearFieldState(emailInput);
+        }
+      });
+      emailInput.addEventListener("blur", () => {
+        const val = emailInput.value.trim();
+        if (!val) return;
+        if (!EMAIL_REGEX.test(val)) {
+          setFieldError(emailInput, "Informe um e-mail válido (ex.: nome@escola.com).", false);
+        } else {
+          setFieldValid(emailInput);
+        }
+      });
+    });
+
+    const registerNameInput = document.getElementById("cadastro-nome");
+    if (registerNameInput) {
+      registerNameInput.addEventListener("input", () => {
+        const val = registerNameInput.value.trim();
+        if (val.length >= 3) {
+          setFieldValid(registerNameInput);
+        } else {
+          clearFieldState(registerNameInput);
+        }
+      });
+      registerNameInput.addEventListener("blur", () => {
+        const val = registerNameInput.value.trim();
+        if (val && val.length < 2) {
+          setFieldError(registerNameInput, "Digite seu nome e sobrenome (mínimo 2 caracteres).", false);
+        }
+      });
+    }
+
+    const loginPwdInput = document.getElementById("login-senha");
+    if (loginPwdInput) {
+      loginPwdInput.addEventListener("input", () => {
+        if (loginPwdInput.value.length > 0) clearFieldState(loginPwdInput);
+      });
+    }
+
+    // Medidor de força de senha + Checklist interativo + Confirmação em tempo real
+    const registerPwdInput = document.getElementById("cadastro-senha");
+    const confirmPwdInput = document.getElementById("cadastro-confirma-senha");
+    const checklistEl = document.querySelector("[data-password-checklist]");
+    const strengthBarsEl = document.querySelector("[data-strength-bars]");
+    const strengthLabelEl = document.querySelector("[data-strength-label]");
+    const matchStatusEl = document.querySelector("[data-match-status]");
+
+    const updateConfirmMatch = () => {
+      if (!confirmPwdInput || !registerPwdInput || !matchStatusEl) return;
+      const pwd = registerPwdInput.value;
+      const confirm = confirmPwdInput.value;
+      const group = getFieldGroup(confirmPwdInput);
+      if (!confirm) {
+        group?.classList.remove("is-error", "is-valid");
+        matchStatusEl.textContent = "";
+        return;
+      }
+      if (pwd === confirm) {
+        group?.classList.remove("is-error");
+        group?.classList.add("is-valid");
+        matchStatusEl.innerHTML = `${window.BitAcademyIcons.svg("check-circle-2", 13)} <span>As senhas coincidem perfeitamente</span>`;
+      } else {
+        group?.classList.remove("is-valid");
+        group?.classList.add("is-error");
+        matchStatusEl.innerHTML = `${window.BitAcademyIcons.svg("alert-circle", 13)} <span>As senhas ainda não coincidem</span>`;
+      }
+    };
+
+    if (registerPwdInput) {
+      registerPwdInput.addEventListener("input", () => {
+        const pwd = registerPwdInput.value;
+        const rules = evaluatePasswordRules(pwd);
+        const passedCount = Object.values(rules).filter(Boolean).length;
+
+        if (checklistEl) {
+          Object.entries(rules).forEach(([ruleKey, isMet]) => {
+            const item = checklistEl.querySelector(`[data-rule="${ruleKey}"]`);
+            if (!item) return;
+            const wasMet = item.classList.contains("is-met");
+            item.classList.toggle("is-met", isMet);
+            const iconHolder = item.querySelector(".rule-icon");
+            if (iconHolder) {
+              iconHolder.innerHTML = window.BitAcademyIcons.svg(isMet ? "check-circle-2" : "circle", 13);
+              if (isMet && !wasMet) window.BitAcademyMotion?.pop(iconHolder);
+            }
+          });
+        }
+
+        let level = 0;
+        let label = "Força da senha";
+        if (pwd.length > 0) {
+          if (passedCount <= 2) {
+            level = 1;
+            label = "Senha fraca";
+          } else if (passedCount === 3) {
+            level = 2;
+            label = "Senha razoável";
+          } else if (passedCount === 4) {
+            level = 3;
+            label = "Senha boa";
+          } else if (passedCount === 5) {
+            level = 4;
+            label = "Senha forte";
+          }
+        }
+
+        if (strengthBarsEl) {
+          strengthBarsEl.dataset.level = String(level);
+        }
+        if (strengthLabelEl) {
+          strengthLabelEl.textContent = label;
+          strengthLabelEl.dataset.level = String(level);
+        }
+
+        const group = getFieldGroup(registerPwdInput);
+        if (passedCount === 5) {
+          group?.classList.remove("is-error");
+          group?.classList.add("is-valid");
+          const errEl = group?.querySelector("[data-field-error]");
+          if (errEl) errEl.textContent = "";
+        } else if (group?.classList.contains("is-valid")) {
+          group.classList.remove("is-valid");
+        }
+
+        if (confirmPwdInput?.value) updateConfirmMatch();
+      });
+    }
+
+    if (confirmPwdInput) {
+      confirmPwdInput.addEventListener("input", updateConfirmMatch);
+    }
+
+    // Submit do Login com validação guiada por campo
     document.querySelector("[data-login-form]")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
+      const emailInput = form.email;
+      const pwdInput = form.senha;
+      const submitBtn = form.querySelector("[data-submit-btn]");
+      setBannerMessage("");
+
+      let hasError = false;
+      const emailVal = emailInput.value.trim();
+      if (!emailVal) {
+        setFieldError(emailInput, "Digite seu e-mail para continuar.");
+        hasError = true;
+      } else if (!EMAIL_REGEX.test(emailVal)) {
+        setFieldError(emailInput, "Formato de e-mail inválido (ex.: aluno@escola.com).");
+        hasError = true;
+      } else {
+        setFieldValid(emailInput);
+      }
+
+      if (!pwdInput.value) {
+        setFieldError(pwdInput, "Digite sua senha de acesso.");
+        hasError = true;
+      } else {
+        clearFieldState(pwdInput);
+      }
+
+      if (hasError) {
+        setBannerMessage("Verifique os campos destacados em vermelho antes de entrar.", "error");
+        const firstErr = form.querySelector(".field-group.is-error input");
+        firstErr?.focus();
+        return;
+      }
+
+      const originalBtnHtml = submitBtn?.innerHTML;
       try {
-        const user = await login({ email: form.email.value, password: form.senha.value });
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = `${window.BitAcademyIcons.svg("refresh-cw", 18, "spin-icon")} <span>Autenticando...</span>`;
+        }
+        const user = await login({ email: emailVal, password: pwdInput.value });
+        setBannerMessage(`Bem-vindo(a), ${user.name}! Redirecionando...`, "success");
         window.location.href = user.type === "Administrador" ? "admin.html" : user.type === "Professor" ? "professor.html" : "perfil.html";
       } catch (error) {
-        if (message) message.textContent = error.message;
+        if (submitBtn && originalBtnHtml) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnHtml;
+        }
+        setBannerMessage(error.message || "E-mail ou senha incorretos.", "error");
+        setFieldError(pwdInput, "Confira se a senha e o e-mail estão corretos.", false);
         window.BitAcademyMotion?.shake(form);
+        pwdInput.focus();
       }
     });
 
+    // Submit do Cadastro com validação guiada por campo
     document.querySelector("[data-register-form]")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
-      const password = form.senha.value;
-      const confirmation = form.confirmaSenha.value;
-      const strongPassword = password.length >= 8 && new TextEncoder().encode(password).length <= 72
-        && /[a-z]/.test(password) && /[A-Z]/.test(password) && /\d/.test(password) && /[^A-Za-z0-9À-ÿ]/.test(password);
+      const nameInput = form.nome;
+      const emailInput = form.email;
+      const pwdInput = form.senha;
+      const confirmInput = form.confirmaSenha;
+      const submitBtn = form.querySelector("[data-submit-btn]");
+      setBannerMessage("");
+
+      let hasError = false;
+      const nameVal = nameInput.value.trim();
+      const emailVal = emailInput.value.trim();
+      const password = pwdInput.value;
+      const confirmation = confirmInput.value;
+
+      if (!nameVal || nameVal.length < 2) {
+        setFieldError(nameInput, "Informe seu nome completo (mínimo 2 caracteres).");
+        hasError = true;
+      } else {
+        setFieldValid(nameInput);
+      }
+
+      if (!emailVal) {
+        setFieldError(emailInput, "Informe um e-mail para sua conta.");
+        hasError = true;
+      } else if (!EMAIL_REGEX.test(emailVal)) {
+        setFieldError(emailInput, "Informe um e-mail válido (ex.: nome@escola.com).");
+        hasError = true;
+      } else {
+        setFieldValid(emailInput);
+      }
+
+      const rules = evaluatePasswordRules(password);
+      const strongPassword = Object.values(rules).every(Boolean);
       if (!strongPassword) {
-        if (message) message.textContent = "A senha precisa ter 8 a 72 bytes e incluir maiúscula, minúscula, número e símbolo.";
-        window.BitAcademyMotion?.shake(form);
-        form.senha.focus();
+        setFieldError(pwdInput, "Complete todos os 5 requisitos da lista acima para proteger sua conta.");
+        hasError = true;
+      }
+
+      if (!confirmation || password !== confirmation) {
+        const group = getFieldGroup(confirmInput);
+        group?.classList.remove("is-valid");
+        group?.classList.add("is-error");
+        if (matchStatusEl) {
+          matchStatusEl.innerHTML = `${window.BitAcademyIcons.svg("alert-circle", 13)} <span>As senhas não coincidem. Digite a mesma senha nos dois campos.</span>`;
+        }
+        window.BitAcademyMotion?.shake(group?.querySelector(".input-with-icon") || group);
+        hasError = true;
+      }
+
+      if (hasError) {
+        setBannerMessage("Revise os campos destacados para concluir seu cadastro.", "error");
+        const firstErr = form.querySelector(".field-group.is-error input");
+        firstErr?.focus();
         return;
       }
-      if (password !== confirmation) {
-        if (message) message.textContent = "As senhas não coincidem.";
-        window.BitAcademyMotion?.shake(form);
-        form.confirmaSenha.focus();
-        return;
-      }
+
+      const originalBtnHtml = submitBtn?.innerHTML;
       try {
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = `${window.BitAcademyIcons.svg("refresh-cw", 18, "spin-icon")} <span>Criando sua conta...</span>`;
+        }
         await register({
-          name: form.nome.value,
-          email: form.email.value,
+          name: nameVal,
+          email: emailVal,
           password
         });
+        setBannerMessage("Conta criada com sucesso! Acessando seu perfil...", "success");
         window.location.href = "perfil.html";
       } catch (error) {
-        if (message) message.textContent = error.message;
-        window.BitAcademyMotion?.shake(form);
+        if (submitBtn && originalBtnHtml) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnHtml;
+        }
+        setBannerMessage(error.message || "Não foi possível criar a conta.", "error");
+        if (String(error.message || "").toLowerCase().includes("e-mail")) {
+          setFieldError(emailInput, error.message);
+        } else {
+          window.BitAcademyMotion?.shake(form);
+        }
       }
     });
   };
