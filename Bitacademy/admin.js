@@ -237,7 +237,10 @@
               <strong style="font-size: 0.85rem; color: #a5b4fc; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;"><i data-lucide="users" data-lucide-size="15"></i> Estudantes Matriculados (${classEnrollments.length})</strong>
               ${classEnrollments.length ? classEnrollments.map((enr) => `
                 <div class="subject-row" style="gap: 8px; flex-wrap: wrap;">
-                  <span style="flex: 1; min-width: 140px;">${escapeHtml(enr.student_name)} <small style="display: block; opacity: 0.75;">${escapeHtml(enr.student_email)}</small></span>
+                  <span style="flex: 1; min-width: 140px; display: flex; align-items: center; gap: 8px;">
+                    ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(enr.student_name, 26, "user-avatar-sm") : ""}
+                    <span>${escapeHtml(enr.student_name)} <small style="display: block; opacity: 0.75;">${escapeHtml(enr.student_email)}</small></span>
+                  </span>
                   <div style="display: flex; gap: 6px; align-items: center;">
                     <select data-enrollment-status-select="${escapeHtml(enr.id)}" aria-label="Situação da matrícula" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 6px; background: #0f0f1a; color: #fff; border: 1px solid rgba(255,255,255,0.15);">
                       <option value="active" ${enr.status === "active" ? "selected" : ""}>Ativa</option>
@@ -307,8 +310,13 @@
         const options = subjects.filter((subject) => !assigned.some((item) => item.id === subject.id));
         return `
           <article class="teacher-card" data-teacher="${escapeHtml(teacher.id)}">
-            <h3>${escapeHtml(teacher.name)}</h3>
-            <p>${escapeHtml(teacher.email)}</p>
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+              ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(teacher.name, 40, "user-avatar-md") : ""}
+              <div>
+                <h3 style="margin: 0;">${escapeHtml(teacher.name)}</h3>
+                <p style="margin: 2px 0 0;">${escapeHtml(teacher.email)}</p>
+              </div>
+            </div>
             <div>
               ${assigned.length ? assigned.map((subject) => `
                 <div class="subject-row">

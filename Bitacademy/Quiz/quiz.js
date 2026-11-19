@@ -471,7 +471,7 @@ class QuizUI {
         ${ranking.map((item, index) => `
           <article class="${index < 3 ? `podium-${index + 1}` : ""}">
             <span>${this.medalForRank(index)}</span>
-            <strong>${this.escapeHtml(item.playerName)}</strong>
+            <strong style="display: flex; align-items: center; gap: 8px;">${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(item.playerName, 24, "user-avatar-sm") : ""}${this.escapeHtml(item.playerName)}</strong>
             <b>${item.score}/${item.total} (${item.percent}%)</b>
           </article>
         `).join("")}

@@ -153,7 +153,23 @@ window.BitAcademyIcons = (() => {
     }
   }
 
-  return { svg, forSubject, subjectIconName, hydrate };
+  const avatarUrl = (seed) => {
+    const cleanSeed = encodeURIComponent(String(seed || "BitAcademy").trim());
+    return `https://api.dicebear.com/9.x/bottts-neutral/svg?seed=${cleanSeed}&radius=50&backgroundColor=1e1b4b,0f172a,172554,312e81`;
+  };
+
+  const avatar = (seed, size = 36, extraClass = "") => {
+    const url = avatarUrl(seed);
+    const safeName = String(seed || "Usuário")
+      .replaceAll("&", "&amp;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+    const cls = `ba-avatar${extraClass ? ` ${extraClass}` : ""}`;
+    return `<img class="${cls}" src="${url}" width="${size}" height="${size}" alt="Avatar de ${safeName}" loading="lazy" decoding="async">`;
+  };
+
+  return { svg, forSubject, subjectIconName, hydrate, avatarUrl, avatar };
 })();
 
 window.BitAcademyMotion = (() => {
@@ -547,7 +563,7 @@ window.BitAcademyAuth = (() => {
         : "";
       container.innerHTML = `
         <a class="auth-user-pill" href="${prefix}perfil.html">
-          <i data-lucide="user" data-lucide-size="15"></i>
+          ${window.BitAcademyIcons.avatar(user.name || user.email, 24, "auth-avatar-mini")}
           <span>Olá, ${firstName}</span>
           <span class="auth-role-badge">${escapeHtml(user.type)}</span>
         </a>
@@ -571,12 +587,15 @@ window.BitAcademyAuth = (() => {
     if (user.type === "Administrador") {
       container.innerHTML = `
         <section class="profile-hero">
-          <div>
-            <p class="eyebrow">Perfil Administrador</p>
-            <h2>${escapeHtml(user.name)}</h2>
-            <p>${escapeHtml(user.email)}</p>
+          <div class="profile-user-identity">
+            ${window.BitAcademyIcons.avatar(user.name || user.email, 68, "profile-avatar-lg")}
+            <div>
+              <p class="eyebrow">Perfil Administrador</p>
+              <h2>${escapeHtml(user.name)}</h2>
+              <p>${escapeHtml(user.email)}</p>
+            </div>
           </div>
-          <a class="primary-link" href="admin.html">Abrir painel administrativo</a>
+          <a class="primary-link" href="admin.html"><i data-lucide="shield-check" data-lucide-size="17"></i> Abrir painel administrativo</a>
         </section>
         <section class="profile-card-section">
           <p class="eyebrow">Gestão da plataforma</p>
@@ -595,12 +614,15 @@ window.BitAcademyAuth = (() => {
       const subjects = Array.isArray(user.subjects) ? user.subjects : [];
       container.innerHTML = `
         <section class="profile-hero">
-          <div>
-            <p class="eyebrow">Perfil Professor</p>
-            <h2>${escapeHtml(user.name)}</h2>
-            <p>${escapeHtml(user.email)}</p>
+          <div class="profile-user-identity">
+            ${window.BitAcademyIcons.avatar(user.name || user.email, 68, "profile-avatar-lg")}
+            <div>
+              <p class="eyebrow">Perfil Professor</p>
+              <h2>${escapeHtml(user.name)}</h2>
+              <p>${escapeHtml(user.email)}</p>
+            </div>
           </div>
-          <a class="primary-link" href="professor.html">Abrir Área do Professor</a>
+          <a class="primary-link" href="professor.html"><i data-lucide="graduation-cap" data-lucide-size="17"></i> Abrir Área do Professor</a>
         </section>
         <section class="profile-card-section">
           <p class="eyebrow">Gestão acadêmica</p>
@@ -656,14 +678,17 @@ window.BitAcademyAuth = (() => {
 
     container.innerHTML = `
       <section class="profile-hero">
-        <div>
-          <p class="eyebrow">Perfil ${escapeHtml(user.type)}</p>
-          <h2>${escapeHtml(user.name)}</h2>
-          <p>${escapeHtml(user.email)}</p>
+        <div class="profile-user-identity">
+          ${window.BitAcademyIcons.avatar(user.name || user.email, 68, "profile-avatar-lg")}
+          <div>
+            <p class="eyebrow">Perfil ${escapeHtml(user.type)}</p>
+            <h2>${escapeHtml(user.name)}</h2>
+            <p>${escapeHtml(user.email)}</p>
+          </div>
         </div>
         <div class="intro-actions">
-          <a class="primary-link" href="Bitacademy.html#disciplinas">Continuar estudando</a>
-          <a class="secondary-link" href="Jogos/matematica-infinita.html">Jogar Matemática Infinita</a>
+          <a class="primary-link" href="Bitacademy.html#disciplinas"><i data-lucide="book-open" data-lucide-size="17"></i> Continuar estudando</a>
+          <a class="secondary-link" href="Jogos/matematica-infinita.html"><i data-lucide="gamepad-2" data-lucide-size="17"></i> Jogar Matemática Infinita</a>
         </div>
       </section>
 

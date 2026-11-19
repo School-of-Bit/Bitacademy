@@ -16,8 +16,8 @@
   border-radius: 22px;
   border: 1px solid var(--cor-borda);
   background:
-    linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(34, 211, 238, 0.08)),
-    var(--cor-card);
+    linear-gradient(135deg, rgba(15, 15, 26, 0.88) 15%, rgba(99, 102, 241, 0.28) 75%, rgba(34, 211, 238, 0.14) 100%),
+    url("https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=1200&q=75") center/cover no-repeat;
   box-shadow: var(--sombra);
 }
 

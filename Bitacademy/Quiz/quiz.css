@@ -431,6 +431,21 @@ body {
   color: var(--cor-amarelo);
 }
 
+.ba-avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: rgba(30, 27, 75, 0.8);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+}
+
+.user-avatar-sm {
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
 /* ─── REVISÃO / GABARITO COMENTADO ─── */
 .quiz-review {
   max-width: 620px;

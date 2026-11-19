@@ -234,9 +234,12 @@ class MathInfiniteGame {
       this.elements.ranking.innerHTML = scores.map((score, index) => `
         <article class="${index < 3 ? `podium-${index + 1}` : ""}">
           <span>${this.medalForRank(index)}</span>
-          <div>
-            <strong>${this.escapeHtml(score.playerName)}</strong>
-            <small>${new Date(score.date).toLocaleDateString("pt-BR")} · ${score.correct} acertos</small>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(score.playerName, 30, "user-avatar-sm") : ""}
+            <div>
+              <strong>${this.escapeHtml(score.playerName)}</strong>
+              <small>${new Date(score.date).toLocaleDateString("pt-BR")} · ${score.correct} acertos</small>
+            </div>
           </div>
           <b>${score.score}</b>
         </article>

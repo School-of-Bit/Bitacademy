@@ -100,12 +100,15 @@
 
     panel.innerHTML = `
       <section class="teacher-welcome">
-        <div>
-          <span class="teacher-label">Bem-vindo(a), professor(a)</span>
-          <h2>${escapeHtml(user.name)}</h2>
-          <p>Escolha uma disciplina abaixo para gerenciar conteúdos e atividades ou abra o diário de turmas para lançar notas.</p>
-          <div class="teacher-welcome-actions">
-            <button type="button" class="teacher-button" data-open-gradebook><i data-lucide="bar-chart-3" data-lucide-size="18"></i> Abrir Diário de Turmas &amp; Boletim</button>
+        <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+          ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(user.name || user.email, 64, "profile-avatar-lg") : ""}
+          <div>
+            <span class="teacher-label">Bem-vindo(a), professor(a)</span>
+            <h2>${escapeHtml(user.name)}</h2>
+            <p>Escolha uma disciplina abaixo para gerenciar conteúdos e atividades ou abra o diário de turmas para lançar notas.</p>
+            <div class="teacher-welcome-actions">
+              <button type="button" class="teacher-button" data-open-gradebook><i data-lucide="bar-chart-3" data-lucide-size="18"></i> Abrir Diário de Turmas &amp; Boletim</button>
+            </div>
           </div>
         </div>
         <div class="teacher-welcome-icon"><i data-lucide="graduation-cap" data-lucide-size="36"></i></div>
@@ -238,7 +241,12 @@
                 const badge = statusBadgeLabel(st.result);
                 return `
                   <tr>
-                    <td><strong>${escapeHtml(st.studentName)}</strong></td>
+                    <td>
+                      <div class="user-inline-cell">
+                        ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(st.studentName, 28, "user-avatar-sm") : ""}
+                        <strong>${escapeHtml(st.studentName)}</strong>
+                      </div>
+                    </td>
                     ${st.periods.map((p) => `
                       <td>
                         <div class="pauta-cell">
@@ -418,7 +426,10 @@
                 return `
                   <form class="grade-student-row" data-save-grade data-assessment="${escapeHtml(assessment.id)}" data-enrollment="${escapeHtml(student.enrollment_id)}">
                     <div>
-                      <strong>${escapeHtml(student.student_name)}</strong>
+                      <div class="user-inline-cell">
+                        ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(student.student_name, 28, "user-avatar-sm") : ""}
+                        <strong>${escapeHtml(student.student_name)}</strong>
+                      </div>
                       ${sub ? `
                         <div style="margin-top: 4px; font-size: 0.82rem;">
                           <span class="teacher-badge published" style="padding: 2px 8px; font-size: 0.75rem;">Entregue em ${escapeHtml(formatDate(sub.submitted_at))}</span>
@@ -1320,8 +1331,13 @@
             return `
               <form class="grade-student-row" data-grade-submission data-activity="${escapeHtml(activity.id)}" data-enrollment="${escapeHtml(st.enrollment_id)}">
                 <div>
-                  <strong>${escapeHtml(st.student_name)}</strong>
-                  <small style="display: block; color: var(--cor-subtexto);">${escapeHtml(st.student_email)}</small>
+                  <div class="user-inline-cell">
+                    ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(st.student_name, 30, "user-avatar-sm") : ""}
+                    <div>
+                      <strong>${escapeHtml(st.student_name)}</strong>
+                      <small style="display: block; color: var(--cor-subtexto); margin: 0;">${escapeHtml(st.student_email)}</small>
+                    </div>
+                  </div>
                   <div style="margin-top: 6px;">
                     ${hasSubmitted
                       ? `<span class="teacher-badge published">Entregue em ${escapeHtml(formatDate(st.submitted_at))}</span>`
