@@ -1,6 +1,6 @@
 const bcrypt = require("bcryptjs");
 const { sql } = require("../../lib/db");
-const { setSessionCookie } = require("../../lib/_auth");
+const { setSessionCookie, getSessionSecret } = require("../../lib/_auth");
 
 function jsonBody(req) {
   if (!req.body) return {};
@@ -23,6 +23,9 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    // Check the deployed function's environment before creating the account,
+    // so a missing secret cannot leave an account without a usable session.
+    getSessionSecret();
     const { name, email, password, type: requestedType } = jsonBody(req);
     const normalizedEmail = String(email || "").trim().toLowerCase();
     const normalizedName = String(name || "").trim();
@@ -62,19 +65,13 @@ module.exports = async function handler(req, res) {
 
     const user = created[0];
 
-    // Diagnóstico temporário: verifica se o segredo JWT está disponível
-    // antes de tentar criar a sessão. Nunca expõe o valor do segredo.
-    if (!process.env.JWT_SECRET) {
-      console.error("Registration failed: JWT_SECRET não está configurado.");
-      return res.status(500).json({
-        error: "Configuração do servidor incompleta: JWT_SECRET não está configurado."
-      });
-    }
-
     setSessionCookie(res, user);
     return res.status(201).json({ user: safeUser(user) });
   } catch (error) {
     console.error("Registration failed:", error);
+    if (error?.message?.includes("JWT_SECRET")) {
+      return res.status(500).json({ error: "Configuração de sessão ausente nesta implantação. Configure JWT_SECRET ou JWT_SECRET_KEY para o ambiente correto e publique novamente." });
+    }
     return res.status(500).json({
       error: "Não foi possível criar a conta."
     });

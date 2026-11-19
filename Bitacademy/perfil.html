@@ -3,22 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Perfil - Bitacademy</title>
+    <title>Meu Perfil — BitAcademy</title>
     <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <header>
-        <h1>Meu Perfil</h1>
-        <p>Acesse sua área de trabalho e acompanhe suas informações na plataforma.</p>
+<body class="home-page profile-page">
+    <header class="home-topbar">
+        <a class="brand-link" href="Bitacademy.html" aria-label="BitAcademy página inicial">
+            <span class="brand-mark">BA</span>
+            <div class="brand-text">
+                <strong>BitAcademy</strong>
+                <small>Área do Usuário</small>
+            </div>
+        </a>
+        <nav class="home-nav" aria-label="Navegação principal">
+            <a href="Bitacademy.html#disciplinas">Disciplinas</a>
+            <a href="Bitacademy.html#quizzes">Quizzes &amp; Jogos</a>
+            <a href="sobre-mim.html">Equipe</a>
+            <span data-auth-status></span>
+        </nav>
     </header>
-    <nav>
-        <a href="Bitacademy.html">Página Inicial</a> |
-        <a href="materia.html?slug=artes">Artes</a> |
-        <a href="materia.html?slug=ciencias">Ciências</a> |
-        <a href="materia.html?slug=matematica">Matemática</a> |
-        <span data-auth-status></span>
-    </nav>
-    <main data-profile></main>
+
+    <main class="home-main profile-main" data-profile>
+        <section class="profile-loading-card">
+            <p class="eyebrow">Sincronizando dados</p>
+            <h2>Carregando seu perfil acadêmico...</h2>
+            <p>Buscando histórico de estudos, recordes e boletim escolar.</p>
+        </section>
+    </main>
+
     <footer>
         <p>&copy; 2026 BitAcademy. Todos os direitos reservados.</p>
     </footer>

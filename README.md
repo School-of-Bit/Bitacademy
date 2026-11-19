@@ -11,6 +11,7 @@ Portal de aprendizado com disciplinas, materiais, quizzes e jogos. O projeto usa
 - Perfis de **Aluno**, **Professor** e **Administrador**, com páginas e navegação de acordo com o papel.
 - Perfil do aluno com melhores resultados por disciplina, recordes de jogos, rankings e atividades disponibilizadas pelos professores.
 - Área do professor para consultar disciplinas vinculadas, criar/editar materiais e cadastrar atividades.
+- Boletim com anos letivos, períodos de duração e peso configuráveis, turmas, matrículas, notas, recuperações e média final.
 - Painel administrativo para gerenciar usuários, redefinir senhas, editar disciplinas, vincular professores e cadastrar/editar/remover quizzes e jogos.
 - Recursos interativos associados a uma disciplina por um caminho de HTML já existente no projeto.
 - Layout responsivo para celular e computador.
@@ -50,8 +51,9 @@ Crie um banco PostgreSQL no [Neon](https://neon.tech/) e abra o SQL Editor do pr
 3. `Bitacademy/database/admin-migration.sql` — habilita o papel Administrador e `auth_version`. O script pode ser executado novamente com segurança.
 4. `Bitacademy/database/academic.sql` — cria materiais, atividades e cadastro de recursos HTML; também pré-cadastra os quizzes e o jogo que já estão no repositório.
 5. `Bitacademy/database/legacy-subject-content.sql` — importa para o banco os textos das páginas originais das disciplinas.
+6. `Bitacademy/database/gradebook.sql` — cria anos letivos, períodos, turmas, matrículas, ofertas de disciplinas, avaliações, notas e trilha de alterações.
 
-Os scripts 2 a 5 podem ser executados novamente conforme indicado em cada arquivo. Em bancos já configurados, execute novamente `ranking-best-results.sql` para consolidar os rankings e habilitar as sessões de jogo validadas; execute também `academic.sql` se ainda não tiver aplicado os recursos acadêmicos atuais.
+Os scripts 2 a 6 podem ser executados novamente conforme indicado em cada arquivo. Em bancos já configurados, execute novamente `ranking-best-results.sql` para consolidar os rankings e habilitar as sessões de jogo validadas; execute também `academic.sql` se ainda não tiver aplicado os recursos acadêmicos atuais. Execute `gradebook.sql` depois dos demais scripts para habilitar o boletim.
 
 ## Rodar localmente
 
@@ -127,9 +129,11 @@ O cadastro administrativo aponta para um arquivo HTML que já faz parte do proje
 
 Para implementar jogos ranqueados com pontuação validada no servidor, consulte [`docs/JOGOS_PARA_DESENVOLVEDORES.md`](docs/JOGOS_PARA_DESENVOLVEDORES.md). O painel registra o acesso ao arquivo, mas cada novo modo requer integração própria com a API e o armazenamento de sessões.
 
+A configuração e as regras do boletim estão em [`docs/BOLETIM_E_NOTAS.md`](docs/BOLETIM_E_NOTAS.md). Em bancos já configurados, execute novamente `Bitacademy/database/gradebook.sql` no Neon para criar as tabelas dos componentes avaliativos e associá-las às avaliações existentes.
+
 ## Publicação na Vercel
 
-Importe o repositório na Vercel e configure o **Root Directory** como `Bitacademy`. Cadastre `DATABASE_URL` e `JWT_SECRET` nas variáveis de ambiente dos ambientes desejados e publique. O arquivo `vercel.json` direciona a raiz do site para `Bitacademy.html`.
+Importe o repositório na Vercel e configure o **Root Directory** como `Bitacademy`. Cadastre `DATABASE_URL` e `JWT_SECRET` (ou `JWT_SECRET_KEY`) nas variáveis de ambiente dos ambientes desejados e publique novamente após alterar os valores. Vercel aplica as variáveis atualizadas somente a novos deployments; selecione os ambientes corretos (Production/Preview) e redeploy. Use o mesmo segredo estável em todas as funções e ambientes que precisam validar a mesma sessão. Alterar esse segredo invalida os cookies de sessão existentes. O arquivo `vercel.json` direciona a raiz do site para `Bitacademy.html`.
 
 ## Equipe
 
