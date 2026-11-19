@@ -46,7 +46,12 @@
     const activateTab = (target) => {
       tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.adminTab === target));
       panels.forEach((panel) => {
-        panel.hidden = target !== "todos" && panel.dataset.adminPanel !== target;
+        const isVisible = target === "todos" || panel.dataset.adminPanel === target;
+        panel.hidden = !isVisible;
+        if (isVisible) {
+          window.BitAcademyMotion?.panelIn(panel);
+          window.BitAcademyMotion?.staggerCards(panel, ".teacher-card, .subject-edit-form, .resource-edit-form", { stagger: 0.045, y: 14 });
+        }
       });
     };
 
@@ -98,8 +103,8 @@
     subjectList.innerHTML = filtered.length ? filtered.map((subject) => `
       <form class="subject-form subject-edit-form" data-subject="${escapeHtml(subject.id)}">
         <div class="subject-title-row">
-          <h3>${escapeHtml(subject.icon || "📘")} ${escapeHtml(subject.name)} <small>${escapeHtml(subject.slug)}</small></h3>
-          <a href="materia.html?slug=${encodeURIComponent(subject.slug)}" target="_blank" rel="noopener noreferrer">Pré-visualizar página ↗</a>
+          <h3>${window.BitAcademyIcons ? window.BitAcademyIcons.forSubject(subject.slug, subject.icon, 20) : escapeHtml(subject.icon || "📘")} ${escapeHtml(subject.name)} <small>${escapeHtml(subject.slug)}</small></h3>
+          <a href="materia.html?slug=${encodeURIComponent(subject.slug)}" target="_blank" rel="noopener noreferrer">Pré-visualizar página <i data-lucide="external-link" data-lucide-size="14"></i></a>
         </div>
         <div class="subject-fields">
           <label>Nome<input name="name" value="${escapeHtml(subject.name)}" maxlength="100" required></label>
@@ -121,12 +126,15 @@
 
   const renderResources = () => {
     const resourceCountEl = document.querySelector("[data-resource-count]");
-    if (resourceCountEl) resourceCountEl.textContent = resources.length;
+    if (resourceCountEl) {
+      resourceCountEl.textContent = resources.length;
+      window.BitAcademyMotion?.countUp(resourceCountEl, resources.length);
+    }
     resourceList.innerHTML = resources.length ? resources.map((r) => `
       <form class="subject-form resource-edit-form" data-resource="${escapeHtml(r.id)}">
         <div class="subject-title-row">
-          <h3>${r.resource_type === "game" ? "🎮" : "📝"} ${escapeHtml(r.title)}</h3>
-          <a href="${escapeHtml(r.html_path)}" target="_blank" rel="noopener noreferrer">Abrir recurso ↗</a>
+          <h3><i data-lucide="${r.resource_type === "game" ? "gamepad-2" : "clipboard-check"}" data-lucide-size="19"></i> ${escapeHtml(r.title)}</h3>
+          <a href="${escapeHtml(r.html_path)}" target="_blank" rel="noopener noreferrer">Abrir recurso <i data-lucide="external-link" data-lucide-size="14"></i></a>
         </div>
         <div class="subject-fields">
           <label>Disciplina<select name="subjectId" required>${subjects.map((s) => `<option value="${escapeHtml(s.id)}" ${s.id === r.subject_id ? "selected" : ""}>${escapeHtml(s.name)}</option>`).join("")}</select></label>
@@ -210,13 +218,13 @@
                 <h3>${escapeHtml(item.name)}</h3>
                 <p>Ano letivo ${escapeHtml(item.academic_year_name)} · ${escapeHtml(item.grade_level || "Série não informada")} · <strong>${item.student_count}</strong> ${item.student_count === 1 ? "aluno ativo" : "alunos ativos"}</p>
               </div>
-              <button type="button" data-toggle-class-overview="${escapeHtml(item.id)}">📊 Quadro de Notas</button>
+              <button type="button" data-toggle-class-overview="${escapeHtml(item.id)}"><i data-lucide="bar-chart-3" data-lucide-size="15"></i> Quadro de Notas</button>
             </div>
 
             <div data-class-overview-drawer="${escapeHtml(item.id)}" hidden style="margin-top: 12px; padding: 12px; border: 1px solid rgba(34, 211, 238, 0.25); border-radius: 10px; background: rgba(15, 23, 42, 0.7); overflow-x: auto;"></div>
 
             <div style="margin-top: 12px;">
-              <strong style="font-size: 0.85rem; color: var(--cor-ciano); display: block; margin-bottom: 6px;">📚 Disciplinas &amp; Professores (${classOfferings.length})</strong>
+              <strong style="font-size: 0.85rem; color: var(--cor-ciano); display: flex; align-items: center; gap: 6px; margin-bottom: 6px;"><i data-lucide="book-marked" data-lucide-size="15"></i> Disciplinas &amp; Professores (${classOfferings.length})</strong>
               ${classOfferings.length ? classOfferings.map((off) => `
                 <div class="subject-row">
                   <span><strong>${escapeHtml(off.subject_name)}</strong> · Prof. ${escapeHtml(off.teacher_name)} <small>(${off.assessment_count} aval.)</small></span>
@@ -226,10 +234,13 @@
             </div>
 
             <div style="margin-top: 12px;">
-              <strong style="font-size: 0.85rem; color: #a5b4fc; display: block; margin-bottom: 6px;">👨‍🎓 Estudantes Matriculados (${classEnrollments.length})</strong>
+              <strong style="font-size: 0.85rem; color: #a5b4fc; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;"><i data-lucide="users" data-lucide-size="15"></i> Estudantes Matriculados (${classEnrollments.length})</strong>
               ${classEnrollments.length ? classEnrollments.map((enr) => `
                 <div class="subject-row" style="gap: 8px; flex-wrap: wrap;">
-                  <span style="flex: 1; min-width: 140px;">${escapeHtml(enr.student_name)} <small style="display: block; opacity: 0.75;">${escapeHtml(enr.student_email)}</small></span>
+                  <span style="flex: 1; min-width: 140px; display: flex; align-items: center; gap: 8px;">
+                    ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(enr.student_name, 26, "user-avatar-sm") : ""}
+                    <span>${escapeHtml(enr.student_name)} <small style="display: block; opacity: 0.75;">${escapeHtml(enr.student_email)}</small></span>
+                  </span>
                   <div style="display: flex; gap: 6px; align-items: center;">
                     <select data-enrollment-status-select="${escapeHtml(enr.id)}" aria-label="Situação da matrícula" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 6px; background: #0f0f1a; color: #fff; border: 1px solid rgba(255,255,255,0.15);">
                       <option value="active" ${enr.status === "active" ? "selected" : ""}>Ativa</option>
@@ -262,7 +273,10 @@
       const data = await api("users");
       allUsers = data.users || [];
       const userCountEl = document.querySelector("[data-user-count]");
-      if (userCountEl) userCountEl.textContent = allUsers.length;
+      if (userCountEl) {
+        userCountEl.textContent = allUsers.length;
+        window.BitAcademyMotion?.countUp(userCountEl, allUsers.length);
+      }
       renderUsers();
       usersMessage.textContent = `${allUsers.length} contas carregadas (limite de 500).`;
       usersMessage.className = "message";
@@ -281,15 +295,28 @@
       renderResourceOptions();
       renderTeacherSubjectOptions();
       const teachers = data.teachers || [];
-      document.querySelector("[data-teacher-count]").textContent = teachers.length;
-      document.querySelector("[data-subject-count]").textContent = subjects.length;
+      const tCountEl = document.querySelector("[data-teacher-count]");
+      const sCountEl = document.querySelector("[data-subject-count]");
+      if (tCountEl) {
+        tCountEl.textContent = teachers.length;
+        window.BitAcademyMotion?.countUp(tCountEl, teachers.length);
+      }
+      if (sCountEl) {
+        sCountEl.textContent = subjects.length;
+        window.BitAcademyMotion?.countUp(sCountEl, subjects.length);
+      }
       list.innerHTML = teachers.length ? teachers.map((teacher) => {
         const assigned = teacher.subjects || [];
         const options = subjects.filter((subject) => !assigned.some((item) => item.id === subject.id));
         return `
           <article class="teacher-card" data-teacher="${escapeHtml(teacher.id)}">
-            <h3>${escapeHtml(teacher.name)}</h3>
-            <p>${escapeHtml(teacher.email)}</p>
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+              ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(teacher.name, 40, "user-avatar-md") : ""}
+              <div>
+                <h3 style="margin: 0;">${escapeHtml(teacher.name)}</h3>
+                <p style="margin: 2px 0 0;">${escapeHtml(teacher.email)}</p>
+              </div>
+            </div>
             <div>
               ${assigned.length ? assigned.map((subject) => `
                 <div class="subject-row">
@@ -516,11 +543,12 @@
       if (!drawer) return;
       if (!drawer.hidden) {
         drawer.hidden = true;
-        toggleOverviewBtn.textContent = "📊 Quadro de Notas";
+        toggleOverviewBtn.innerHTML = '<i data-lucide="bar-chart-3" data-lucide-size="15"></i> Quadro de Notas';
         return;
       }
       drawer.hidden = false;
-      toggleOverviewBtn.textContent = "▲ Fechar Quadro";
+      window.BitAcademyMotion?.drawerIn(drawer);
+      toggleOverviewBtn.innerHTML = '<i data-lucide="chevron-up" data-lucide-size="15"></i> Fechar Quadro';
       drawer.innerHTML = "<p style='margin: 0; font-size: 0.85rem;'>Carregando quadro de notas da turma...</p>";
       try {
         const response = await fetch(`/api/gradebook?action=class-overview&classGroupId=${encodeURIComponent(classId)}`, { credentials: "same-origin" });
@@ -544,7 +572,7 @@
           return "Em curso";
         };
         drawer.innerHTML = `
-          <strong style="display: block; margin-bottom: 8px; font-size: 0.88rem; color: #fff;">📊 Conselho de Classe · Média de aprovação: ${escapeHtml(classInfo.passing_score)}/10</strong>
+          <strong style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px; font-size: 0.88rem; color: #fff;"><i data-lucide="bar-chart-3" data-lucide-size="16"></i> Conselho de Classe · Média de aprovação: ${escapeHtml(classInfo.passing_score)}/10</strong>
           <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
             <thead>
               <tr style="border-bottom: 1px solid rgba(255,255,255,0.12); text-align: left;">

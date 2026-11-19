@@ -54,8 +54,14 @@
 
       document.title = `${data.subject.name} — BitAcademy`;
       document.querySelector("[data-subject-name]").textContent = data.subject.name;
-      document.querySelector("[data-subject-icon]").textContent = data.subject.icon || "📘";
+      const subjectIconEl = document.querySelector("[data-subject-icon]");
+      if (subjectIconEl && window.BitAcademyIcons) {
+        subjectIconEl.innerHTML = window.BitAcademyIcons.forSubject(slug, data.subject.icon, 28);
+      } else if (subjectIconEl) {
+        subjectIconEl.textContent = data.subject.icon || "📘";
+      }
       document.querySelector("[data-subject-description]").textContent = data.subject.description || "Conteúdos e materiais para estudar esta disciplina.";
+      window.BitAcademyMotion?.panelIn(".material-hero");
 
       try {
         const resourceResponse = await fetch(`/api/academic?action=resources&subject=${encodeURIComponent(slug)}`);
@@ -66,14 +72,15 @@
           ? resources.map((item) => `
               <article class="material-card resource-card">
                 <div>
-                  <p class="resource-type">${item.resource_type === "game" ? "🎮 Jogo Competitivo" : "📝 Quiz de Fixação"}</p>
+                  <p class="resource-type">${item.resource_type === "game" ? '<i data-lucide="gamepad-2" data-lucide-size="16"></i> Jogo Competitivo' : '<i data-lucide="clipboard-check" data-lucide-size="16"></i> Quiz de Fixação'}</p>
                   <h3>${escapeHtml(item.title)}</h3>
                   <p>${escapeHtml(item.description || "Pratique o conteúdo desta disciplina.")}</p>
                 </div>
-                <a href="${escapeHtml(item.html_path)}">${item.resource_type === "game" ? "Jogar agora" : "Fazer quiz"} →</a>
+                <a href="${escapeHtml(item.html_path)}">${item.resource_type === "game" ? "Jogar agora" : "Fazer quiz"} <i data-lucide="arrow-right" data-lucide-size="16"></i></a>
               </article>
             `).join("")
           : '<p class="empty-state">Ainda não há quizzes ou jogos cadastrados nesta disciplina.</p>';
+        window.BitAcademyMotion?.staggerCards(resourceList, ".resource-card", { stagger: 0.06, y: 16 });
       } catch {
         resourceList.innerHTML = '<p class="empty-state">Não foi possível carregar os quizzes e jogos.</p>';
       }
@@ -103,17 +110,18 @@
           <article id="material-${idx + 1}" class="material-card">
             <div class="material-card-header">
               <h3>${escapeHtml(item.title)}</h3>
-              <span class="reading-badge">⏱️ ~${minutes} min de leitura</span>
+              <span class="reading-badge"><i data-lucide="clock" data-lucide-size="14"></i> ~${minutes} min de leitura</span>
             </div>
             <div class="material-content">${escapeHtml(item.content)}</div>
             <div class="material-meta">
-              <span>👨‍🏫 Responsável: ${escapeHtml(item.teacher_name)}</span>
-              <span>📅 Publicado em ${escapeHtml(formatDate(item.published_at))}</span>
+              <span><i data-lucide="graduation-cap" data-lucide-size="15"></i> Responsável: ${escapeHtml(item.teacher_name)}</span>
+              <span><i data-lucide="calendar" data-lucide-size="15"></i> Publicado em ${escapeHtml(formatDate(item.published_at))}</span>
             </div>
-            ${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Abrir material complementar ↗</a>` : ""}
+            ${link ? `<a href="${escapeHtml(link)}" target="_blank" rel="noopener noreferrer">Abrir material complementar <i data-lucide="external-link" data-lucide-size="15"></i></a>` : ""}
           </article>
         `;
       }).join("");
+      window.BitAcademyMotion?.staggerCards(materials, ".material-card", { stagger: 0.07, y: 20 });
     } catch (error) {
       status.textContent = error.message;
       materials.innerHTML = "";

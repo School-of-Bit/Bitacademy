@@ -4,12 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BitAcademy — Portal de Aprendizado</title>
+    <link rel="icon" type="image/png" href="assets/logos/favicon.png">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="home-page">
     <header class="home-topbar">
         <a class="brand-link" href="Bitacademy.html" aria-label="BitAcademy página inicial">
-            <span class="brand-mark">BA</span>
+            <span class="brand-mark"><img src="assets/logos/logo-mark.png" alt="Logo BitAcademy" class="brand-logo-img"></span>
             <div class="brand-text">
                 <strong>BitAcademy</strong>
                 <small>Portal de Estudos</small>
@@ -31,8 +32,8 @@
                 <h1>Estude, pratique e acompanhe sua evolução em um só lugar.</h1>
                 <p>O BitAcademy reúne disciplinas dinâmicas, materiais publicados pelos seus professores, boletim escolar, quizzes temáticos e jogos competitivos validados em tempo real.</p>
                 <div class="intro-actions">
-                    <a class="primary-link" href="#disciplinas">Explorar disciplinas</a>
-                    <a class="secondary-link" href="#quizzes">Praticar agora</a>
+                    <a class="primary-link" href="#disciplinas"><i data-lucide="compass" data-lucide-size="18"></i> Explorar disciplinas</a>
+                    <a class="secondary-link" href="#quizzes"><i data-lucide="gamepad-2" data-lucide-size="18"></i> Praticar agora</a>
                 </div>
             </div>
             <figure class="hero-visual" aria-label="Painel visual de estudos">
@@ -48,14 +49,14 @@
                             <b>Matemática Infinita</b>
                             <small>Modo competitivo ranqueado</small>
                         </div>
-                        <span class="board-pill">⚡ Ao vivo</span>
+                        <span class="board-pill"><i data-lucide="zap" data-lucide-size="14"></i> Ao vivo</span>
                     </div>
                     <div class="board-row">
                         <div>
                             <b>Materiais &amp; Boletim</b>
                             <small>Conteúdo guiado pelos professores</small>
                         </div>
-                        <span class="board-pill subtle">8 matérias</span>
+                        <span class="board-pill subtle"><i data-lucide="layers" data-lucide-size="14"></i> 8 matérias</span>
                     </div>
                     <div class="board-chart" aria-hidden="true">
                         <span style="height: 45%"></span>
@@ -70,16 +71,25 @@
 
         <section class="home-overview" aria-label="Resumo do portal">
             <article>
-                <strong data-overview-subjects>8</strong>
-                <span>disciplinas organizadas</span>
+                <div class="overview-icon"><i data-lucide="book-marked" data-lucide-size="22"></i></div>
+                <div>
+                    <strong data-overview-subjects>8</strong>
+                    <span>disciplinas organizadas</span>
+                </div>
             </article>
             <article>
-                <strong>8</strong>
-                <span>quizzes temáticos com gabarito</span>
+                <div class="overview-icon"><i data-lucide="gamepad-2" data-lucide-size="22"></i></div>
+                <div>
+                    <strong>8</strong>
+                    <span>quizzes temáticos com gabarito</span>
+                </div>
             </article>
             <article>
-                <strong>100%</strong>
-                <span>progresso, ranking e boletim no perfil</span>
+                <div class="overview-icon"><i data-lucide="bar-chart-3" data-lucide-size="22"></i></div>
+                <div>
+                    <strong>100%</strong>
+                    <span>progresso, ranking e boletim no perfil</span>
+                </div>
             </article>
         </section>
 
@@ -91,9 +101,9 @@
             </div>
 
             <div class="learning-tabs" role="tablist" aria-label="Modos de uso do portal">
-                <button type="button" class="active" data-home-tab="estudar">1. Estudar</button>
-                <button type="button" data-home-tab="praticar">2. Praticar &amp; Jogar</button>
-                <button type="button" data-home-tab="acompanhar">3. Acompanhar Boletim</button>
+                <button type="button" class="active" data-home-tab="estudar"><i data-lucide="book-open" data-lucide-size="17"></i> 1. Estudar</button>
+                <button type="button" data-home-tab="praticar"><i data-lucide="gamepad-2" data-lucide-size="17"></i> 2. Praticar &amp; Jogar</button>
+                <button type="button" data-home-tab="acompanhar"><i data-lucide="file-spreadsheet" data-lucide-size="17"></i> 3. Acompanhar Boletim</button>
             </div>
 
             <div class="tab-panels">
@@ -101,12 +111,12 @@
                     <div>
                         <h3>Conteúdo por disciplina</h3>
                         <p>Acesse os textos base e os materiais complementares publicados pelos professores de cada matéria antes de testar seus conhecimentos.</p>
-                        <a class="secondary-link" href="#disciplinas">Explorar matérias</a>
+                        <a class="secondary-link" href="#disciplinas"><i data-lucide="book-open" data-lucide-size="17"></i> Explorar matérias</a>
                     </div>
                     <div class="panel-visual subject-preview" aria-hidden="true">
-                        <span>📚 Português &amp; Literatura</span>
-                        <span>🔬 Ciências da Natureza</span>
-                        <span>📜 História &amp; Geografia</span>
+                        <span><i data-lucide="book-open-text" data-lucide-size="18"></i> Português &amp; Literatura</span>
+                        <span><i data-lucide="flask-conical" data-lucide-size="18"></i> Ciências da Natureza</span>
+                        <span><i data-lucide="landmark" data-lucide-size="18"></i> História &amp; Geografia</span>
                     </div>
                 </article>
 
@@ -114,7 +124,7 @@
                     <div>
                         <h3>Quizzes de fixação e Matemática Infinita</h3>
                         <p>Responda questões com explicação detalhada ou desafie o relógio no modo infinito para subir no ranking oficial da escola.</p>
-                        <a class="secondary-link" href="#quizzes">Ir para Quizzes &amp; Jogos</a>
+                        <a class="secondary-link" href="#quizzes"><i data-lucide="trophy" data-lucide-size="17"></i> Ir para Quizzes &amp; Jogos</a>
                     </div>
                     <div class="panel-visual quiz-preview" aria-hidden="true">
                         <b>5/5</b>
@@ -126,7 +136,7 @@
                     <div>
                         <h3>Perfil, recordes e boletim escolar</h3>
                         <p>Consulte suas notas por período, situação nas disciplinas, atividades propostas pelos professores e seus melhores resultados nos quizzes.</p>
-                        <a class="secondary-link" href="perfil.html">Abrir meu perfil</a>
+                        <a class="secondary-link" href="perfil.html"><i data-lucide="user-check" data-lucide-size="17"></i> Abrir meu perfil</a>
                     </div>
                     <div class="panel-visual progress-preview" aria-hidden="true">
                         <span></span>
@@ -147,52 +157,52 @@
 
             <div class="subject-grid" data-subject-catalog>
                 <article class="subject-card" data-accent="artes">
-                    <span class="subject-icon">🎨</span>
+                    <span class="subject-icon"><i data-lucide="palette" data-lucide-size="24"></i></span>
                     <strong>Artes</strong>
                     <span>Expressão, movimentos artísticos e criatividade.</span>
-                    <a href="materia.html?slug=artes">Estudar →</a>
+                    <a href="materia.html?slug=artes">Estudar <i data-lucide="arrow-right" data-lucide-size="16"></i></a>
                 </article>
                 <article class="subject-card" data-accent="ciencias">
-                    <span class="subject-icon">🔬</span>
+                    <span class="subject-icon"><i data-lucide="flask-conical" data-lucide-size="24"></i></span>
                     <strong>Ciências</strong>
                     <span>Natureza, corpo humano, química e fenômenos físicos.</span>
-                    <a href="materia.html?slug=ciencias">Estudar →</a>
+                    <a href="materia.html?slug=ciencias">Estudar <i data-lucide="arrow-right" data-lucide-size="16"></i></a>
                 </article>
                 <article class="subject-card" data-accent="filosofia">
-                    <span class="subject-icon">💭</span>
+                    <span class="subject-icon"><i data-lucide="brain" data-lucide-size="24"></i></span>
                     <strong>Filosofia</strong>
                     <span>Pensamento crítico, ética e grandes questões humanas.</span>
-                    <a href="materia.html?slug=filosofia">Estudar →</a>
+                    <a href="materia.html?slug=filosofia">Estudar <i data-lucide="arrow-right" data-lucide-size="16"></i></a>
                 </article>
                 <article class="subject-card" data-accent="geografia">
-                    <span class="subject-icon">🌎</span>
+                    <span class="subject-icon"><i data-lucide="globe-2" data-lucide-size="24"></i></span>
                     <strong>Geografia</strong>
                     <span>Espaço geográfico, clima, relevo e sociedade.</span>
-                    <a href="materia.html?slug=geografia">Estudar →</a>
+                    <a href="materia.html?slug=geografia">Estudar <i data-lucide="arrow-right" data-lucide-size="16"></i></a>
                 </article>
                 <article class="subject-card" data-accent="historia">
-                    <span class="subject-icon">📜</span>
+                    <span class="subject-icon"><i data-lucide="landmark" data-lucide-size="24"></i></span>
                     <strong>História</strong>
                     <span>Processos, eventos e transformações da humanidade.</span>
-                    <a href="materia.html?slug=historia">Estudar →</a>
+                    <a href="materia.html?slug=historia">Estudar <i data-lucide="arrow-right" data-lucide-size="16"></i></a>
                 </article>
                 <article class="subject-card" data-accent="ingles">
-                    <span class="subject-icon">🗣</span>
+                    <span class="subject-icon"><i data-lucide="languages" data-lucide-size="24"></i></span>
                     <strong>Inglês</strong>
                     <span>Gramática, vocabulário e comunicação em outro idioma.</span>
-                    <a href="materia.html?slug=ingles">Estudar →</a>
+                    <a href="materia.html?slug=ingles">Estudar <i data-lucide="arrow-right" data-lucide-size="16"></i></a>
                 </article>
                 <article class="subject-card" data-accent="matematica">
-                    <span class="subject-icon">➗</span>
+                    <span class="subject-icon"><i data-lucide="calculator" data-lucide-size="24"></i></span>
                     <strong>Matemática</strong>
                     <span>Números, lógica, álgebra, geometria e estatística.</span>
-                    <a href="materia.html?slug=matematica">Estudar →</a>
+                    <a href="materia.html?slug=matematica">Estudar <i data-lucide="arrow-right" data-lucide-size="16"></i></a>
                 </article>
                 <article class="subject-card" data-accent="portugues">
-                    <span class="subject-icon">📚</span>
+                    <span class="subject-icon"><i data-lucide="book-open-text" data-lucide-size="24"></i></span>
                     <strong>Português</strong>
                     <span>Leitura, escrita, gramática e interpretação de textos.</span>
-                    <a href="materia.html?slug=portugues">Estudar →</a>
+                    <a href="materia.html?slug=portugues">Estudar <i data-lucide="arrow-right" data-lucide-size="16"></i></a>
                 </article>
             </div>
         </section>
@@ -206,25 +216,25 @@
 
             <div class="math-game-banner">
                 <div>
-                    <span class="game-tag">⚡ Destaque · Modo Competitivo</span>
+                    <span class="game-tag"><i data-lucide="zap" data-lucide-size="14"></i> Destaque · Modo Competitivo</span>
                     <h3>Matemática Infinita</h3>
                     <p>Resolva cálculos contra o relógio! Acertos somam tempo extra, aumentam seu combo e gravam seu recorde oficial no servidor.</p>
                 </div>
                 <div class="quiz-actions">
-                    <a class="primary-link" href="Jogos/matematica-infinita.html">Jogar Matemática Infinita</a>
-                    <a class="secondary-link" href="materia.html?slug=matematica">Revisar Matemática</a>
+                    <a class="primary-link" href="Jogos/matematica-infinita.html"><i data-lucide="play" data-lucide-size="17"></i> Jogar Matemática Infinita</a>
+                    <a class="secondary-link" href="materia.html?slug=matematica"><i data-lucide="book-open" data-lucide-size="17"></i> Revisar Matemática</a>
                 </div>
             </div>
 
             <div class="quiz-Quick-grid" aria-label="Atalhos para os quizzes">
-                <a class="quiz-pill-card" href="Quiz/quiz-artes.html"><span>🎨</span><div><strong>Quiz de Artes</strong><small>Movimentos e expressão</small></div></a>
-                <a class="quiz-pill-card" href="Quiz/quiz-ciencias.html"><span>⚛️</span><div><strong>Quiz de Ciências</strong><small>Biologia, física e química</small></div></a>
-                <a class="quiz-pill-card" href="Quiz/quiz-filosofia.html"><span>🧠</span><div><strong>Quiz de Filosofia</strong><small>Ética e pensamento</small></div></a>
-                <a class="quiz-pill-card" href="Quiz/quiz-geografia.html"><span>🌎</span><div><strong>Quiz de Geografia</strong><small>Clima, relevo e espaço</small></div></a>
-                <a class="quiz-pill-card" href="Quiz/quiz-historia.html"><span>📜</span><div><strong>Quiz de História</strong><small>Marcos da humanidade</small></div></a>
-                <a class="quiz-pill-card" href="Quiz/quiz-ingles.html"><span>🗣️</span><div><strong>Quiz de Inglês</strong><small>Gramática e vocabulário</small></div></a>
-                <a class="quiz-pill-card" href="Quiz/quiz-matematica.html"><span>📐</span><div><strong>Quiz de Matemática</strong><small>Álgebra, geometria e lógica</small></div></a>
-                <a class="quiz-pill-card" href="Quiz/quiz-portugues.html"><span>🖋️</span><div><strong>Quiz de Português</strong><small>Gramática e literatura</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-artes.html"><span><i data-lucide="palette" data-lucide-size="20"></i></span><div><strong>Quiz de Artes</strong><small>Movimentos e expressão</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-ciencias.html"><span><i data-lucide="atom" data-lucide-size="20"></i></span><div><strong>Quiz de Ciências</strong><small>Biologia, física e química</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-filosofia.html"><span><i data-lucide="brain" data-lucide-size="20"></i></span><div><strong>Quiz de Filosofia</strong><small>Ética e pensamento</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-geografia.html"><span><i data-lucide="globe-2" data-lucide-size="20"></i></span><div><strong>Quiz de Geografia</strong><small>Clima, relevo e espaço</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-historia.html"><span><i data-lucide="scroll-text" data-lucide-size="20"></i></span><div><strong>Quiz de História</strong><small>Marcos da humanidade</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-ingles.html"><span><i data-lucide="languages" data-lucide-size="20"></i></span><div><strong>Quiz de Inglês</strong><small>Gramática e vocabulário</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-matematica.html"><span><i data-lucide="compass" data-lucide-size="20"></i></span><div><strong>Quiz de Matemática</strong><small>Álgebra, geometria e lógica</small></div></a>
+                <a class="quiz-pill-card" href="Quiz/quiz-portugues.html"><span><i data-lucide="feather" data-lucide-size="20"></i></span><div><strong>Quiz de Português</strong><small>Gramática e literatura</small></div></a>
             </div>
         </section>
     </main>

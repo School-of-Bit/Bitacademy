@@ -4,13 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Entrar — BitAcademy</title>
+    <link rel="icon" type="image/png" href="assets/logos/favicon.png">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="login-page">
     <main class="login-shell">
         <section class="login-card" aria-labelledby="login-titulo">
             <div class="login-brand">
-                <a href="Bitacademy.html" class="brand-mark" aria-label="Voltar para a página inicial">BA</a>
+                <a href="Bitacademy.html" class="brand-mark" aria-label="Voltar para a página inicial"><img src="assets/logos/logo-mark.png" alt="Logo BitAcademy" class="brand-logo-img"></a>
                 <div>
                     <p class="eyebrow">Portal de acesso</p>
                     <h1 id="login-titulo">Entrar no BitAcademy</h1>
@@ -18,67 +19,152 @@
             </div>
 
             <div class="auth-tabs" role="tablist" aria-label="Acesso de usuários">
-                <button type="button" class="active" data-auth-tab="login">Entrar</button>
-                <button type="button" data-auth-tab="cadastro">Criar conta</button>
+                <button type="button" class="active" data-auth-tab="login"><i data-lucide="log-in" data-lucide-size="17"></i> Entrar</button>
+                <button type="button" data-auth-tab="cadastro"><i data-lucide="user-plus" data-lucide-size="17"></i> Criar conta</button>
             </div>
 
-            <p class="form-message" data-auth-message aria-live="polite"></p>
+            <div class="form-message-banner" data-auth-message-box hidden role="alert" aria-live="polite">
+                <span class="message-banner-icon" data-auth-message-icon><i data-lucide="alert-circle" data-lucide-size="18"></i></span>
+                <p class="form-message" data-auth-message></p>
+            </div>
+
             <div class="form-message recovery-notice" data-recovery-notice hidden role="status">
-                Para proteger sua conta, solicite a redefinição de senha ao administrador da plataforma. Ele pode redefini-la pelo painel administrativo.
+                <span class="recovery-notice-icon"><i data-lucide="key-round" data-lucide-size="18"></i></span>
+                <div>
+                    <strong>Recuperação de acesso</strong>
+                    <p>Para proteger sua conta, solicite a redefinição de senha ao administrador da plataforma. Ele pode gerar uma nova senha diretamente pelo Painel Administrativo.</p>
+                </div>
             </div>
 
-            <form class="login-form" data-login-form data-auth-panel="login">
-                <label for="login-email">E-mail</label>
-                <input type="email" id="login-email" name="email" placeholder="seunome@escola.com" maxlength="255" autocomplete="email" required>
+            <form class="login-form" data-login-form data-auth-panel="login" novalidate>
+                <div class="field-group" data-field-group="login-email">
+                    <label for="login-email">E-mail</label>
+                    <div class="input-with-icon">
+                        <span class="input-icon-left"><i data-lucide="mail" data-lucide-size="18"></i></span>
+                        <input type="email" id="login-email" name="email" placeholder="seunome@escola.com" maxlength="255" autocomplete="email" required>
+                        <span class="input-status-icon" data-input-status></span>
+                    </div>
+                    <small class="field-hint" data-field-error></small>
+                </div>
 
-                <label for="login-senha">Senha</label>
-                <div class="password-field">
-                    <input type="password" id="login-senha" name="senha" placeholder="Digite sua senha" autocomplete="current-password" required>
-                    <button type="button" class="password-toggle" data-password-toggle="login-senha" aria-label="Mostrar senha">Mostrar</button>
+                <div class="field-group" data-field-group="login-senha">
+                    <label for="login-senha">Senha</label>
+                    <div class="password-field input-with-icon">
+                        <span class="input-icon-left"><i data-lucide="lock" data-lucide-size="18"></i></span>
+                        <input type="password" id="login-senha" name="senha" placeholder="Digite sua senha" autocomplete="current-password" required>
+                        <button type="button" class="password-toggle" data-password-toggle="login-senha" aria-label="Mostrar senha">
+                            <i data-lucide="eye" data-lucide-size="16"></i>
+                            <span>Mostrar</span>
+                        </button>
+                    </div>
+                    <small class="caps-lock-warning" data-caps-warning hidden><i data-lucide="alert-triangle" data-lucide-size="13"></i> Caps Lock está ativado</small>
+                    <small class="field-hint" data-field-error></small>
                 </div>
 
                 <div class="login-options">
                     <div class="login-help-links">
-                        <button type="button" data-forgot-password>Esqueceu sua senha?</button>
-                        <a href="Bitacademy.html">← Voltar como visitante</a>
+                        <button type="button" data-forgot-password><i data-lucide="key-round" data-lucide-size="15"></i> Esqueceu sua senha?</button>
+                        <a href="Bitacademy.html"><i data-lucide="arrow-left" data-lucide-size="15"></i> Voltar como visitante</a>
                     </div>
                 </div>
 
-                <button type="submit">Entrar na plataforma</button>
+                <button type="submit" data-submit-btn><i data-lucide="log-in" data-lucide-size="18"></i> <span>Entrar na plataforma</span></button>
             </form>
 
-            <form class="login-form" data-register-form data-auth-panel="cadastro" hidden>
-                <label for="cadastro-nome">Nome completo</label>
-                <input type="text" id="cadastro-nome" name="nome" placeholder="Seu nome completo" minlength="2" maxlength="150" autocomplete="name" required>
-
-                <label for="cadastro-email">E-mail</label>
-                <input type="email" id="cadastro-email" name="email" placeholder="seunome@escola.com" maxlength="255" autocomplete="email" required>
-
-                <label for="cadastro-senha">Senha</label>
-                <div class="password-field">
-                    <input type="password" id="cadastro-senha" name="senha" placeholder="Crie uma senha forte" minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="password-rules" required>
-                    <button type="button" class="password-toggle" data-password-toggle="cadastro-senha" aria-label="Mostrar senha">Mostrar</button>
-                </div>
-                <small id="password-rules" class="password-rules">Use 8 a 72 caracteres, com letra maiúscula, minúscula, número e símbolo.</small>
-
-                <label for="cadastro-confirma-senha">Confirmar senha</label>
-                <div class="password-field">
-                    <input type="password" id="cadastro-confirma-senha" name="confirmaSenha" placeholder="Digite a senha novamente" minlength="8" maxlength="72" autocomplete="new-password" required>
-                    <button type="button" class="password-toggle" data-password-toggle="cadastro-confirma-senha" aria-label="Mostrar confirmação da senha">Mostrar</button>
+            <form class="login-form" data-register-form data-auth-panel="cadastro" hidden novalidate>
+                <div class="field-group" data-field-group="cadastro-nome">
+                    <label for="cadastro-nome">Nome completo</label>
+                    <div class="input-with-icon">
+                        <span class="input-icon-left"><i data-lucide="user" data-lucide-size="18"></i></span>
+                        <input type="text" id="cadastro-nome" name="nome" placeholder="Ex.: Ana Beatriz Souza" minlength="2" maxlength="150" autocomplete="name" required>
+                        <span class="input-status-icon" data-input-status></span>
+                    </div>
+                    <small class="field-hint" data-field-error></small>
                 </div>
 
-                <button type="submit">Criar conta de estudante</button>
+                <div class="field-group" data-field-group="cadastro-email">
+                    <label for="cadastro-email">E-mail</label>
+                    <div class="input-with-icon">
+                        <span class="input-icon-left"><i data-lucide="mail" data-lucide-size="18"></i></span>
+                        <input type="email" id="cadastro-email" name="email" placeholder="seunome@escola.com" maxlength="255" autocomplete="email" required>
+                        <span class="input-status-icon" data-input-status></span>
+                    </div>
+                    <small class="field-hint" data-field-error></small>
+                </div>
+
+                <div class="field-group" data-field-group="cadastro-senha">
+                    <div class="label-row">
+                        <label for="cadastro-senha">Senha</label>
+                        <span class="password-strength-label" data-strength-label>Força da senha</span>
+                    </div>
+                    <div class="password-field input-with-icon">
+                        <span class="input-icon-left"><i data-lucide="lock" data-lucide-size="18"></i></span>
+                        <input type="password" id="cadastro-senha" name="senha" placeholder="Crie uma senha forte" minlength="8" maxlength="72" autocomplete="new-password" aria-describedby="password-checklist" required>
+                        <button type="button" class="password-toggle" data-password-toggle="cadastro-senha" aria-label="Mostrar senha">
+                            <i data-lucide="eye" data-lucide-size="16"></i>
+                            <span>Mostrar</span>
+                        </button>
+                    </div>
+                    <small class="caps-lock-warning" data-caps-warning hidden><i data-lucide="alert-triangle" data-lucide-size="13"></i> Caps Lock está ativado</small>
+                    <div class="password-strength-bars" data-strength-bars aria-hidden="true">
+                        <span></span><span></span><span></span><span></span>
+                    </div>
+                    <ul id="password-checklist" class="password-checklist" data-password-checklist aria-label="Requisitos da senha">
+                        <li data-rule="length"><span class="rule-icon"><i data-lucide="circle" data-lucide-size="13"></i></span> 8 a 72 caracteres</li>
+                        <li data-rule="upper"><span class="rule-icon"><i data-lucide="circle" data-lucide-size="13"></i></span> Letra maiúscula (A-Z)</li>
+                        <li data-rule="lower"><span class="rule-icon"><i data-lucide="circle" data-lucide-size="13"></i></span> Letra minúscula (a-z)</li>
+                        <li data-rule="number"><span class="rule-icon"><i data-lucide="circle" data-lucide-size="13"></i></span> Número (0-9)</li>
+                        <li data-rule="symbol"><span class="rule-icon"><i data-lucide="circle" data-lucide-size="13"></i></span> Símbolo (!@#$...)</li>
+                    </ul>
+                    <small class="field-hint" data-field-error></small>
+                </div>
+
+                <div class="field-group" data-field-group="cadastro-confirma-senha">
+                    <label for="cadastro-confirma-senha">Confirmar senha</label>
+                    <div class="password-field input-with-icon">
+                        <span class="input-icon-left"><i data-lucide="shield-check" data-lucide-size="18"></i></span>
+                        <input type="password" id="cadastro-confirma-senha" name="confirmaSenha" placeholder="Digite a senha novamente" minlength="8" maxlength="72" autocomplete="new-password" required>
+                        <button type="button" class="password-toggle" data-password-toggle="cadastro-confirma-senha" aria-label="Mostrar confirmação da senha">
+                            <i data-lucide="eye" data-lucide-size="16"></i>
+                            <span>Mostrar</span>
+                        </button>
+                    </div>
+                    <small class="field-hint" data-match-status data-field-error></small>
+                </div>
+
+                <button type="submit" data-submit-btn><i data-lucide="user-plus" data-lucide-size="18"></i> <span>Criar conta de estudante</span></button>
             </form>
         </section>
 
         <aside class="access-panel" aria-label="Informações sobre o acesso">
+            <div class="brand-banner-card">
+                <img src="assets/logos/logo-banner-dark.png" alt="BitAcademy — Ecossistema Escolar" loading="eager" decoding="async">
+            </div>
             <p class="eyebrow">Jornada integrada</p>
             <h2>Um único acesso para aprender e evoluir</h2>
             <p>Crie sua conta gratuita de aluno para estudar conteúdos das disciplinas, registrar recordes nos quizzes e acompanhar seu boletim escolar.</p>
-            <ul>
-                <li>Materiais de estudo publicados pelos professores</li>
-                <li>Quizzes temáticos e Matemática Infinita com ranking oficial</li>
-                <li>Boletim escolar detalhado por período e componente</li>
+            <ul class="access-feature-list">
+                <li>
+                    <span class="access-feature-icon"><i data-lucide="book-open" data-lucide-size="18"></i></span>
+                    <div>
+                        <strong>Materiais didáticos por disciplina</strong>
+                        <small>Apostilas e referências publicadas pelos seus professores.</small>
+                    </div>
+                </li>
+                <li>
+                    <span class="access-feature-icon"><i data-lucide="trophy" data-lucide-size="18"></i></span>
+                    <div>
+                        <strong>Quizzes e Matemática Infinita</strong>
+                        <small>Prática gamificada com pontuação oficial no ranking.</small>
+                    </div>
+                </li>
+                <li>
+                    <span class="access-feature-icon"><i data-lucide="file-spreadsheet" data-lucide-size="18"></i></span>
+                    <div>
+                        <strong>Boletim e entrega de atividades</strong>
+                        <small>Médias por período, feedbacks e envio de trabalhos.</small>
+                    </div>
+                </li>
             </ul>
         </aside>
     </main>

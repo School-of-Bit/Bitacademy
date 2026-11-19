@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Space+Grotesk:wght@600;700&display=swap');
 
 :root {
   --cor-bg: #0f0f1a;
@@ -12,7 +12,9 @@
   --cor-erro: #ef4444;
   --raio: 18px;
   --sombra: 0 18px 60px rgba(0, 0, 0, 0.38);
-  --fonte: 'Nunito', sans-serif;
+  --fonte: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --fonte-titulo: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --fonte-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
 * {
@@ -24,12 +26,49 @@
 body {
   min-height: 100vh;
   padding: 24px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background:
     radial-gradient(circle at top left, rgba(34, 211, 238, 0.16), transparent 28%),
     radial-gradient(circle at bottom right, rgba(250, 204, 21, 0.09), transparent 28%),
     var(--cor-bg);
   color: var(--cor-texto);
   font-family: var(--fonte);
+}
+
+h1,
+h2,
+h3,
+.battle-badge strong {
+  font-family: var(--fonte-titulo);
+  letter-spacing: -0.025em;
+}
+
+.eyebrow,
+.battle-badge span,
+.game-stats strong,
+.level-pill,
+.question,
+.answer-form input,
+.ranking-list article > span,
+.ranking-list b,
+.auth-role-badge {
+  font-family: var(--fonte-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.lucide {
+  display: inline-block;
+  vertical-align: -0.18em;
+  flex-shrink: 0;
+  stroke: currentColor;
+}
+
+.lucide-holder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .game-shell {
@@ -382,6 +421,19 @@ button.secondary {
 .ranking-list b {
   color: var(--cor-amarelo);
   font-size: 1.2rem;
+}
+
+.ba-avatar {
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: rgba(30, 27, 75, 0.8);
+  border: 1px solid rgba(34, 211, 238, 0.35);
+}
+
+.user-avatar-sm {
+  width: 30px;
+  height: 30px;
 }
 
 .battle-preview {

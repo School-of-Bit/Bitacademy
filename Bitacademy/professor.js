@@ -61,7 +61,7 @@
     if (user.type !== "Professor") {
       panel.innerHTML = `
         <section class="teacher-empty">
-          <span class="teacher-icon">🔒</span>
+          <span class="teacher-icon"><i data-lucide="lock" data-lucide-size="32"></i></span>
           <h2>Área restrita</h2>
           <p>Esta página está disponível somente para contas de professor.</p>
           <a class="teacher-button" href="perfil.html">Voltar ao perfil</a>
@@ -78,21 +78,21 @@
     const subjectCards = subjects.length
       ? subjects.map((subject) => `
           <article class="subject-card">
-            <div class="subject-card-icon">📚</div>
+            <div class="subject-card-icon">${window.BitAcademyIcons ? window.BitAcademyIcons.forSubject(subject.slug, subject.icon, 26) : '<i data-lucide="book-open" data-lucide-size="26"></i>'}</div>
             <div class="subject-card-content">
               <span class="teacher-label">Disciplina vinculada</span>
               <h3>${escapeHtml(subject.name)}</h3>
               <p>Gerencie materiais de estudo, rascunhos e atividades avaliativas desta disciplina.</p>
               <div class="subject-actions">
                 <button type="button" class="teacher-button" data-subject-action="${escapeHtml(subject.slug)}">Gerenciar disciplina</button>
-                <a class="teacher-button secondary" href="materia.html?slug=${encodeURIComponent(subject.slug)}">Ver página pública ↗</a>
+                <a class="teacher-button secondary" href="materia.html?slug=${encodeURIComponent(subject.slug)}">Ver página pública <i data-lucide="external-link" data-lucide-size="14"></i></a>
               </div>
             </div>
           </article>
         `).join("")
       : `
         <section class="teacher-empty" style="grid-column: 1 / -1;">
-          <span class="teacher-icon">📚</span>
+          <span class="teacher-icon"><i data-lucide="book-open" data-lucide-size="32"></i></span>
           <h2>Nenhuma disciplina vinculada</h2>
           <p>Sua conta de professor ainda não possui uma disciplina associada. Solicite o vínculo ao administrador.</p>
         </section>
@@ -100,15 +100,18 @@
 
     panel.innerHTML = `
       <section class="teacher-welcome">
-        <div>
-          <span class="teacher-label">Bem-vindo(a), professor(a)</span>
-          <h2>${escapeHtml(user.name)}</h2>
-          <p>Escolha uma disciplina abaixo para gerenciar conteúdos e atividades ou abra o diário de turmas para lançar notas.</p>
-          <div class="teacher-welcome-actions">
-            <button type="button" class="teacher-button" data-open-gradebook>📊 Abrir Diário de Turmas &amp; Boletim</button>
+        <div style="display: flex; align-items: center; gap: 18px; flex-wrap: wrap;">
+          ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(user.name || user.email, 64, "profile-avatar-lg") : ""}
+          <div>
+            <span class="teacher-label">Bem-vindo(a), professor(a)</span>
+            <h2>${escapeHtml(user.name)}</h2>
+            <p>Escolha uma disciplina abaixo para gerenciar conteúdos e atividades ou abra o diário de turmas para lançar notas.</p>
+            <div class="teacher-welcome-actions">
+              <button type="button" class="teacher-button" data-open-gradebook><i data-lucide="bar-chart-3" data-lucide-size="18"></i> Abrir Diário de Turmas &amp; Boletim</button>
+            </div>
           </div>
         </div>
-        <div class="teacher-welcome-icon">👨‍🏫</div>
+        <div class="teacher-welcome-icon"><i data-lucide="graduation-cap" data-lucide-size="36"></i></div>
       </section>
 
       <section class="teacher-overview">
@@ -148,6 +151,10 @@
       });
     });
     panel.querySelector("[data-open-gradebook]").addEventListener("click", renderGradebookCourses);
+
+    window.BitAcademyMotion?.panelIn(panel.querySelector(".teacher-welcome"));
+    window.BitAcademyMotion?.staggerCards(panel, ".teacher-stat", { stagger: 0.06, y: 14 });
+    window.BitAcademyMotion?.staggerCards(panel, ".subject-card", { stagger: 0.065, y: 18 });
   };
 
   const renderGradebookCourses = async () => {
@@ -172,18 +179,19 @@
       const data = await api("/api/gradebook?action=courses");
       list.innerHTML = data.courses.length ? data.courses.map((course) => `
         <article class="subject-card">
-          <div class="subject-card-icon">📝</div>
+          <div class="subject-card-icon"><i data-lucide="file-spreadsheet" data-lucide-size="26"></i></div>
           <div class="subject-card-content">
             <span class="teacher-label">Ano letivo ${escapeHtml(course.academic_year_name)}</span>
             <h3>${escapeHtml(course.subject_name)}</h3>
             <p>${escapeHtml(course.class_name)} · ${course.student_count} ${course.student_count === 1 ? "estudante matriculado" : "estudantes matriculados"}</p>
             <div class="subject-actions">
-              <button type="button" class="teacher-button" data-gradebook-course="${escapeHtml(course.id)}">Abrir diário de notas</button>
+              <button type="button" class="teacher-button" data-gradebook-course="${escapeHtml(course.id)}"><i data-lucide="bar-chart-3" data-lucide-size="16"></i> Abrir diário de notas</button>
             </div>
           </div>
         </article>
       `).join("") : `<div class="teacher-empty compact" style="grid-column: 1 / -1;"><h3>Nenhuma turma atribuída</h3><p>Peça ao administrador para vincular uma turma à sua disciplina no painel administrativo.</p></div>`;
       list.querySelectorAll("[data-gradebook-course]").forEach((button) => button.addEventListener("click", () => renderGradebookCourse(button.dataset.gradebookCourse)));
+      window.BitAcademyMotion?.staggerCards(list, ".subject-card", { stagger: 0.065, y: 18 });
     } catch (error) {
       list.innerHTML = `<p class="teacher-message error">${escapeHtml(error.message)}</p>`;
     }
@@ -233,7 +241,12 @@
                 const badge = statusBadgeLabel(st.result);
                 return `
                   <tr>
-                    <td><strong>${escapeHtml(st.studentName)}</strong></td>
+                    <td>
+                      <div class="user-inline-cell">
+                        ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(st.studentName, 28, "user-avatar-sm") : ""}
+                        <strong>${escapeHtml(st.studentName)}</strong>
+                      </div>
+                    </td>
                     ${st.periods.map((p) => `
                       <td>
                         <div class="pauta-cell">
@@ -294,7 +307,7 @@
             <h2>${escapeHtml(course.subject_name)}</h2>
             <p>${students.length} ${students.length === 1 ? "estudante matriculado" : "estudantes matriculados"} · Média mínima de aprovação: ${escapeHtml(course.passing_score)}/10</p>
           </div>
-          <div class="teacher-welcome-icon">📊</div>
+          <div class="teacher-welcome-icon"><i data-lucide="bar-chart-3" data-lucide-size="36"></i></div>
         </section>
 
         <section class="teacher-section">
@@ -305,7 +318,7 @@
             </div>
             <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
               <p style="margin: 0;">Acompanhe as médias parciais e finais calculadas e identifique estudantes que precisam de recuperação.</p>
-              ${studentSummaries.length ? `<button type="button" class="teacher-button secondary" data-export-csv>📥 Exportar Pauta (CSV)</button>` : ""}
+              ${studentSummaries.length ? `<button type="button" class="teacher-button secondary" data-export-csv><i data-lucide="download" data-lucide-size="16"></i> Exportar Pauta (CSV)</button>` : ""}
             </div>
           </div>
           ${pautaTableHtml}
@@ -413,7 +426,10 @@
                 return `
                   <form class="grade-student-row" data-save-grade data-assessment="${escapeHtml(assessment.id)}" data-enrollment="${escapeHtml(student.enrollment_id)}">
                     <div>
-                      <strong>${escapeHtml(student.student_name)}</strong>
+                      <div class="user-inline-cell">
+                        ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(student.student_name, 28, "user-avatar-sm") : ""}
+                        <strong>${escapeHtml(student.student_name)}</strong>
+                      </div>
                       ${sub ? `
                         <div style="margin-top: 4px; font-size: 0.82rem;">
                           <span class="teacher-badge published" style="padding: 2px 8px; font-size: 0.75rem;">Entregue em ${escapeHtml(formatDate(sub.submitted_at))}</span>
@@ -549,7 +565,10 @@
       content.querySelectorAll("[data-toggle-edit-assessment]").forEach((btn) => btn.addEventListener("click", () => {
         const id = btn.dataset.toggleEditAssessment;
         const editForm = content.querySelector(`[data-edit-assessment-form="${id}"]`);
-        if (editForm) editForm.hidden = !editForm.hidden;
+        if (editForm) {
+          editForm.hidden = !editForm.hidden;
+          if (!editForm.hidden) window.BitAcademyMotion?.drawerIn(editForm);
+        }
       }));
 
       content.querySelectorAll("[data-edit-assessment-form]").forEach((form) => form.addEventListener("submit", async (event) => {
@@ -598,6 +617,7 @@
           return;
         }
         drawer.hidden = false;
+        window.BitAcademyMotion?.drawerIn(drawer);
         drawer.innerHTML = `<div class="teacher-loading">Carregando histórico de alterações...</div>`;
         try {
           const histData = await api(`/api/gradebook?action=grade-history&assessmentId=${encodeURIComponent(assessmentId)}`);
@@ -694,6 +714,10 @@
         const name = button.dataset.jumpSubjectName || slug;
         showSubject({ slug, name }, "activities");
       }));
+
+      window.BitAcademyMotion?.panelIn(content.querySelector(".teacher-welcome"));
+      window.BitAcademyMotion?.animateMeters(content);
+      window.BitAcademyMotion?.staggerCards(content, ".grade-assessment", { stagger: 0.06, y: 18 });
     } catch (error) {
       content.innerHTML = `<section class="teacher-empty"><h2>Não foi possível abrir o diário</h2><p>${escapeHtml(error.message)}</p></section>`;
     }
@@ -708,12 +732,12 @@
           <h2>${escapeHtml(subject.name)}</h2>
           <p>Publique materiais de estudo, salve rascunhos e cadastre atividades integradas ao boletim.</p>
         </div>
-        <div class="teacher-welcome-icon">📖</div>
+        <div class="teacher-welcome-icon">${window.BitAcademyIcons ? window.BitAcademyIcons.forSubject(subject.slug, subject.icon, 36) : '<i data-lucide="book-open" data-lucide-size="36"></i>'}</div>
       </section>
       <section class="teacher-tabs" aria-label="Seções da disciplina">
-        <button class="active" type="button" data-tab="overview">Visão geral</button>
-        <button type="button" data-tab="materials">Materiais de estudo</button>
-        <button type="button" data-tab="activities">Atividades &amp; Entregas</button>
+        <button class="active" type="button" data-tab="overview"><i data-lucide="layers" data-lucide-size="16"></i> Visão geral</button>
+        <button type="button" data-tab="materials"><i data-lucide="file-text" data-lucide-size="16"></i> Materiais de estudo</button>
+        <button type="button" data-tab="activities"><i data-lucide="clipboard-list" data-lucide-size="16"></i> Atividades &amp; Entregas</button>
       </section>
       <div data-subject-content>
         <div class="teacher-loading">Carregando disciplina...</div>
@@ -746,6 +770,8 @@
       } else {
         await renderOverview(subject, content);
       }
+      window.BitAcademyMotion?.panelIn(content);
+      window.BitAcademyMotion?.staggerCards(content, ".teacher-list-item, .teacher-feature-grid article, .teacher-stat", { stagger: 0.055, y: 16 });
     } catch (error) {
       content.innerHTML = `
         <section class="teacher-empty">
@@ -784,17 +810,17 @@
         </div>
         <div class="teacher-feature-grid">
           <article>
-            <span>📄</span>
+            <span><i data-lucide="file-text" data-lucide-size="24"></i></span>
             <h3>Materiais de Estudo</h3>
             <p>Publique textos, resumos e links complementares. Use o modo rascunho enquanto prepara o conteúdo.</p>
           </article>
           <article>
-            <span>📝</span>
+            <span><i data-lucide="clipboard-check" data-lucide-size="24"></i></span>
             <h3>Atividades &amp; Entregas</h3>
             <p>Cadastre tarefas vinculadas às turmas, receba entregas com links e lance notas direto no boletim.</p>
           </article>
           <article>
-            <span>📊</span>
+            <span><i data-lucide="bar-chart-3" data-lucide-size="24"></i></span>
             <h3>Boletim &amp; Notas</h3>
             <p>Configure componentes avaliativos e lance notas por período no Diário de Classe.</p>
           </article>
@@ -875,6 +901,7 @@
         const body = form.querySelector(".material-edit-body");
         const isHidden = body.hidden;
         body.hidden = !isHidden;
+        if (isHidden) window.BitAcademyMotion?.drawerIn(body);
         btn.textContent = isHidden ? "Fechar edição" : "Editar material";
       });
     });
@@ -1166,7 +1193,10 @@
       btn.addEventListener("click", () => {
         const id = btn.dataset.toggleEditActivity;
         const editForm = content.querySelector(`[data-edit-activity-form="${id}"]`);
-        if (editForm) editForm.hidden = !editForm.hidden;
+        if (editForm) {
+          editForm.hidden = !editForm.hidden;
+          if (!editForm.hidden) window.BitAcademyMotion?.drawerIn(editForm);
+        }
       });
     });
 
@@ -1258,6 +1288,7 @@
           return;
         }
         drawer.hidden = false;
+        window.BitAcademyMotion?.drawerIn(drawer);
         btn.textContent = `▲ Fechar Correção`;
         await renderSubmissionsDrawer(actId, drawer, subject);
       });
@@ -1300,8 +1331,13 @@
             return `
               <form class="grade-student-row" data-grade-submission data-activity="${escapeHtml(activity.id)}" data-enrollment="${escapeHtml(st.enrollment_id)}">
                 <div>
-                  <strong>${escapeHtml(st.student_name)}</strong>
-                  <small style="display: block; color: var(--cor-subtexto);">${escapeHtml(st.student_email)}</small>
+                  <div class="user-inline-cell">
+                    ${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(st.student_name, 30, "user-avatar-sm") : ""}
+                    <div>
+                      <strong>${escapeHtml(st.student_name)}</strong>
+                      <small style="display: block; color: var(--cor-subtexto); margin: 0;">${escapeHtml(st.student_email)}</small>
+                    </div>
+                  </div>
                   <div style="margin-top: 6px;">
                     ${hasSubmitted
                       ? `<span class="teacher-badge published">Entregue em ${escapeHtml(formatDate(st.submitted_at))}</span>`

@@ -311,7 +311,7 @@ class QuizUI {
   renderTopbar() {
     return `
       <nav class="quiz-topbar" aria-label="Navegação do quiz">
-        <a class="quiz-nav-link" href="../materia.html?slug=${encodeURIComponent(this.materia)}">← Voltar para ${this.escapeHtml(this.engine.materiaInfo.titulo)}</a>
+        <a class="quiz-nav-link" href="../materia.html?slug=${encodeURIComponent(this.materia)}"><i data-lucide="arrow-left" data-lucide-size="16"></i> Voltar para ${this.escapeHtml(this.engine.materiaInfo.titulo)}</a>
         <div class="quiz-topbar-right">
           <a class="quiz-nav-link subtle" href="../Bitacademy.html">Página Inicial</a>
           <span data-auth-status></span>
@@ -321,15 +321,18 @@ class QuizUI {
   }
 
   renderEstrutura() {
+    const iconHtml = window.BitAcademyIcons
+      ? window.BitAcademyIcons.forSubject(this.materia, this.engine.materiaInfo.emoji, 24)
+      : this.engine.materiaInfo.emoji;
     this.container.innerHTML = `
       ${this.renderTopbar()}
       <div class="quiz-card">
         <div class="quiz-header" style="border-left: 6px solid ${this.engine.materiaInfo.cor}">
           <div class="quiz-header-top">
-            <span class="quiz-badge">Quiz de Fixação</span>
+            <span class="quiz-badge"><i data-lucide="clipboard-check" data-lucide-size="14"></i> Quiz de Fixação</span>
             <span class="quiz-step-counter">Questão <b id="current-idx">1</b> de ${this.engine.perguntas.length}</span>
           </div>
-          <h2>${this.engine.materiaInfo.emoji} ${this.engine.materiaInfo.titulo}</h2>
+          <h2 style="display: flex; align-items: center; gap: 10px;">${iconHtml} ${this.engine.materiaInfo.titulo}</h2>
           <div class="quiz-meta">
             <div class="progress-bg"><div id="progress-bar" class="progress-fill"></div></div>
           </div>
@@ -371,6 +374,8 @@ class QuizUI {
     });
 
     document.getElementById("quiz-footer").classList.add("hidden");
+    window.BitAcademyMotion?.panelIn(content.querySelector(".question-text"));
+    window.BitAcademyMotion?.staggerCards(content, ".option-btn", { stagger: 0.045, y: 12 });
   }
 
   handleSelection(e) {
@@ -387,12 +392,19 @@ class QuizUI {
       else if (bIdx === idx && !result.correto) b.classList.add("wrong");
     });
 
+    if (result.correto) {
+      window.BitAcademyMotion?.pop(btn, 1.03);
+    } else {
+      window.BitAcademyMotion?.shake(btn);
+    }
+
     const feedback = document.getElementById("feedback-area");
     feedback.classList.remove("hidden");
     feedback.className = `feedback-box ${result.correto ? "is-correct" : "is-wrong"}`;
     feedback.innerHTML = result.correto
       ? `<b>✨ Resposta correta!</b> ${this.escapeHtml(result.explicacao || "")}`
       : `<b>⚠️ Resposta incorreta:</b> A alternativa correta é a <strong>${String.fromCharCode(65 + result.indiceCorreto)}</strong>. ${this.escapeHtml(result.explicacao || "")}`;
+    window.BitAcademyMotion?.drawerIn(feedback);
 
     this.btnNext.textContent = this.engine.atual === this.engine.perguntas.length - 1 ? "Ver Resultado Final 🏆" : "Próxima Questão →";
     document.getElementById("quiz-footer").classList.remove("hidden");
@@ -455,11 +467,11 @@ class QuizUI {
     try { ranking = await window.BitAcademyAuth?.getQuizRanking(this.materia, 5) || []; } catch {}
     const rankingHtml = ranking.length ? `
       <div class="quiz-ranking">
-        <h4>🏆 Top 5 deste Quiz</h4>
+        <h4 style="display: flex; align-items: center; justify-content: center; gap: 8px;"><i data-lucide="trophy" data-lucide-size="18"></i> Top 5 deste Quiz</h4>
         ${ranking.map((item, index) => `
           <article class="${index < 3 ? `podium-${index + 1}` : ""}">
             <span>${this.medalForRank(index)}</span>
-            <strong>${this.escapeHtml(item.playerName)}</strong>
+            <strong style="display: flex; align-items: center; gap: 8px;">${window.BitAcademyIcons ? window.BitAcademyIcons.avatar(item.playerName, 24, "user-avatar-sm") : ""}${this.escapeHtml(item.playerName)}</strong>
             <b>${item.score}/${item.total} (${item.percent}%)</b>
           </article>
         `).join("")}
@@ -468,18 +480,18 @@ class QuizUI {
 
     const reviewHtml = `
       <details class="quiz-review">
-        <summary>📋 Ver gabarito comentado (${score} de ${total} acertos)</summary>
+        <summary><i data-lucide="clipboard-list" data-lucide-size="16"></i> Ver gabarito comentado (${score} de ${total} acertos)</summary>
         <div class="quiz-review-list">
           ${this.engine.respostasUsuario.map((item, idx) => `
             <article class="quiz-review-item ${item.acertou ? "correct" : "wrong"}">
               <div class="quiz-review-head">
                 <span>Questão ${idx + 1}</span>
-                <b>${item.acertou ? "✓ Acertou" : "✗ Errou"}</b>
+                <b>${item.acertou ? '<i data-lucide="check-circle-2" data-lucide-size="15"></i> Acertou' : '<i data-lucide="x-circle" data-lucide-size="15"></i> Errou'}</b>
               </div>
               <p class="quiz-review-question">${this.escapeHtml(item.pergunta)}</p>
               <p class="quiz-review-answer">Sua resposta: <strong>${this.escapeHtml(item.opcoes[item.escolhida] ?? "—")}</strong></p>
               ${!item.acertou ? `<p class="quiz-review-correct">Correta: <strong>${this.escapeHtml(item.opcoes[item.correta])}</strong></p>` : ""}
-              ${item.explicacao ? `<small class="quiz-review-exp">💡 ${this.escapeHtml(item.explicacao)}</small>` : ""}
+              ${item.explicacao ? `<small class="quiz-review-exp"><i data-lucide="lightbulb" data-lucide-size="14"></i> ${this.escapeHtml(item.explicacao)}</small>` : ""}
             </article>
           `).join("")}
         </div>
@@ -504,6 +516,9 @@ class QuizUI {
       </div>
     `;
     window.BitAcademyAuth?.renderAuthStatus?.();
+    window.BitAcademyMotion?.panelIn(this.container.querySelector(".result-card"));
+    window.BitAcademyMotion?.pop(this.container.querySelector(".score-circle"), 1.15);
+    window.BitAcademyMotion?.staggerCards(this.container, ".quiz-ranking article", { stagger: 0.055, y: 12 });
   }
 }
 
