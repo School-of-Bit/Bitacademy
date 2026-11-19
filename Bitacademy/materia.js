@@ -61,6 +61,7 @@
         subjectIconEl.textContent = data.subject.icon || "📘";
       }
       document.querySelector("[data-subject-description]").textContent = data.subject.description || "Conteúdos e materiais para estudar esta disciplina.";
+      window.BitAcademyMotion?.panelIn(".material-hero");
 
       try {
         const resourceResponse = await fetch(`/api/academic?action=resources&subject=${encodeURIComponent(slug)}`);
@@ -79,6 +80,7 @@
               </article>
             `).join("")
           : '<p class="empty-state">Ainda não há quizzes ou jogos cadastrados nesta disciplina.</p>';
+        window.BitAcademyMotion?.staggerCards(resourceList, ".resource-card", { stagger: 0.06, y: 16 });
       } catch {
         resourceList.innerHTML = '<p class="empty-state">Não foi possível carregar os quizzes e jogos.</p>';
       }
@@ -119,6 +121,7 @@
           </article>
         `;
       }).join("");
+      window.BitAcademyMotion?.staggerCards(materials, ".material-card", { stagger: 0.07, y: 20 });
     } catch (error) {
       status.textContent = error.message;
       materials.innerHTML = "";

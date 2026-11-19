@@ -374,6 +374,8 @@ class QuizUI {
     });
 
     document.getElementById("quiz-footer").classList.add("hidden");
+    window.BitAcademyMotion?.panelIn(content.querySelector(".question-text"));
+    window.BitAcademyMotion?.staggerCards(content, ".option-btn", { stagger: 0.045, y: 12 });
   }
 
   handleSelection(e) {
@@ -390,12 +392,19 @@ class QuizUI {
       else if (bIdx === idx && !result.correto) b.classList.add("wrong");
     });
 
+    if (result.correto) {
+      window.BitAcademyMotion?.pop(btn, 1.03);
+    } else {
+      window.BitAcademyMotion?.shake(btn);
+    }
+
     const feedback = document.getElementById("feedback-area");
     feedback.classList.remove("hidden");
     feedback.className = `feedback-box ${result.correto ? "is-correct" : "is-wrong"}`;
     feedback.innerHTML = result.correto
       ? `<b>✨ Resposta correta!</b> ${this.escapeHtml(result.explicacao || "")}`
       : `<b>⚠️ Resposta incorreta:</b> A alternativa correta é a <strong>${String.fromCharCode(65 + result.indiceCorreto)}</strong>. ${this.escapeHtml(result.explicacao || "")}`;
+    window.BitAcademyMotion?.drawerIn(feedback);
 
     this.btnNext.textContent = this.engine.atual === this.engine.perguntas.length - 1 ? "Ver Resultado Final 🏆" : "Próxima Questão →";
     document.getElementById("quiz-footer").classList.remove("hidden");
@@ -507,6 +516,9 @@ class QuizUI {
       </div>
     `;
     window.BitAcademyAuth?.renderAuthStatus?.();
+    window.BitAcademyMotion?.panelIn(this.container.querySelector(".result-card"));
+    window.BitAcademyMotion?.pop(this.container.querySelector(".score-circle"), 1.15);
+    window.BitAcademyMotion?.staggerCards(this.container, ".quiz-ranking article", { stagger: 0.055, y: 12 });
   }
 }
 

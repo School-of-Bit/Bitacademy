@@ -148,6 +148,10 @@
       });
     });
     panel.querySelector("[data-open-gradebook]").addEventListener("click", renderGradebookCourses);
+
+    window.BitAcademyMotion?.panelIn(panel.querySelector(".teacher-welcome"));
+    window.BitAcademyMotion?.staggerCards(panel, ".teacher-stat", { stagger: 0.06, y: 14 });
+    window.BitAcademyMotion?.staggerCards(panel, ".subject-card", { stagger: 0.065, y: 18 });
   };
 
   const renderGradebookCourses = async () => {
@@ -184,6 +188,7 @@
         </article>
       `).join("") : `<div class="teacher-empty compact" style="grid-column: 1 / -1;"><h3>Nenhuma turma atribuída</h3><p>Peça ao administrador para vincular uma turma à sua disciplina no painel administrativo.</p></div>`;
       list.querySelectorAll("[data-gradebook-course]").forEach((button) => button.addEventListener("click", () => renderGradebookCourse(button.dataset.gradebookCourse)));
+      window.BitAcademyMotion?.staggerCards(list, ".subject-card", { stagger: 0.065, y: 18 });
     } catch (error) {
       list.innerHTML = `<p class="teacher-message error">${escapeHtml(error.message)}</p>`;
     }
@@ -549,7 +554,10 @@
       content.querySelectorAll("[data-toggle-edit-assessment]").forEach((btn) => btn.addEventListener("click", () => {
         const id = btn.dataset.toggleEditAssessment;
         const editForm = content.querySelector(`[data-edit-assessment-form="${id}"]`);
-        if (editForm) editForm.hidden = !editForm.hidden;
+        if (editForm) {
+          editForm.hidden = !editForm.hidden;
+          if (!editForm.hidden) window.BitAcademyMotion?.drawerIn(editForm);
+        }
       }));
 
       content.querySelectorAll("[data-edit-assessment-form]").forEach((form) => form.addEventListener("submit", async (event) => {
@@ -598,6 +606,7 @@
           return;
         }
         drawer.hidden = false;
+        window.BitAcademyMotion?.drawerIn(drawer);
         drawer.innerHTML = `<div class="teacher-loading">Carregando histórico de alterações...</div>`;
         try {
           const histData = await api(`/api/gradebook?action=grade-history&assessmentId=${encodeURIComponent(assessmentId)}`);
@@ -694,6 +703,10 @@
         const name = button.dataset.jumpSubjectName || slug;
         showSubject({ slug, name }, "activities");
       }));
+
+      window.BitAcademyMotion?.panelIn(content.querySelector(".teacher-welcome"));
+      window.BitAcademyMotion?.animateMeters(content);
+      window.BitAcademyMotion?.staggerCards(content, ".grade-assessment", { stagger: 0.06, y: 18 });
     } catch (error) {
       content.innerHTML = `<section class="teacher-empty"><h2>Não foi possível abrir o diário</h2><p>${escapeHtml(error.message)}</p></section>`;
     }
@@ -746,6 +759,8 @@
       } else {
         await renderOverview(subject, content);
       }
+      window.BitAcademyMotion?.panelIn(content);
+      window.BitAcademyMotion?.staggerCards(content, ".teacher-list-item, .teacher-feature-grid article, .teacher-stat", { stagger: 0.055, y: 16 });
     } catch (error) {
       content.innerHTML = `
         <section class="teacher-empty">
@@ -875,6 +890,7 @@
         const body = form.querySelector(".material-edit-body");
         const isHidden = body.hidden;
         body.hidden = !isHidden;
+        if (isHidden) window.BitAcademyMotion?.drawerIn(body);
         btn.textContent = isHidden ? "Fechar edição" : "Editar material";
       });
     });
@@ -1166,7 +1182,10 @@
       btn.addEventListener("click", () => {
         const id = btn.dataset.toggleEditActivity;
         const editForm = content.querySelector(`[data-edit-activity-form="${id}"]`);
-        if (editForm) editForm.hidden = !editForm.hidden;
+        if (editForm) {
+          editForm.hidden = !editForm.hidden;
+          if (!editForm.hidden) window.BitAcademyMotion?.drawerIn(editForm);
+        }
       });
     });
 
@@ -1258,6 +1277,7 @@
           return;
         }
         drawer.hidden = false;
+        window.BitAcademyMotion?.drawerIn(drawer);
         btn.textContent = `▲ Fechar Correção`;
         await renderSubmissionsDrawer(actId, drawer, subject);
       });

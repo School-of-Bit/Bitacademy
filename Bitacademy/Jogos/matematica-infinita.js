@@ -112,7 +112,10 @@ class MathInfiniteGame {
     this.state.level = Number(state.level);
     this.state.timeLeft = Number(state.timeLeft);
     this.state.revision = Number(state.revision);
-    if (game.question) this.elements.question.textContent = game.question;
+    if (game.question) {
+      this.elements.question.textContent = game.question;
+      window.BitAcademyMotion?.pop(this.elements.question, 1.1);
+    }
     this.elements.answer.value = "";
     this.render();
   }
@@ -140,6 +143,12 @@ class MathInfiniteGame {
       this.elements.feedback.textContent = game.accepted === false
         ? "A resposta já havia sido enviada. Questão atualizada."
         : game.wasCorrect ? "✨ Acertou! +4s" : `⚠️ Errou. A resposta era ${game.correctAnswer}. -5s`;
+      if (game.wasCorrect) {
+        window.BitAcademyMotion?.pop(this.elements.score, 1.22);
+        window.BitAcademyMotion?.pop(this.elements.streak, 1.22);
+      } else if (game.accepted !== false) {
+        window.BitAcademyMotion?.shake(this.elements.form);
+      }
       this.elements.answer.disabled = false;
       this.elements.form.querySelector("button").disabled = false;
       this.elements.reset.disabled = false;
@@ -232,6 +241,7 @@ class MathInfiniteGame {
           <b>${score.score}</b>
         </article>
       `).join("");
+      window.BitAcademyMotion?.staggerCards(this.elements.ranking, "article", { stagger: 0.05, y: 12 });
     } catch (error) {
       this.elements.ranking.innerHTML = `<p>Não foi possível carregar o ranking.</p>`;
     }

@@ -46,7 +46,12 @@
     const activateTab = (target) => {
       tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.adminTab === target));
       panels.forEach((panel) => {
-        panel.hidden = target !== "todos" && panel.dataset.adminPanel !== target;
+        const isVisible = target === "todos" || panel.dataset.adminPanel === target;
+        panel.hidden = !isVisible;
+        if (isVisible) {
+          window.BitAcademyMotion?.panelIn(panel);
+          window.BitAcademyMotion?.staggerCards(panel, ".teacher-card, .subject-edit-form, .resource-edit-form", { stagger: 0.045, y: 14 });
+        }
       });
     };
 
@@ -121,7 +126,10 @@
 
   const renderResources = () => {
     const resourceCountEl = document.querySelector("[data-resource-count]");
-    if (resourceCountEl) resourceCountEl.textContent = resources.length;
+    if (resourceCountEl) {
+      resourceCountEl.textContent = resources.length;
+      window.BitAcademyMotion?.countUp(resourceCountEl, resources.length);
+    }
     resourceList.innerHTML = resources.length ? resources.map((r) => `
       <form class="subject-form resource-edit-form" data-resource="${escapeHtml(r.id)}">
         <div class="subject-title-row">
@@ -262,7 +270,10 @@
       const data = await api("users");
       allUsers = data.users || [];
       const userCountEl = document.querySelector("[data-user-count]");
-      if (userCountEl) userCountEl.textContent = allUsers.length;
+      if (userCountEl) {
+        userCountEl.textContent = allUsers.length;
+        window.BitAcademyMotion?.countUp(userCountEl, allUsers.length);
+      }
       renderUsers();
       usersMessage.textContent = `${allUsers.length} contas carregadas (limite de 500).`;
       usersMessage.className = "message";
@@ -281,8 +292,16 @@
       renderResourceOptions();
       renderTeacherSubjectOptions();
       const teachers = data.teachers || [];
-      document.querySelector("[data-teacher-count]").textContent = teachers.length;
-      document.querySelector("[data-subject-count]").textContent = subjects.length;
+      const tCountEl = document.querySelector("[data-teacher-count]");
+      const sCountEl = document.querySelector("[data-subject-count]");
+      if (tCountEl) {
+        tCountEl.textContent = teachers.length;
+        window.BitAcademyMotion?.countUp(tCountEl, teachers.length);
+      }
+      if (sCountEl) {
+        sCountEl.textContent = subjects.length;
+        window.BitAcademyMotion?.countUp(sCountEl, subjects.length);
+      }
       list.innerHTML = teachers.length ? teachers.map((teacher) => {
         const assigned = teacher.subjects || [];
         const options = subjects.filter((subject) => !assigned.some((item) => item.id === subject.id));
@@ -520,6 +539,7 @@
         return;
       }
       drawer.hidden = false;
+      window.BitAcademyMotion?.drawerIn(drawer);
       toggleOverviewBtn.innerHTML = '<i data-lucide="chevron-up" data-lucide-size="15"></i> Fechar Quadro';
       drawer.innerHTML = "<p style='margin: 0; font-size: 0.85rem;'>Carregando quadro de notas da turma...</p>";
       try {
