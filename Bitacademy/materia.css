@@ -98,8 +98,10 @@
 }
 
 .material-toc-label {
-  font-size: 0.8rem;
-  font-weight: 900;
+  font-family: var(--fonte-mono);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--cor-subtexto);
   margin-right: 4px;
@@ -211,15 +213,18 @@
 }
 
 .material-content {
-  color: var(--cor-texto);
-  opacity: 0.92;
-  line-height: 1.8;
+  font-family: var(--fonte);
+  color: #e2e8f0;
+  opacity: 0.95;
+  line-height: 1.82;
+  letter-spacing: -0.004em;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: 1.01rem;
+  font-size: 1.03rem;
 }
 
 .material-meta {
+  font-family: var(--fonte-mono);
   display: flex;
   flex-wrap: wrap;
   gap: 8px 18px;
@@ -227,8 +232,8 @@
   padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   color: var(--cor-subtexto);
-  font-size: 0.86rem;
-  font-weight: 700;
+  font-size: 0.8rem;
+  font-weight: 600;
 }
 
 .material-card a {

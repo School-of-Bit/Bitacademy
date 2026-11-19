@@ -8,12 +8,13 @@
 }
 
 .teacher-label {
+  font-family: var(--fonte-mono);
   display: block;
   margin: 0;
   color: var(--cor-ciano);
-  font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -86,9 +87,12 @@
 }
 
 .teacher-stat strong {
-  font-size: 1.65rem;
+  font-family: var(--fonte-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 1.75rem;
   color: var(--cor-ciano);
-  font-weight: 900;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 .teacher-section {
@@ -422,14 +426,16 @@
 }
 
 .teacher-badge {
+  font-family: var(--fonte-mono);
+  font-variant-numeric: tabular-nums;
   display: inline-flex;
   padding: 4px 10px;
   border: 1px solid var(--cor-borda);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
   color: var(--cor-subtexto);
-  font-size: 0.76rem;
-  font-weight: 800;
+  font-size: 0.74rem;
+  font-weight: 700;
 }
 
 .teacher-badge.published {
@@ -494,6 +500,15 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  font-family: var(--fonte-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.grade-student-row input[type="number"],
+.component-edit-row input[type="number"] {
+  font-family: var(--fonte-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .pauta-score-low {

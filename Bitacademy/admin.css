@@ -76,10 +76,13 @@
 }
 
 .stats strong {
+  font-family: var(--fonte-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
   display: block;
   margin-top: 8px;
-  font-size: 1.9rem;
-  font-weight: 900;
+  font-size: 1.95rem;
+  font-weight: 800;
   color: var(--cor-ciano);
 }
 
@@ -485,11 +488,13 @@ button:disabled {
 }
 
 code {
-  padding: 2px 6px;
+  font-family: var(--fonte-mono);
+  font-variant-numeric: tabular-nums;
+  padding: 2px 7px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--cor-ciano);
-  font-size: 0.9em;
+  font-size: 0.86em;
 }
 
 @media (max-width: 860px) {

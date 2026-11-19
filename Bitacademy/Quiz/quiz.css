@@ -2,7 +2,7 @@
    BITACADEMY – Estilos dos Quizzes
    ============================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Space+Grotesk:wght@600;700&display=swap');
 
 :root {
   --cor-bg: #0f0f1a;
@@ -18,7 +18,9 @@
   --quiz-accent: #6366f1;
   --raio: 18px;
   --sombra: 0 12px 38px rgba(0, 0, 0, 0.44);
-  --fonte: 'Nunito', sans-serif;
+  --fonte: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --fonte-titulo: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  --fonte-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 }
 
 * {
@@ -29,6 +31,8 @@
 
 body {
   font-family: var(--fonte);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   background:
     radial-gradient(circle at 12% 0%, color-mix(in srgb, var(--quiz-accent) 18%, transparent), transparent 32%),
     radial-gradient(circle at 88% 10%, rgba(34, 211, 238, 0.1), transparent 28%),
@@ -36,6 +40,27 @@ body {
   color: var(--cor-texto);
   min-height: 100vh;
   padding: 20px;
+}
+
+h1,
+h2,
+h3,
+h4,
+.question-text {
+  font-family: var(--fonte-titulo);
+  letter-spacing: -0.02em;
+}
+
+.quiz-badge,
+.quiz-step-counter,
+.option-btn .label,
+.score-circle,
+.quiz-ranking span,
+.quiz-ranking b,
+.quiz-review-head,
+.auth-role-badge {
+  font-family: var(--fonte-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .hidden {
