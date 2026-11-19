@@ -205,8 +205,15 @@
         const classEnrollments = allEnrollments.filter((e) => e.class_group_id === item.id);
         return `
           <article class="teacher-card">
-            <h3>${escapeHtml(item.name)}</h3>
-            <p>Ano letivo ${escapeHtml(item.academic_year_name)} · ${escapeHtml(item.grade_level || "Série não informada")} · <strong>${item.student_count}</strong> ${item.student_count === 1 ? "aluno ativo" : "alunos ativos"}</p>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap;">
+              <div>
+                <h3>${escapeHtml(item.name)}</h3>
+                <p>Ano letivo ${escapeHtml(item.academic_year_name)} · ${escapeHtml(item.grade_level || "Série não informada")} · <strong>${item.student_count}</strong> ${item.student_count === 1 ? "aluno ativo" : "alunos ativos"}</p>
+              </div>
+              <button type="button" data-toggle-class-overview="${escapeHtml(item.id)}">📊 Quadro de Notas</button>
+            </div>
+
+            <div data-class-overview-drawer="${escapeHtml(item.id)}" hidden style="margin-top: 12px; padding: 12px; border: 1px solid rgba(34, 211, 238, 0.25); border-radius: 10px; background: rgba(15, 23, 42, 0.7); overflow-x: auto;"></div>
 
             <div style="margin-top: 12px;">
               <strong style="font-size: 0.85rem; color: var(--cor-ciano); display: block; margin-bottom: 6px;">📚 Disciplinas &amp; Professores (${classOfferings.length})</strong>
@@ -498,6 +505,72 @@
       } catch (error) {
         gbMessage.textContent = error.message;
         gbMessage.className = "message error";
+      }
+      return;
+    }
+
+    const toggleOverviewBtn = event.target.closest("[data-toggle-class-overview]");
+    if (toggleOverviewBtn) {
+      const classId = toggleOverviewBtn.dataset.toggleClassOverview;
+      const drawer = document.querySelector(`[data-class-overview-drawer="${classId}"]`);
+      if (!drawer) return;
+      if (!drawer.hidden) {
+        drawer.hidden = true;
+        toggleOverviewBtn.textContent = "📊 Quadro de Notas";
+        return;
+      }
+      drawer.hidden = false;
+      toggleOverviewBtn.textContent = "▲ Fechar Quadro";
+      drawer.innerHTML = "<p style='margin: 0; font-size: 0.85rem;'>Carregando quadro de notas da turma...</p>";
+      try {
+        const response = await fetch(`/api/gradebook?action=class-overview&classGroupId=${encodeURIComponent(classId)}`, { credentials: "same-origin" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Não foi possível carregar o quadro de notas.");
+        const { offerings = [], matrix = [], classInfo } = data;
+        if (!offerings.length || !matrix.length) {
+          drawer.innerHTML = "<p style='margin: 0; font-size: 0.85rem;'>Vincule disciplinas e matricule alunos para visualizar o conselho de classe.</p>";
+          return;
+        }
+        const statusColor = (res) => {
+          if (res === "passed") return "#34d399";
+          if (res === "not_passed") return "#f87171";
+          if (res === "recovery_pending") return "#fbbf24";
+          return "#94a3b8";
+        };
+        const statusLabel = (res) => {
+          if (res === "passed") return "Aprovado";
+          if (res === "not_passed") return "Reprovado";
+          if (res === "recovery_pending") return "Rec. Final";
+          return "Em curso";
+        };
+        drawer.innerHTML = `
+          <strong style="display: block; margin-bottom: 8px; font-size: 0.88rem; color: #fff;">📊 Conselho de Classe · Média de aprovação: ${escapeHtml(classInfo.passing_score)}/10</strong>
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+            <thead>
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.12); text-align: left;">
+                <th style="padding: 6px 8px;">Estudante</th>
+                ${offerings.map((o) => `<th style="padding: 6px 8px;">${escapeHtml(o.subject_name)}</th>`).join("")}
+              </tr>
+            </thead>
+            <tbody>
+              ${matrix.map((st) => `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                  <td style="padding: 6px 8px;"><strong>${escapeHtml(st.studentName)}</strong></td>
+                  ${st.subjects.map((sub) => `
+                    <td style="padding: 6px 8px;">
+                      <strong style="color: ${sub.displayScore !== null && sub.displayScore < Number(classInfo.passing_score) ? "#fca5a5" : "#fff"};">
+                        ${sub.displayScore !== null ? sub.displayScore.toFixed(2) : "—"}
+                      </strong>
+                      <small style="display: block; color: ${statusColor(sub.result)}; font-size: 0.72rem;">${statusLabel(sub.result)}</small>
+                    </td>
+                  `).join("")}
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        `;
+      } catch (err) {
+        drawer.innerHTML = `<p style="margin: 0; color: #f87171; font-size: 0.85rem;">${escapeHtml(err.message)}</p>`;
       }
       return;
     }

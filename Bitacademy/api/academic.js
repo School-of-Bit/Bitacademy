@@ -306,7 +306,8 @@ async function deleteActivity(teacherId, body, res) {
   if (!UUID.test(id)) return res.status(400).json({ error: "Atividade inválida." });
 
   const target = await sql`
-    SELECT a.id, a.assessment_id, gp.status AS period_status, y.status AS year_status, ass.status AS assessment_status
+    SELECT a.id, a.assessment_id, a.course_offering_id, a.grading_period_id,
+           gp.status AS period_status, y.status AS year_status, ass.status AS assessment_status
     FROM activities a
     LEFT JOIN course_offerings o ON o.id = a.course_offering_id
     LEFT JOIN class_groups c ON c.id = o.class_group_id
@@ -328,6 +329,20 @@ async function deleteActivity(teacherId, body, res) {
     await sql`DELETE FROM grade_change_log WHERE grade_id IN (SELECT id FROM grades WHERE assessment_id = ${assessmentId})`;
     await sql`DELETE FROM grades WHERE assessment_id = ${assessmentId}`;
     await sql`DELETE FROM assessments WHERE id = ${assessmentId}`;
+    if (target[0].course_offering_id && target[0].grading_period_id) {
+      const pubCount = await sql`
+        SELECT COUNT(*)::int AS count FROM assessments
+        WHERE course_offering_id = ${target[0].course_offering_id}
+          AND grading_period_id = ${target[0].grading_period_id}
+          AND status = 'published'
+      `;
+      if ((pubCount[0]?.count || 0) === 0) {
+        await sql`
+          UPDATE assessment_components SET status = 'draft', updated_at = NOW()
+          WHERE course_offering_id = ${target[0].course_offering_id} AND grading_period_id = ${target[0].grading_period_id}
+        `;
+      }
+    }
   }
 
   return res.status(200).json({ ok: true });

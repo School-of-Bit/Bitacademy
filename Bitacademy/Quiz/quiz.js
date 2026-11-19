@@ -434,6 +434,7 @@ class QuizUI {
       ? "Resultado sincronizado e salvo no seu perfil."
       : "Entre ou crie sua conta para registrar seu recorde no ranking oficial.";
 
+    let autoGradedNotice = "";
     if (user) {
       try {
         const saved = await window.BitAcademyAuth.recordQuizResult({
@@ -441,6 +442,10 @@ class QuizUI {
           answers: this.engine.respostasUsuario.map(({ questionIndex, selected }) => ({ questionIndex, selected }))
         });
         if (!saved.improved) saveMessage = "Seu recorde anterior nesta disciplina foi mantido como sua maior pontuação.";
+        if (saved.autoGradedActivities > 0) {
+          const autoGrade = ((score / total) * 10).toFixed(2);
+          autoGradedNotice = `⚡ Nota ${autoGrade}/10 lançada automaticamente em ${saved.autoGradedActivities} ${saved.autoGradedActivities === 1 ? "atividade avaliativa" : "atividades avaliativas"} da sua turma!`;
+        }
       } catch (error) {
         saveMessage = error.message;
       }
@@ -488,6 +493,7 @@ class QuizUI {
         <h3>${percent === 100 ? "Desempenho Perfeito! 🌟" : percent >= 70 ? "Ótimo desempenho! 👏" : "Bom esforço! Continue praticando 💪"}</h3>
         <p class="result-percent">Aproveitamento de <strong>${percent}%</strong> em ${this.escapeHtml(this.engine.materiaInfo.titulo)}.</p>
         <p class="result-save-status">${this.escapeHtml(saveMessage)}</p>
+        ${autoGradedNotice ? `<p style="margin: 10px 0 14px; padding: 10px 14px; border-radius: 10px; background: rgba(16, 185, 129, 0.14); border: 1px solid rgba(16, 185, 129, 0.35); color: #6ee7b7; font-weight: 700; font-size: 0.92rem;">${this.escapeHtml(autoGradedNotice)}</p>` : ""}
         ${rankingHtml}
         ${reviewHtml}
         <div class="result-actions">

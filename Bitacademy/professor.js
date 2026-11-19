@@ -380,11 +380,14 @@
                   <p>${escapeHtml(assessment.description || "")} ${assessment.due_at ? `· Prazo: ${escapeHtml(formatDate(assessment.due_at))}` : ""}</p>
                 </div>
                 <div class="grade-assessment-actions">
+                  ${assessment.activity_id && course.subject_slug ? `<button class="teacher-button secondary" type="button" data-jump-subject="${escapeHtml(course.subject_slug)}" data-jump-subject-name="${escapeHtml(course.subject_name)}">📋 Abrir na Disciplina</button>` : ""}
                   <button class="teacher-button secondary" type="button" data-toggle-history="${escapeHtml(assessment.id)}">🕒 Histórico</button>
                   <button class="teacher-button secondary" type="button" data-toggle-edit-assessment="${escapeHtml(assessment.id)}" ${isClosed ? "disabled" : ""}>✏️ Editar</button>
                   <button class="teacher-button secondary" type="button" data-delete-assessment="${escapeHtml(assessment.id)}" ${isClosed ? "disabled" : ""}>🗑️ Excluir</button>
                   ${students.length ? `<button class="teacher-button secondary" type="button" data-save-all-grades="${escapeHtml(assessment.id)}" ${isClosed ? "disabled" : ""}>Salvar todas as notas</button>` : ""}
-                  <button class="teacher-button" type="button" data-publish-assessment="${escapeHtml(assessment.id)}" ${isClosed ? "disabled" : ""}>${assessment.status === "published" ? "✓ Publicada" : "📢 Publicar notas"}</button>
+                  ${assessment.status === "published"
+                    ? `<button class="teacher-button secondary" type="button" data-unpublish-assessment="${escapeHtml(assessment.id)}" ${isClosed ? "disabled" : ""}>↩️ Voltar p/ Rascunho</button>`
+                    : `<button class="teacher-button" type="button" data-publish-assessment="${escapeHtml(assessment.id)}" ${isClosed ? "disabled" : ""}>📢 Publicar notas</button>`}
                 </div>
               </div>
 
@@ -674,12 +677,29 @@
           showMessage(cardMsg, error.message, "error");
         }
       }));
+
+      content.querySelectorAll("[data-unpublish-assessment]").forEach((button) => button.addEventListener("click", async () => {
+        const assessmentId = button.dataset.unpublishAssessment;
+        const cardMsg = content.querySelector(`[data-assessment-card-message="${assessmentId}"]`);
+        try {
+          await api("/api/gradebook?action=unpublish-assessment", { method: "POST", body: JSON.stringify({ assessmentId }) });
+          await renderGradebookCourse(offeringId);
+        } catch (error) {
+          showMessage(cardMsg, error.message, "error");
+        }
+      }));
+
+      content.querySelectorAll("[data-jump-subject]").forEach((button) => button.addEventListener("click", () => {
+        const slug = button.dataset.jumpSubject;
+        const name = button.dataset.jumpSubjectName || slug;
+        showSubject({ slug, name }, "activities");
+      }));
     } catch (error) {
       content.innerHTML = `<section class="teacher-empty"><h2>Não foi possível abrir o diário</h2><p>${escapeHtml(error.message)}</p></section>`;
     }
   };
 
-  const showSubject = async (subject) => {
+  const showSubject = async (subject, initialTab = "overview") => {
     panel.innerHTML = `
       <button type="button" class="teacher-back" data-teacher-back>← Voltar para minhas disciplinas</button>
       <section class="teacher-welcome">
@@ -705,7 +725,7 @@
       tab.addEventListener("click", () => switchTab(subject, tab.dataset.tab));
     });
 
-    await switchTab(subject, "overview");
+    await switchTab(subject, initialTab);
   };
 
   const switchTab = async (subject, tab) => {
@@ -1008,6 +1028,9 @@
                   <small>${activity.due_at ? `📅 Prazo: ${escapeHtml(formatDate(activity.due_at))}` : "Sem prazo definido"} · ${activity.graded_count ?? 0}/${activity.submission_count ?? 0} entregas avaliadas</small>
                 </div>
                 <div class="subject-actions" style="margin: 0; display: flex; gap: 8px; flex-wrap: wrap;">
+                  ${activity.course_offering_id ? `
+                    <button type="button" class="teacher-button secondary" data-jump-gradebook="${escapeHtml(activity.course_offering_id)}">📊 Abrir no Diário</button>
+                  ` : ""}
                   ${activity.assessment_id && activity.assessment_status !== "published" ? `
                     <button type="button" class="teacher-button secondary" data-publish-activity-assessment="${escapeHtml(activity.assessment_id)}" ${isPeriodClosed ? "disabled" : ""}>📢 Publicar no Boletim</button>
                   ` : ""}
@@ -1216,6 +1239,12 @@
           showMessage(msgEl, err.message, "error");
           btn.disabled = false;
         }
+      });
+    });
+
+    content.querySelectorAll("[data-jump-gradebook]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        renderGradebookCourse(btn.dataset.jumpGradebook);
       });
     });
 

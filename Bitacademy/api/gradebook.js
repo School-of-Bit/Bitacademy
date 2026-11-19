@@ -18,9 +18,26 @@ function weightedAverage(rows, valueKey = "score") {
 
 function applyRecovery(base, recovery, policy) {
   if (base === null || recovery === null) return base ?? recovery;
-  return policy === "average"
+  const calculated = policy === "average"
     ? Math.round((base + recovery) * 50) / 100
     : Math.max(base, recovery);
+  return Math.max(base, calculated);
+}
+
+async function syncComponentLock(courseOfferingId, gradingPeriodId) {
+  if (!courseOfferingId || !gradingPeriodId) return;
+  const pubCount = await sql`
+    SELECT COUNT(*)::int AS count FROM assessments
+    WHERE course_offering_id = ${courseOfferingId}
+      AND grading_period_id = ${gradingPeriodId}
+      AND status = 'published'
+  `;
+  if ((pubCount[0]?.count || 0) === 0) {
+    await sql`
+      UPDATE assessment_components SET status = 'draft', updated_at = NOW()
+      WHERE course_offering_id = ${courseOfferingId} AND grading_period_id = ${gradingPeriodId}
+    `;
+  }
 }
 
 async function getUser(req) {
@@ -130,7 +147,10 @@ async function updatePeriodStatus(body, res) {
           JOIN student_enrollments se ON se.class_group_id = c.id AND se.status = 'active'
           LEFT JOIN grades g ON g.assessment_id = a.id AND g.enrollment_id = se.id
           WHERE a.course_offering_id = o.id AND a.grading_period_id = p.id
-            AND a.status = 'published' AND (g.id IS NULL OR g.grade_status = 'pending')) AS pending_grade_count
+            AND a.status = 'published' AND (g.id IS NULL OR g.grade_status = 'pending')) AS pending_grade_count,
+        (SELECT COUNT(*)::int FROM assessments a
+          WHERE a.course_offering_id = o.id AND a.grading_period_id = p.id
+            AND a.status = 'draft') AS draft_assessment_count
       FROM grading_periods p
       JOIN class_groups c ON c.academic_year_id = p.academic_year_id AND c.status = 'active'
       JOIN course_offerings o ON o.class_group_id = c.id AND o.status = 'active'
@@ -145,6 +165,7 @@ async function updatePeriodStatus(body, res) {
       if (Number(row.total_weight) !== 100) reasons.push(`pesos dos componentes somam ${Number(row.total_weight).toFixed(0)}% (deve ser 100%)`);
       if (row.published_regular_count === 0) reasons.push("nenhuma avaliação regular publicada");
       else if (row.empty_component_count > 0) reasons.push(`${row.empty_component_count} componente(s) sem avaliação publicada`);
+      if (row.draft_assessment_count > 0) reasons.push(`${row.draft_assessment_count} avaliação(ões) ainda em rascunho`);
       if (row.pending_grade_count > 0) reasons.push(`${row.pending_grade_count} nota(s) pendente(s)`);
       if (reasons.length) {
         issues.push(`${row.class_name} · ${row.subject_name} (Prof. ${row.teacher_name}): ${reasons.join(", ")}`);
@@ -483,7 +504,7 @@ async function updateAssessment(user, body, res) {
 async function deleteAssessment(user, body, res) {
   const assessmentId = String(body.assessmentId || "");
   if (!UUID.test(assessmentId)) return res.status(400).json({ error: "Avaliação inválida." });
-  const target = await sql`SELECT a.id, a.status, p.status AS period_status, y.status AS year_status
+  const target = await sql`SELECT a.id, a.status, a.course_offering_id, a.grading_period_id, p.status AS period_status, y.status AS year_status
     FROM assessments a JOIN course_offerings o ON o.id = a.course_offering_id
     JOIN class_groups c ON c.id = o.class_group_id JOIN academic_years y ON y.id = c.academic_year_id
     LEFT JOIN grading_periods p ON p.id = a.grading_period_id
@@ -496,7 +517,24 @@ async function deleteAssessment(user, body, res) {
   await sql`DELETE FROM grade_change_log WHERE grade_id IN (SELECT id FROM grades WHERE assessment_id = ${assessmentId})`;
   await sql`DELETE FROM grades WHERE assessment_id = ${assessmentId}`;
   await sql`DELETE FROM assessments WHERE id = ${assessmentId}`;
+  await syncComponentLock(target[0].course_offering_id, target[0].grading_period_id);
   return res.status(200).json({ ok: true });
+}
+
+async function unpublishAssessment(user, body, res) {
+  const id = String(body.assessmentId || "");
+  if (!UUID.test(id)) return res.status(400).json({ error: "Avaliação inválida." });
+  const target = await sql`SELECT a.id, a.course_offering_id, a.grading_period_id, p.status AS period_status, y.status AS year_status
+    FROM assessments a JOIN course_offerings o ON o.id = a.course_offering_id
+    JOIN class_groups c ON c.id = o.class_group_id JOIN academic_years y ON y.id = c.academic_year_id
+    LEFT JOIN grading_periods p ON p.id = a.grading_period_id
+    WHERE a.id = ${id} AND o.teacher_id = ${user.id} AND o.status = 'active' LIMIT 1`;
+  if (!target.length || target[0].year_status === "closed" || target[0].period_status === "closed") {
+    return res.status(409).json({ error: "Avaliação não encontrada ou período já encerrado." });
+  }
+  const rows = await sql`UPDATE assessments SET status = 'draft', updated_at = NOW() WHERE id = ${id} RETURNING id, status`;
+  await syncComponentLock(target[0].course_offering_id, target[0].grading_period_id);
+  return res.status(200).json({ assessment: rows[0] });
 }
 
 async function updateGrade(user, body, res) {
@@ -665,6 +703,7 @@ async function studentReport(user, res) {
     const periods = [...report.periods.values()].map((period) => {
       const components = [...period.components.values()].map((component) => ({
         ...component,
+        pendingCount: component.assessments.filter((a) => a.gradeStatus === "pending").length,
         average: weightedAverage(component.assessments, "score")
       }));
       const baseAverage = weightedAverage(components, "average");
@@ -682,6 +721,104 @@ async function studentReport(user, res) {
   return res.status(200).json({ reports });
 }
 
+async function getClassOverview(classGroupId, res) {
+  if (!UUID.test(classGroupId)) return res.status(400).json({ error: "Turma inválida." });
+  const classInfo = await sql`
+    SELECT c.id, c.name AS class_name, c.grade_level, y.id AS academic_year_id, y.name AS academic_year_name,
+           y.passing_score, y.period_recovery_policy, y.final_recovery_policy, y.status AS year_status
+    FROM class_groups c JOIN academic_years y ON y.id = c.academic_year_id
+    WHERE c.id = ${classGroupId} LIMIT 1
+  `;
+  if (!classInfo.length) return res.status(404).json({ error: "Turma não encontrada." });
+
+  const [offerings, students, periods, components, assessments, grades] = await Promise.all([
+    sql`SELECT o.id, s.name AS subject_name, u.name AS teacher_name
+      FROM course_offerings o JOIN subjects s ON s.id = o.subject_id JOIN users u ON u.id = o.teacher_id
+      WHERE o.class_group_id = ${classGroupId} AND o.status = 'active' ORDER BY s.name`,
+    sql`SELECT e.id AS enrollment_id, u.name AS student_name, u.email AS student_email
+      FROM student_enrollments e JOIN users u ON u.id = e.student_id
+      WHERE e.class_group_id = ${classGroupId} AND e.status = 'active' ORDER BY u.name`,
+    sql`SELECT id, name, sequence, weight, status FROM grading_periods
+      WHERE academic_year_id = ${classInfo[0].academic_year_id} ORDER BY sequence`,
+    sql`SELECT ac.id, ac.course_offering_id, ac.grading_period_id, ac.weight_percent
+      FROM assessment_components ac JOIN course_offerings o ON o.id = ac.course_offering_id
+      WHERE o.class_group_id = ${classGroupId} AND o.status = 'active'`,
+    sql`SELECT a.id, a.course_offering_id, a.grading_period_id, a.component_id, a.assessment_type, a.weight, a.status
+      FROM assessments a JOIN course_offerings o ON o.id = a.course_offering_id
+      WHERE o.class_group_id = ${classGroupId} AND o.status = 'active'`,
+    sql`SELECT g.enrollment_id, g.assessment_id, g.score, g.grade_status
+      FROM grades g JOIN assessments a ON a.id = g.assessment_id JOIN course_offerings o ON o.id = a.course_offering_id
+      WHERE o.class_group_id = ${classGroupId} AND o.status = 'active'`
+  ]);
+
+  const passingScore = Number(classInfo[0].passing_score);
+  const periodPolicy = classInfo[0].period_recovery_policy;
+  const finalPolicy = classInfo[0].final_recovery_policy;
+  const yearStatus = classInfo[0].year_status;
+
+  const matrix = students.map((student) => {
+    const subjectsData = offerings.map((off) => {
+      const periodAverages = periods.map((period) => {
+        const offComps = components.filter((c) => c.course_offering_id === off.id && c.grading_period_id === period.id);
+        const compRows = offComps.map((comp) => {
+          const compAss = assessments.filter((a) => a.component_id === comp.id && a.assessment_type === "regular");
+          const scored = compAss.map((a) => {
+            const g = grades.find((gr) => gr.assessment_id === a.id && gr.enrollment_id === student.enrollment_id);
+            return {
+              weight: Number(a.weight),
+              score: g && g.grade_status === "scored" && g.score !== null ? Number(g.score) : null
+            };
+          });
+          return {
+            weight: Number(comp.weight_percent),
+            average: weightedAverage(scored, "score")
+          };
+        });
+        const base = weightedAverage(compRows, "average");
+        const recAss = assessments.find((a) => a.course_offering_id === off.id && a.grading_period_id === period.id && a.assessment_type === "period_recovery");
+        const recGr = recAss ? grades.find((gr) => gr.assessment_id === recAss.id && gr.enrollment_id === student.enrollment_id) : null;
+        const recScore = recGr && recGr.grade_status === "scored" && recGr.score !== null ? Number(recGr.score) : null;
+        return {
+          weight: Number(period.weight),
+          average: applyRecovery(base, recScore, periodPolicy)
+        };
+      });
+
+      const annualAverage = weightedAverage(periodAverages, "average");
+      const finalRecAss = assessments.find((a) => a.course_offering_id === off.id && a.assessment_type === "final_recovery");
+      const finalRecGr = finalRecAss ? grades.find((gr) => gr.assessment_id === finalRecAss.id && gr.enrollment_id === student.enrollment_id) : null;
+      const finalRecovery = finalRecGr && finalRecGr.grade_status === "scored" && finalRecGr.score !== null ? Number(finalRecGr.score) : null;
+      const allEvaluated = periodAverages.length > 0 && periodAverages.every((p) => p.average !== null);
+      const finalScore = allEvaluated ? applyRecovery(annualAverage, finalRecovery, finalPolicy) : null;
+      const displayScore = finalScore !== null ? finalScore : annualAverage;
+      const result = finalScore === null ? "in_progress"
+        : finalScore >= passingScore ? "passed"
+          : finalRecovery === null && yearStatus !== "closed" ? "recovery_pending" : "not_passed";
+
+      return {
+        offeringId: off.id,
+        subjectName: off.subject_name,
+        annualAverage,
+        finalScore,
+        displayScore,
+        result
+      };
+    });
+
+    return {
+      enrollmentId: student.enrollment_id,
+      studentName: student.student_name,
+      subjects: subjectsData
+    };
+  });
+
+  return res.status(200).json({
+    classInfo: classInfo[0],
+    offerings,
+    matrix
+  });
+}
+
 module.exports = async function handler(req, res) {
   try {
     const user = await getUser(req);
@@ -692,6 +829,10 @@ module.exports = async function handler(req, res) {
     if (req.method === "GET" && action === "setup") {
       if (user.account_type !== "Administrador") return res.status(403).json({ error: "Apenas administradores podem configurar o ano letivo." });
       return adminSetup(res);
+    }
+    if (req.method === "GET" && action === "class-overview") {
+      if (user.account_type !== "Administrador") return res.status(403).json({ error: "Apenas administradores podem consultar o conselho de classe." });
+      return getClassOverview(String(req.query?.classGroupId || ""), res);
     }
     if (req.method === "GET" && action === "courses") {
       if (user.account_type !== "Professor") return res.status(403).json({ error: "Área exclusiva para professores." });
@@ -723,7 +864,7 @@ module.exports = async function handler(req, res) {
       if (action === "remove-course-offering") return removeCourseOffering(body, res);
       return assignCourse(body, res);
     }
-    if (["create-component", "update-component", "delete-component", "create-assessment", "update-assessment", "delete-assessment", "save-grade", "publish-assessment"].includes(action)) {
+    if (["create-component", "update-component", "delete-component", "create-assessment", "update-assessment", "delete-assessment", "save-grade", "publish-assessment", "unpublish-assessment"].includes(action)) {
       if (user.account_type !== "Professor") return res.status(403).json({ error: "Apenas professores podem lançar notas." });
       if (action === "create-component") return createComponent(user, body, res);
       if (action === "update-component") return updateComponent(user, body, res);
@@ -732,6 +873,7 @@ module.exports = async function handler(req, res) {
       if (action === "update-assessment") return updateAssessment(user, body, res);
       if (action === "delete-assessment") return deleteAssessment(user, body, res);
       if (action === "save-grade") return updateGrade(user, body, res);
+      if (action === "unpublish-assessment") return unpublishAssessment(user, body, res);
       return publishAssessment(user, body, res);
     }
     return res.status(400).json({ error: "Ação do boletim inválida." });

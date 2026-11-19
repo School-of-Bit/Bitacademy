@@ -348,7 +348,7 @@ window.BitAcademyAuth = (() => {
                           <section>
                             <div class="gradebook-period-heading">
                               <strong>${escapeHtml(component.name)}</strong>
-                              <span>Peso ${escapeHtml(component.weight)}% · ${component.average === null ? "Sem média" : `${component.average.toFixed(2)}/10`}</span>
+                              <span>Peso ${escapeHtml(component.weight)}% · ${component.average === null ? "Sem média" : `${component.average.toFixed(2)}/10`}${component.pendingCount > 0 ? ` (parcial · ${component.pendingCount} pendente${component.pendingCount > 1 ? "s" : ""})` : ""}</span>
                             </div>
                             <div class="gradebook-assessment-list">
                               ${component.assessments.map((assessment) => `
