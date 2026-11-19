@@ -31,7 +31,7 @@ async function getUser(req) {
 }
 
 async function adminSetup(res) {
-  const [years, classes, students, teachers, subjects] = await Promise.all([
+  const [years, classes, students, teachers, subjects, enrollments, offerings] = await Promise.all([
     sql`SELECT y.*, COALESCE(json_agg(json_build_object('id', p.id, 'name', p.name, 'sequence', p.sequence,
           'starts_on', p.starts_on, 'ends_on', p.ends_on, 'weight', p.weight, 'status', p.status)
           ORDER BY p.sequence) FILTER (WHERE p.id IS NOT NULL), '[]'::json) AS periods
@@ -43,9 +43,21 @@ async function adminSetup(res) {
       ORDER BY y.starts_on DESC, c.name`,
     sql`SELECT id, name, email FROM users WHERE account_type = 'Aluno' ORDER BY name LIMIT 1000`,
     sql`SELECT id, name, email FROM users WHERE account_type = 'Professor' ORDER BY name LIMIT 500`,
-    sql`SELECT id, slug, name FROM subjects ORDER BY name`
+    sql`SELECT id, slug, name FROM subjects ORDER BY name`,
+    sql`SELECT e.id, e.class_group_id, e.student_id, e.status, e.enrolled_on, e.ended_on,
+        u.name AS student_name, u.email AS student_email
+      FROM student_enrollments e JOIN users u ON u.id = e.student_id
+      ORDER BY u.name`,
+    sql`SELECT o.id, o.class_group_id, o.subject_id, o.teacher_id, o.status,
+        s.name AS subject_name, u.name AS teacher_name,
+        (SELECT COUNT(*)::int FROM assessments a WHERE a.course_offering_id = o.id) AS assessment_count
+      FROM course_offerings o
+      JOIN subjects s ON s.id = o.subject_id
+      JOIN users u ON u.id = o.teacher_id
+      WHERE o.status = 'active'
+      ORDER BY s.name`
   ]);
-  return res.status(200).json({ years, classes, students, teachers, subjects });
+  return res.status(200).json({ years, classes, students, teachers, subjects, enrollments, offerings });
 }
 
 async function createYear(body, res) {
@@ -104,22 +116,46 @@ async function updatePeriodStatus(body, res) {
   const status = String(body.status || "");
   if (!UUID.test(periodId) || !["open", "closed"].includes(status)) return res.status(400).json({ error: "Período ou estado inválido." });
   if (status === "closed") {
-    const incomplete = await sql`SELECT 1 FROM grading_periods p
-      JOIN class_groups c ON c.academic_year_id = p.academic_year_id AND c.status = 'active'
-      JOIN course_offerings o ON o.class_group_id = c.id AND o.status = 'active'
-      WHERE p.id = ${periodId} AND (
-        NOT EXISTS (SELECT 1 FROM assessments a WHERE a.course_offering_id = o.id AND a.grading_period_id = p.id
-          AND a.assessment_type = 'regular' AND a.status = 'published')
-        OR (SELECT COALESCE(SUM(ac.weight_percent), 0) FROM assessment_components ac
-          WHERE ac.course_offering_id = o.id AND ac.grading_period_id = p.id) <> 100
-        OR EXISTS (SELECT 1 FROM assessment_components ac WHERE ac.course_offering_id = o.id AND ac.grading_period_id = p.id
-          AND NOT EXISTS (SELECT 1 FROM assessments a WHERE a.component_id = ac.id AND a.assessment_type = 'regular' AND a.status = 'published'))
-        OR EXISTS (SELECT 1 FROM assessments a JOIN student_enrollments se ON se.class_group_id = c.id AND se.status = 'active'
+    const diagnostics = await sql`
+      SELECT c.name AS class_name, s.name AS subject_name, u.name AS teacher_name,
+        (SELECT COALESCE(SUM(ac.weight_percent), 0)::numeric FROM assessment_components ac
+          WHERE ac.course_offering_id = o.id AND ac.grading_period_id = p.id) AS total_weight,
+        (SELECT COUNT(*)::int FROM assessments a
+          WHERE a.course_offering_id = o.id AND a.grading_period_id = p.id
+            AND a.assessment_type = 'regular' AND a.status = 'published') AS published_regular_count,
+        (SELECT COUNT(*)::int FROM assessment_components ac
+          WHERE ac.course_offering_id = o.id AND ac.grading_period_id = p.id
+            AND NOT EXISTS (SELECT 1 FROM assessments a WHERE a.component_id = ac.id AND a.assessment_type = 'regular' AND a.status = 'published')) AS empty_component_count,
+        (SELECT COUNT(*)::int FROM assessments a
+          JOIN student_enrollments se ON se.class_group_id = c.id AND se.status = 'active'
           LEFT JOIN grades g ON g.assessment_id = a.id AND g.enrollment_id = se.id
           WHERE a.course_offering_id = o.id AND a.grading_period_id = p.id
-            AND a.status = 'published' AND (g.id IS NULL OR g.grade_status = 'pending'))
-      ) LIMIT 1`;
-    if (incomplete.length) return res.status(409).json({ error: "Há disciplinas com componentes incompletos, pesos diferentes de 100%, avaliações não publicadas ou notas pendentes. Complete o diário antes de encerrar o período." });
+            AND a.status = 'published' AND (g.id IS NULL OR g.grade_status = 'pending')) AS pending_grade_count
+      FROM grading_periods p
+      JOIN class_groups c ON c.academic_year_id = p.academic_year_id AND c.status = 'active'
+      JOIN course_offerings o ON o.class_group_id = c.id AND o.status = 'active'
+      JOIN subjects s ON s.id = o.subject_id
+      JOIN users u ON u.id = o.teacher_id
+      WHERE p.id = ${periodId}
+      ORDER BY c.name, s.name
+    `;
+    const issues = [];
+    for (const row of diagnostics) {
+      const reasons = [];
+      if (Number(row.total_weight) !== 100) reasons.push(`pesos dos componentes somam ${Number(row.total_weight).toFixed(0)}% (deve ser 100%)`);
+      if (row.published_regular_count === 0) reasons.push("nenhuma avaliação regular publicada");
+      else if (row.empty_component_count > 0) reasons.push(`${row.empty_component_count} componente(s) sem avaliação publicada`);
+      if (row.pending_grade_count > 0) reasons.push(`${row.pending_grade_count} nota(s) pendente(s)`);
+      if (reasons.length) {
+        issues.push(`${row.class_name} · ${row.subject_name} (Prof. ${row.teacher_name}): ${reasons.join(", ")}`);
+      }
+    }
+    if (issues.length) {
+      return res.status(409).json({
+        error: `Não foi possível encerrar o período. Pendências encontradas:\n• ${issues.slice(0, 6).join("\n• ")}${issues.length > 6 ? `\n• (+${issues.length - 6} outras disciplinas)` : ""}`,
+        issues
+      });
+    }
   }
   const rows = await sql`UPDATE grading_periods p SET status = ${status}
     FROM academic_years y WHERE p.id = ${periodId} AND p.academic_year_id = y.id AND y.status <> 'closed'
@@ -169,6 +205,38 @@ async function assignCourse(body, res) {
   return res.status(201).json({ offering: rows[0] });
 }
 
+async function updateEnrollmentStatus(body, res) {
+  const enrollmentId = String(body.enrollmentId || "");
+  const status = String(body.status || "");
+  if (!UUID.test(enrollmentId) || !["active", "transferred", "withdrawn", "completed"].includes(status)) {
+    return res.status(400).json({ error: "Matrícula ou situação inválida." });
+  }
+  const rows = await sql`
+    UPDATE student_enrollments
+    SET status = ${status},
+        ended_on = CASE WHEN ${status} = 'active' THEN NULL ELSE COALESCE(ended_on, CURRENT_DATE) END
+    WHERE id = ${enrollmentId}
+    RETURNING *
+  `;
+  if (!rows.length) return res.status(404).json({ error: "Matrícula não encontrada." });
+  return res.status(200).json({ enrollment: rows[0] });
+}
+
+async function removeCourseOffering(body, res) {
+  const offeringId = String(body.offeringId || "");
+  if (!UUID.test(offeringId)) return res.status(400).json({ error: "Oferta inválida." });
+  const hasAssessments = await sql`SELECT 1 FROM assessments WHERE course_offering_id = ${offeringId} LIMIT 1`;
+  if (hasAssessments.length) {
+    const archived = await sql`UPDATE course_offerings SET status = 'archived' WHERE id = ${offeringId} RETURNING *`;
+    if (!archived.length) return res.status(404).json({ error: "Oferta não encontrada." });
+    return res.status(200).json({ offering: archived[0], archived: true });
+  }
+  await sql`DELETE FROM assessment_components WHERE course_offering_id = ${offeringId}`;
+  const deleted = await sql`DELETE FROM course_offerings WHERE id = ${offeringId} RETURNING id`;
+  if (!deleted.length) return res.status(404).json({ error: "Oferta não encontrada." });
+  return res.status(200).json({ ok: true, deleted: true });
+}
+
 async function listTeacherCourses(user, res) {
   const rows = await sql`SELECT o.id, o.class_group_id, c.name AS class_name, y.id AS academic_year_id,
       y.name AS academic_year_name, s.id AS subject_id, s.name AS subject_name,
@@ -184,28 +252,111 @@ async function getCourseDetails(user, offeringId, res) {
   if (!UUID.test(offeringId)) return res.status(400).json({ error: "Turma e disciplina inválidas." });
   const offering = await sql`SELECT o.id, o.class_group_id, c.name AS class_name, c.academic_year_id,
       y.name AS academic_year_name, y.passing_score, y.period_recovery_policy, y.final_recovery_policy,
-      y.status AS year_status, s.name AS subject_name
+      y.status AS year_status, s.name AS subject_name, s.slug AS subject_slug
     FROM course_offerings o JOIN class_groups c ON c.id = o.class_group_id
     JOIN academic_years y ON y.id = c.academic_year_id JOIN subjects s ON s.id = o.subject_id
     WHERE o.id = ${offeringId} AND o.teacher_id = ${user.id} AND o.status = 'active' LIMIT 1`;
   if (!offering.length) return res.status(404).json({ error: "Turma não encontrada entre suas disciplinas." });
-  const [periods, components, assessments, students, grades] = await Promise.all([
+  const [periods, components, assessments, students, grades, submissions] = await Promise.all([
     sql`SELECT id, name, sequence, starts_on, ends_on, weight, status FROM grading_periods
       WHERE academic_year_id = ${offering[0].academic_year_id} ORDER BY sequence`,
     sql`SELECT id, grading_period_id, name, weight_percent, status FROM assessment_components
       WHERE course_offering_id = ${offeringId} ORDER BY grading_period_id, created_at`,
     sql`SELECT a.id, a.grading_period_id, a.component_id, c.name AS component_name,
-        a.title, a.description, a.assessment_type, a.weight, a.due_at, a.status
-      FROM assessments a LEFT JOIN assessment_components c ON c.id = a.component_id
+        a.title, a.description, a.assessment_type, a.weight, a.due_at, a.status,
+        act.id AS activity_id, act.activity_type
+      FROM assessments a
+      LEFT JOIN assessment_components c ON c.id = a.component_id
+      LEFT JOIN activities act ON act.assessment_id = a.id
       WHERE a.course_offering_id = ${offeringId} ORDER BY a.created_at DESC`,
-    sql`SELECT e.id AS enrollment_id, u.id AS student_id, u.name AS student_name
+    sql`SELECT e.id AS enrollment_id, u.id AS student_id, u.name AS student_name, u.email AS student_email
       FROM student_enrollments e JOIN users u ON u.id = e.student_id
       WHERE e.class_group_id = ${offering[0].class_group_id} AND e.status = 'active' ORDER BY u.name`,
     sql`SELECT g.id, g.enrollment_id, g.assessment_id, g.score, g.grade_status, g.feedback
       FROM grades g JOIN assessments a ON a.id = g.assessment_id
-      WHERE a.course_offering_id = ${offeringId}`
+      WHERE a.course_offering_id = ${offeringId}`,
+    sql`SELECT sub.id, sub.activity_id, act.assessment_id, sub.enrollment_id, sub.content, sub.link, sub.status, sub.submitted_at, sub.score
+      FROM activity_submissions sub
+      JOIN activities act ON act.id = sub.activity_id
+      WHERE act.course_offering_id = ${offeringId}`
   ]);
-  return res.status(200).json({ course: offering[0], periods, components, assessments, students, grades });
+
+  const passingScore = Number(offering[0].passing_score);
+  const periodPolicy = offering[0].period_recovery_policy;
+  const finalPolicy = offering[0].final_recovery_policy;
+  const yearStatus = offering[0].year_status;
+
+  // Quadro consolidado de médias da turma (calcula usando todas as notas lançadas no diário para dar visão em tempo real ao professor)
+  const studentSummaries = students.map((student) => {
+    const periodSummaries = periods.map((period) => {
+      const periodComponents = components.filter((c) => c.grading_period_id === period.id);
+      const compAverages = periodComponents.map((comp) => {
+        const compAssessments = assessments.filter((a) => a.component_id === comp.id && a.assessment_type === "regular");
+        const scoredRows = compAssessments.map((a) => {
+          const g = grades.find((gr) => gr.assessment_id === a.id && gr.enrollment_id === student.enrollment_id);
+          return {
+            weight: Number(a.weight),
+            score: g && g.grade_status === "scored" && g.score !== null ? Number(g.score) : null
+          };
+        });
+        return {
+          id: comp.id,
+          name: comp.name,
+          weight: Number(comp.weight_percent),
+          average: weightedAverage(scoredRows, "score")
+        };
+      });
+      const baseAverage = weightedAverage(compAverages, "average");
+      const recAssessment = assessments.find((a) => a.grading_period_id === period.id && a.assessment_type === "period_recovery");
+      const recGrade = recAssessment ? grades.find((gr) => gr.assessment_id === recAssessment.id && gr.enrollment_id === student.enrollment_id) : null;
+      const recoveryScore = recGrade && recGrade.grade_status === "scored" && recGrade.score !== null ? Number(recGrade.score) : null;
+      const finalPeriodAverage = applyRecovery(baseAverage, recoveryScore, periodPolicy);
+      const needsRecovery = baseAverage !== null && baseAverage < passingScore && (finalPeriodAverage === null || finalPeriodAverage < passingScore);
+      return {
+        periodId: period.id,
+        periodName: period.name,
+        sequence: Number(period.sequence),
+        weight: Number(period.weight),
+        status: period.status,
+        baseAverage,
+        recovery: recoveryScore,
+        average: finalPeriodAverage,
+        needsRecovery
+      };
+    });
+
+    const annualAverage = weightedAverage(periodSummaries, "average");
+    const finalRecAssessment = assessments.find((a) => a.assessment_type === "final_recovery");
+    const finalRecGrade = finalRecAssessment ? grades.find((gr) => gr.assessment_id === finalRecAssessment.id && gr.enrollment_id === student.enrollment_id) : null;
+    const finalRecovery = finalRecGrade && finalRecGrade.grade_status === "scored" && finalRecGrade.score !== null ? Number(finalRecGrade.score) : null;
+    const allPeriodsEvaluated = periodSummaries.length > 0 && periodSummaries.every((p) => p.average !== null);
+    const finalScore = allPeriodsEvaluated ? applyRecovery(annualAverage, finalRecovery, finalPolicy) : null;
+    const result = finalScore === null ? "in_progress"
+      : finalScore >= passingScore ? "passed"
+        : finalRecovery === null && yearStatus !== "closed" ? "recovery_pending" : "not_passed";
+
+    return {
+      enrollmentId: student.enrollment_id,
+      studentId: student.student_id,
+      studentName: student.student_name,
+      periods: periodSummaries,
+      annualAverage,
+      finalRecovery,
+      finalScore,
+      result
+    };
+  });
+
+  return res.status(200).json({
+    course: offering[0],
+    periods,
+    components,
+    assessments,
+    students,
+    grades,
+    submissions,
+    studentSummaries
+  });
 }
 
 async function createComponent(user, body, res) {
@@ -300,6 +451,54 @@ async function createAssessment(user, body, res) {
   return res.status(201).json({ assessment: created[0] });
 }
 
+async function updateAssessment(user, body, res) {
+  const assessmentId = String(body.assessmentId || "");
+  const title = String(body.title || "").trim();
+  const description = String(body.description || "").trim() || null;
+  const weight = Number(body.weight ?? 1);
+  const dueAt = body.dueAt ? new Date(body.dueAt) : null;
+  if (!UUID.test(assessmentId) || title.length < 2 || title.length > 160) return res.status(400).json({ error: "Informe um título válido para a avaliação." });
+  if (!Number.isFinite(weight) || weight <= 0 || weight > 1000) return res.status(400).json({ error: "O peso interno deve ser maior que zero." });
+  if (body.dueAt && Number.isNaN(dueAt.getTime())) return res.status(400).json({ error: "Prazo inválido." });
+  const target = await sql`SELECT a.id, a.status, p.status AS period_status, y.status AS year_status
+    FROM assessments a JOIN course_offerings o ON o.id = a.course_offering_id
+    JOIN class_groups c ON c.id = o.class_group_id JOIN academic_years y ON y.id = c.academic_year_id
+    LEFT JOIN grading_periods p ON p.id = a.grading_period_id
+    WHERE a.id = ${assessmentId} AND o.teacher_id = ${user.id} LIMIT 1`;
+  if (!target.length) return res.status(404).json({ error: "Avaliação não encontrada em suas turmas." });
+  if (target[0].status === "closed" || target[0].period_status === "closed" || target[0].year_status === "closed") {
+    return res.status(409).json({ error: "Esta avaliação pertence a um período encerrado e não pode ser editada." });
+  }
+  const isoDue = dueAt ? dueAt.toISOString() : null;
+  const rows = await sql`UPDATE assessments
+    SET title = ${title}, description = ${description}, weight = ${weight}, due_at = ${isoDue}, updated_at = NOW()
+    WHERE id = ${assessmentId} RETURNING *`;
+  // Sincronizar atividade vinculada se houver
+  await sql`UPDATE activities
+    SET title = ${title}, description = COALESCE(${description}, description), due_at = ${isoDue}, updated_at = NOW()
+    WHERE assessment_id = ${assessmentId}`;
+  return res.status(200).json({ assessment: rows[0] });
+}
+
+async function deleteAssessment(user, body, res) {
+  const assessmentId = String(body.assessmentId || "");
+  if (!UUID.test(assessmentId)) return res.status(400).json({ error: "Avaliação inválida." });
+  const target = await sql`SELECT a.id, a.status, p.status AS period_status, y.status AS year_status
+    FROM assessments a JOIN course_offerings o ON o.id = a.course_offering_id
+    JOIN class_groups c ON c.id = o.class_group_id JOIN academic_years y ON y.id = c.academic_year_id
+    LEFT JOIN grading_periods p ON p.id = a.grading_period_id
+    WHERE a.id = ${assessmentId} AND o.teacher_id = ${user.id} LIMIT 1`;
+  if (!target.length) return res.status(404).json({ error: "Avaliação não encontrada em suas turmas." });
+  if (target[0].status === "closed" || target[0].period_status === "closed" || target[0].year_status === "closed") {
+    return res.status(409).json({ error: "Não é possível remover avaliações de um período encerrado." });
+  }
+  await sql`UPDATE activities SET assessment_id = NULL WHERE assessment_id = ${assessmentId}`;
+  await sql`DELETE FROM grade_change_log WHERE grade_id IN (SELECT id FROM grades WHERE assessment_id = ${assessmentId})`;
+  await sql`DELETE FROM grades WHERE assessment_id = ${assessmentId}`;
+  await sql`DELETE FROM assessments WHERE id = ${assessmentId}`;
+  return res.status(200).json({ ok: true });
+}
+
 async function updateGrade(user, body, res) {
   const assessmentId = String(body.assessmentId || "");
   const enrollmentId = String(body.enrollmentId || "");
@@ -336,7 +535,49 @@ async function updateGrade(user, body, res) {
         OR previous.feedback IS DISTINCT FROM changed.feedback
       RETURNING id
     ) SELECT changed.* FROM changed`;
-  return res.status(200).json({ grade: saved[0] });
+
+  // Sincronização bidirecional: se houver uma atividade vinculada a esta avaliação, refletir em activity_submissions
+  const linkedAct = await sql`SELECT id FROM activities WHERE assessment_id = ${assessmentId} LIMIT 1`;
+  let activitySynced = false;
+  if (linkedAct.length) {
+    const actId = linkedAct[0].id;
+    const subStatus = gradeStatus === "scored" ? "graded" : "submitted";
+    await sql`
+      INSERT INTO activity_submissions (activity_id, enrollment_id, score, feedback, status, graded_at, graded_by)
+      VALUES (${actId}, ${enrollmentId}, ${score}, ${feedback}, ${subStatus}, ${gradeStatus === "scored" ? sql`NOW()` : null}, ${user.id})
+      ON CONFLICT (activity_id, enrollment_id)
+      DO UPDATE SET score = EXCLUDED.score, feedback = EXCLUDED.feedback,
+                    status = CASE WHEN ${gradeStatus} = 'scored' THEN 'graded' WHEN activity_submissions.status = 'graded' THEN 'submitted' ELSE activity_submissions.status END,
+                    graded_at = CASE WHEN ${gradeStatus} = 'scored' THEN NOW() ELSE activity_submissions.graded_at END,
+                    graded_by = ${user.id}, updated_at = NOW()
+    `;
+    activitySynced = true;
+  }
+
+  return res.status(200).json({ grade: saved[0], activitySynced });
+}
+
+async function getGradeHistory(user, assessmentId, res) {
+  if (!UUID.test(assessmentId)) return res.status(400).json({ error: "Avaliação inválida." });
+  const target = await sql`SELECT a.id, a.title FROM assessments a
+    JOIN course_offerings o ON o.id = a.course_offering_id
+    WHERE a.id = ${assessmentId} AND (o.teacher_id = ${user.id} OR ${user.account_type} = 'Administrador') LIMIT 1`;
+  if (!target.length) return res.status(404).json({ error: "Avaliação não encontrada ou sem permissão." });
+  const logs = await sql`
+    SELECT l.id, l.previous_score, l.new_score, l.previous_grade_status, l.new_grade_status,
+           l.previous_feedback, l.new_feedback, l.changed_at,
+           u_student.name AS student_name,
+           u_author.name AS changed_by_name
+    FROM grade_change_log l
+    JOIN grades g ON g.id = l.grade_id
+    JOIN student_enrollments se ON se.id = g.enrollment_id
+    JOIN users u_student ON u_student.id = se.student_id
+    JOIN users u_author ON u_author.id = l.changed_by
+    WHERE g.assessment_id = ${assessmentId}
+    ORDER BY l.changed_at DESC
+    LIMIT 100
+  `;
+  return res.status(200).json({ assessment: target[0], history: logs });
 }
 
 async function publishAssessment(user, body, res) {
@@ -464,9 +705,13 @@ module.exports = async function handler(req, res) {
       if (user.account_type !== "Aluno") return res.status(403).json({ error: "O boletim está disponível para contas de aluno." });
       return studentReport(user, res);
     }
+    if (req.method === "GET" && action === "grade-history") {
+      if (!["Professor", "Administrador"].includes(user.account_type)) return res.status(403).json({ error: "Acesso restrito a professores e administradores." });
+      return getGradeHistory(user, String(req.query?.assessmentId || ""), res);
+    }
     if (req.method !== "POST") return res.status(405).json({ error: "Método não permitido." });
 
-    if (["create-year", "create-period", "create-class", "enroll-student", "assign-course", "update-period-status", "update-year-status"].includes(action)) {
+    if (["create-year", "create-period", "create-class", "enroll-student", "assign-course", "update-period-status", "update-year-status", "update-enrollment-status", "remove-course-offering"].includes(action)) {
       if (user.account_type !== "Administrador") return res.status(403).json({ error: "Apenas administradores podem configurar turmas e períodos." });
       if (action === "create-year") return createYear(body, res);
       if (action === "create-period") return createPeriod(body, res);
@@ -474,14 +719,18 @@ module.exports = async function handler(req, res) {
       if (action === "update-period-status") return updatePeriodStatus(body, res);
       if (action === "update-year-status") return updateYearStatus(body, res);
       if (action === "enroll-student") return enrollStudent(body, res);
+      if (action === "update-enrollment-status") return updateEnrollmentStatus(body, res);
+      if (action === "remove-course-offering") return removeCourseOffering(body, res);
       return assignCourse(body, res);
     }
-    if (["create-component", "update-component", "delete-component", "create-assessment", "save-grade", "publish-assessment"].includes(action)) {
+    if (["create-component", "update-component", "delete-component", "create-assessment", "update-assessment", "delete-assessment", "save-grade", "publish-assessment"].includes(action)) {
       if (user.account_type !== "Professor") return res.status(403).json({ error: "Apenas professores podem lançar notas." });
       if (action === "create-component") return createComponent(user, body, res);
       if (action === "update-component") return updateComponent(user, body, res);
       if (action === "delete-component") return deleteComponent(user, body, res);
       if (action === "create-assessment") return createAssessment(user, body, res);
+      if (action === "update-assessment") return updateAssessment(user, body, res);
+      if (action === "delete-assessment") return deleteAssessment(user, body, res);
       if (action === "save-grade") return updateGrade(user, body, res);
       return publishAssessment(user, body, res);
     }

@@ -310,9 +310,14 @@ window.BitAcademyAuth = (() => {
       </section>
 
       <section class="profile-tab-panel profile-card-section" data-profile-panel="boletim" hidden>
-        <p class="eyebrow">Vida escolar</p>
-        <h2>Boletim Acadêmico</h2>
-        <p style="margin-bottom: 16px;">Acompanhe suas médias por período, notas de componentes avaliativos e situação anual em cada disciplina.</p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 16px;">
+          <div>
+            <p class="eyebrow">Vida escolar</p>
+            <h2>Boletim Acadêmico</h2>
+            <p style="margin: 4px 0 0;">Acompanhe suas médias por período, notas de componentes avaliativos e situação anual em cada disciplina.</p>
+          </div>
+          ${gradeReports.length ? `<button type="button" class="btn-subtle no-print" data-print-gradebook>🖨️ Imprimir / Salvar Boletim PDF</button>` : ""}
+        </div>
         <div class="gradebook-reports">
           ${gradeReportError ? `<p>${escapeHtml(gradeReportError)}</p>` : gradeReports.length ? gradeReports.map((report) => {
             const displayScore = report.finalScore !== null ? report.finalScore : report.annualAverage;
@@ -448,28 +453,43 @@ window.BitAcademyAuth = (() => {
                           ${activity.submission_link ? `<p class="submission-record-link"><strong>Link enviado:</strong> <a href="${escapeHtml(activity.submission_link)}" target="_blank" rel="noopener noreferrer">${escapeHtml(activity.submission_link)} ↗</a></p>` : ""}
                           ${activity.submission_content ? `<div class="submission-record-content"><strong>Texto/Resposta:</strong><pre class="submission-content-box">${escapeHtml(activity.submission_content)}</pre></div>` : ""}
                         </div>
-                        <div style="margin-top: 14px;">
-                          <button type="button" class="btn-subtle" data-toggle-submission="${activity.id}">✏️ Atualizar ou reenviar trabalho</button>
-                        </div>
-                        <div data-submission-form-container="${activity.id}" style="display: none; margin-top: 14px;">
-                          <form class="activity-submit-form" data-activity-submit-form data-activity-id="${activity.id}">
-                            <label>
-                              <span>Atualizar texto ou anotações</span>
-                              <textarea name="content" rows="3" placeholder="Escreva sua resposta ou considerações...">${escapeHtml(activity.submission_content || "")}</textarea>
-                            </label>
-                            <label>
-                              <span>Atualizar link do trabalho (Google Drive, GitHub, Notion, etc.)</span>
-                              <input type="url" name="link" value="${escapeHtml(activity.submission_link || "")}" placeholder="https://..." />
-                            </label>
-                            <div class="form-feedback" data-submission-msg></div>
-                            <div class="form-actions-inline">
-                              <button type="submit" class="primary-button small">Salvar Nova Versão</button>
-                            </div>
-                          </form>
-                        </div>
+                        ${activity.period_status === "closed" ? `
+                          <p style="margin-top: 10px; font-size: 0.85rem; color: var(--cor-subtexto);">🔒 O período avaliativo já foi encerrado.</p>
+                        ` : `
+                          <div style="margin-top: 14px;">
+                            <button type="button" class="btn-subtle" data-toggle-submission="${activity.id}">✏️ Atualizar ou reenviar trabalho</button>
+                          </div>
+                          <div data-submission-form-container="${activity.id}" style="display: none; margin-top: 14px;">
+                            <form class="activity-submit-form" data-activity-submit-form data-activity-id="${activity.id}">
+                              <label>
+                                <span>Atualizar texto ou anotações</span>
+                                <textarea name="content" rows="3" placeholder="Escreva sua resposta ou considerações...">${escapeHtml(activity.submission_content || "")}</textarea>
+                              </label>
+                              <label>
+                                <span>Atualizar link do trabalho (Google Drive, GitHub, Notion, etc.)</span>
+                                <input type="url" name="link" value="${escapeHtml(activity.submission_link || "")}" placeholder="https://..." />
+                              </label>
+                              <div class="form-feedback" data-submission-msg></div>
+                              <div class="form-actions-inline">
+                                <button type="submit" class="primary-button small">Salvar Nova Versão</button>
+                              </div>
+                            </form>
+                          </div>
+                        `}
+                      </div>
+                    ` : activity.period_status === "closed" ? `
+                      <div class="submission-pending-box">
+                        <p class="submission-pending-prompt" style="margin: 0; color: var(--cor-subtexto);">🔒 O período avaliativo desta atividade foi encerrado sem entrega registrada.</p>
                       </div>
                     ` : `
                       <div class="submission-pending-box">
+                        ${activity.activity_type === "automatic" ? `
+                          <div style="margin-bottom: 14px; padding: 12px 14px; border-radius: 10px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3);">
+                            <strong style="color: #fbbf24; display: block; margin-bottom: 4px;">⚡ Atividade com Correção Automática via Quiz</strong>
+                            <p style="margin: 0 0 8px; font-size: 0.88rem; color: #e2e8f0;">Ao concluir o Quiz oficial de <strong>${escapeHtml(activity.subject_name)}</strong>, sua nota (0 a 10) é calculada e lançada automaticamente nesta atividade e no boletim!</p>
+                            <a href="materia.html?slug=${encodeURIComponent(activity.subject_slug)}" class="primary-link" style="display: inline-block; padding: 6px 14px; font-size: 0.84rem;">Realizar Quiz de ${escapeHtml(activity.subject_name)} →</a>
+                          </div>
+                        ` : ""}
                         <p class="submission-pending-prompt">Envie sua resposta ou link do trabalho para avaliação:</p>
                         <form class="activity-submit-form" data-activity-submit-form data-activity-id="${activity.id}">
                           <label>
@@ -515,6 +535,10 @@ window.BitAcademyAuth = (() => {
 
     profileTabs.forEach((tab) => {
       tab.addEventListener("click", () => switchTab(tab.dataset.profileTab));
+    });
+
+    container.querySelector("[data-print-gradebook]")?.addEventListener("click", () => {
+      window.print();
     });
 
     container.querySelectorAll("[data-activity-submit-form]").forEach((form) => {

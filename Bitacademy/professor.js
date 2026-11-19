@@ -189,15 +189,71 @@
     }
   };
 
+  const toDatetimeLocal = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
   const renderGradebookCourse = async (offeringId) => {
     panel.innerHTML = `<button type="button" class="teacher-back" data-gradebook-courses-back>← Voltar às turmas</button><div data-gradebook-detail class="teacher-loading">Carregando diário...</div>`;
     panel.querySelector("[data-gradebook-courses-back]").addEventListener("click", renderGradebookCourses);
     const content = panel.querySelector("[data-gradebook-detail]");
     try {
       const data = await api(`/api/gradebook?action=course&offering=${encodeURIComponent(offeringId)}`);
-      const { course, periods, components, assessments, students, grades } = data;
+      const { course, periods, components, assessments, students, grades, submissions = [], studentSummaries = [] } = data;
       const gradeFor = (assessmentId, enrollmentId) => grades.find((item) => item.assessment_id === assessmentId && item.enrollment_id === enrollmentId);
+      const submissionFor = (assessmentId, enrollmentId) => submissions.find((item) => item.assessment_id === assessmentId && item.enrollment_id === enrollmentId);
       const componentOptions = components.map((component) => `<option value="${escapeHtml(component.id)}" data-period="${escapeHtml(component.grading_period_id)}">${escapeHtml(component.name)} · ${escapeHtml(component.weight_percent)}%</option>`).join("");
+
+      const statusBadgeLabel = (result) => {
+        if (result === "passed") return { label: "Aprovado", cls: "published" };
+        if (result === "recovery_pending") return { label: "Rec. Final Pendente", cls: "draft" };
+        if (result === "not_passed") return { label: "Não aprovado", cls: "danger" };
+        return { label: "Em curso", cls: "" };
+      };
+
+      const pautaTableHtml = studentSummaries.length ? `
+        <div class="pauta-table-wrapper">
+          <table class="pauta-table">
+            <thead>
+              <tr>
+                <th>Estudante</th>
+                ${periods.map((p) => `<th>${escapeHtml(p.sequence)}. ${escapeHtml(p.name)} <small>(Peso ${escapeHtml(p.weight)})</small></th>`).join("")}
+                <th>Média Anual</th>
+                <th>Rec. Final</th>
+                <th>Final</th>
+                <th>Situação</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${studentSummaries.map((st) => {
+                const badge = statusBadgeLabel(st.result);
+                return `
+                  <tr>
+                    <td><strong>${escapeHtml(st.studentName)}</strong></td>
+                    ${st.periods.map((p) => `
+                      <td>
+                        <div class="pauta-cell">
+                          <strong class="${p.needsRecovery ? "pauta-score-low" : ""}">${p.average !== null ? p.average.toFixed(2) : "—"}</strong>
+                          ${p.recovery !== null ? `<small class="pauta-rec-tag">Rec: ${p.recovery.toFixed(2)}</small>` : ""}
+                          ${p.needsRecovery ? `<small class="pauta-alert-tag">⚠️ Abaixo da média</small>` : ""}
+                        </div>
+                      </td>
+                    `).join("")}
+                    <td><strong>${st.annualAverage !== null ? st.annualAverage.toFixed(2) : "—"}</strong></td>
+                    <td>${st.finalRecovery !== null ? st.finalRecovery.toFixed(2) : "—"}</td>
+                    <td><strong>${st.finalScore !== null ? st.finalScore.toFixed(2) : "—"}</strong></td>
+                    <td><span class="teacher-badge ${badge.cls}">${badge.label}</span></td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      ` : `<p class="teacher-empty compact">Nenhum estudante matriculado nesta turma para calcular a pauta.</p>`;
 
       const componentPanels = periods.map((period) => {
         const rows = components.filter((component) => component.grading_period_id === period.id);
@@ -236,9 +292,23 @@
           <div>
             <span class="teacher-label">${escapeHtml(course.academic_year_name)} · ${escapeHtml(course.class_name)}</span>
             <h2>${escapeHtml(course.subject_name)}</h2>
-            <p>${students.length} ${students.length === 1 ? "estudante matriculado" : "estudantes matriculados"} · Escala de 0 a 10</p>
+            <p>${students.length} ${students.length === 1 ? "estudante matriculado" : "estudantes matriculados"} · Média mínima de aprovação: ${escapeHtml(course.passing_score)}/10</p>
           </div>
           <div class="teacher-welcome-icon">📊</div>
+        </section>
+
+        <section class="teacher-section">
+          <div class="teacher-section-heading">
+            <div>
+              <span class="teacher-label">Visão consolidada em tempo real</span>
+              <h2>Pauta &amp; Quadro de Médias da Turma</h2>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <p style="margin: 0;">Acompanhe as médias parciais e finais calculadas e identifique estudantes que precisam de recuperação.</p>
+              ${studentSummaries.length ? `<button type="button" class="teacher-button secondary" data-export-csv>📥 Exportar Pauta (CSV)</button>` : ""}
+            </div>
+          </div>
+          ${pautaTableHtml}
         </section>
 
         <section class="teacher-section">
@@ -291,47 +361,104 @@
               <span class="teacher-label">Diário de lançamento</span>
               <h2>Avaliações cadastradas</h2>
             </div>
-            <p>Salve as notas individualmente ou todas de uma vez. As notas ficam visíveis aos estudantes após clicar em Publicar notas.</p>
+            <p>Salve as notas individualmente ou todas de uma vez. As notas ficam visíveis aos estudantes no boletim após clicar em Publicar notas.</p>
           </div>
-          ${assessments.length ? assessments.map((assessment) => `
+          ${assessments.length ? assessments.map((assessment) => {
+            const periodObj = periods.find((p) => p.id === assessment.grading_period_id);
+            const isClosed = assessment.status === "closed" || periodObj?.status === "closed" || course.year_status === "closed";
+            return `
             <article class="teacher-list-item grade-assessment" data-assessment-card="${escapeHtml(assessment.id)}">
               <div class="teacher-list-heading">
                 <div>
                   <div class="teacher-badges">
                     <span class="teacher-badge">${assessment.assessment_type === "regular" ? escapeHtml(assessment.component_name || "Regular") : assessment.assessment_type === "period_recovery" ? "Recuperação do período" : "Recuperação final"}</span>
                     <span class="teacher-badge">Peso interno ${escapeHtml(assessment.weight)}</span>
-                    <span class="teacher-badge ${assessment.status === "published" ? "published" : "draft"}">${assessment.status === "published" ? "Publicada" : "Rascunho"}</span>
+                    <span class="teacher-badge ${assessment.status === "published" ? "published" : "draft"}">${assessment.status === "published" ? "Publicada no Boletim" : "Rascunho"}</span>
+                    ${assessment.activity_id ? `<span class="teacher-badge published">📝 Vinculada à Atividade (${assessment.activity_type === "automatic" ? "Automática" : "Manual"})</span>` : ""}
                   </div>
                   <h3>${escapeHtml(assessment.title)}</h3>
                   <p>${escapeHtml(assessment.description || "")} ${assessment.due_at ? `· Prazo: ${escapeHtml(formatDate(assessment.due_at))}` : ""}</p>
                 </div>
                 <div class="grade-assessment-actions">
-                  ${students.length ? `<button class="teacher-button secondary" type="button" data-save-all-grades="${escapeHtml(assessment.id)}" ${assessment.status === "closed" ? "disabled" : ""}>Salvar todas as notas</button>` : ""}
-                  <button class="teacher-button" type="button" data-publish-assessment="${escapeHtml(assessment.id)}" ${assessment.status === "closed" ? "disabled" : ""}>Publicar notas</button>
+                  <button class="teacher-button secondary" type="button" data-toggle-history="${escapeHtml(assessment.id)}">🕒 Histórico</button>
+                  <button class="teacher-button secondary" type="button" data-toggle-edit-assessment="${escapeHtml(assessment.id)}" ${isClosed ? "disabled" : ""}>✏️ Editar</button>
+                  <button class="teacher-button secondary" type="button" data-delete-assessment="${escapeHtml(assessment.id)}" ${isClosed ? "disabled" : ""}>🗑️ Excluir</button>
+                  ${students.length ? `<button class="teacher-button secondary" type="button" data-save-all-grades="${escapeHtml(assessment.id)}" ${isClosed ? "disabled" : ""}>Salvar todas as notas</button>` : ""}
+                  <button class="teacher-button" type="button" data-publish-assessment="${escapeHtml(assessment.id)}" ${isClosed ? "disabled" : ""}>${assessment.status === "published" ? "✓ Publicada" : "📢 Publicar notas"}</button>
                 </div>
               </div>
+
+              <form class="teacher-form assessment-edit-drawer" data-edit-assessment-form="${escapeHtml(assessment.id)}" hidden style="margin: 12px 0; padding: 14px; border: 1px solid var(--cor-borda); border-radius: 12px; background: rgba(255,255,255,0.02);">
+                <div class="teacher-form-row">
+                  <label>Título da avaliação<input name="title" maxlength="160" value="${escapeHtml(assessment.title)}" required></label>
+                  <label>Peso interno<input name="weight" type="number" min="0.001" max="1000" step="0.001" value="${escapeHtml(assessment.weight)}" required></label>
+                  <label>Prazo opcional<input name="dueAt" type="datetime-local" value="${escapeHtml(toDatetimeLocal(assessment.due_at))}"></label>
+                </div>
+                <label>Descrição<textarea name="description" rows="2">${escapeHtml(assessment.description || "")}</textarea></label>
+                <div class="teacher-form-actions">
+                  <button type="submit" class="teacher-button">Salvar alterações</button>
+                </div>
+              </form>
+
+              <div class="history-drawer" data-history-drawer="${escapeHtml(assessment.id)}" hidden style="margin: 12px 0; padding: 14px; border: 1px solid var(--cor-borda); border-radius: 12px; background: rgba(15, 23, 42, 0.6);"></div>
+
               <div class="teacher-message" data-assessment-card-message="${escapeHtml(assessment.id)}" aria-live="polite"></div>
               ${students.length ? `<div class="grade-student-list">${students.map((student) => {
                 const grade = gradeFor(assessment.id, student.enrollment_id);
+                const sub = submissionFor(assessment.id, student.enrollment_id);
                 const gradeStatus = grade?.grade_status || (grade?.score !== null && grade?.score !== undefined ? "scored" : "pending");
-                const disabled = assessment.status === "closed";
                 return `
                   <form class="grade-student-row" data-save-grade data-assessment="${escapeHtml(assessment.id)}" data-enrollment="${escapeHtml(student.enrollment_id)}">
-                    <strong>${escapeHtml(student.student_name)}</strong>
-                    <label>Situação<select name="gradeStatus" data-grade-status ${disabled ? "disabled" : ""}><option value="pending" ${gradeStatus === "pending" ? "selected" : ""}>Pendente</option><option value="scored" ${gradeStatus === "scored" ? "selected" : ""}>Corrigida</option><option value="excused" ${gradeStatus === "excused" ? "selected" : ""}>Dispensada</option></select></label>
-                    <label>Nota (0-10)<input name="score" data-grade-score type="number" min="0" max="10" step="0.01" value="${grade?.score ?? ""}" placeholder="0 a 10" ${disabled || gradeStatus !== "scored" ? "disabled" : ""}></label>
-                    <label>Comentário / Feedback<input name="feedback" maxlength="2000" value="${escapeHtml(grade?.feedback || "")}" placeholder="Opcional" ${disabled ? "disabled" : ""}></label>
+                    <div>
+                      <strong>${escapeHtml(student.student_name)}</strong>
+                      ${sub ? `
+                        <div style="margin-top: 4px; font-size: 0.82rem;">
+                          <span class="teacher-badge published" style="padding: 2px 8px; font-size: 0.75rem;">Entregue em ${escapeHtml(formatDate(sub.submitted_at))}</span>
+                          ${sub.link ? `<a href="${escapeHtml(sub.link)}" target="_blank" rel="noopener noreferrer" style="color: var(--cor-ciano); font-weight: 700; margin-left: 6px;">Abrir anexo ↗</a>` : ""}
+                          ${sub.content ? `<div style="margin-top: 4px; padding: 6px 8px; border-radius: 6px; background: rgba(255,255,255,0.04); color: var(--cor-subtexto); white-space: pre-wrap;">${escapeHtml(sub.content)}</div>` : ""}
+                        </div>
+                      ` : assessment.activity_id ? `<small style="display: block; color: var(--cor-subtexto); margin-top: 2px;">Sem entrega registrada na atividade</small>` : ""}
+                    </div>
+                    <label>Situação<select name="gradeStatus" data-grade-status ${isClosed ? "disabled" : ""}><option value="pending" ${gradeStatus === "pending" ? "selected" : ""}>Pendente</option><option value="scored" ${gradeStatus === "scored" ? "selected" : ""}>Corrigida</option><option value="excused" ${gradeStatus === "excused" ? "selected" : ""}>Dispensada</option></select></label>
+                    <label>Nota (0-10)<input name="score" data-grade-score type="number" min="0" max="10" step="0.01" value="${grade?.score ?? ""}" placeholder="0 a 10" ${isClosed || gradeStatus !== "scored" ? "disabled" : ""}></label>
+                    <label>Comentário / Feedback<input name="feedback" maxlength="2000" value="${escapeHtml(grade?.feedback || "")}" placeholder="Opcional" ${isClosed ? "disabled" : ""}></label>
                     <div class="grade-row-actions">
-                      <button class="teacher-button" type="submit" ${disabled ? "disabled" : ""}>Salvar</button>
+                      <button class="teacher-button" type="submit" ${isClosed ? "disabled" : ""}>Salvar</button>
                       <span class="teacher-message" data-row-message aria-live="polite"></span>
                     </div>
                   </form>
                 `;
               }).join("")}</div>` : `<p class="teacher-empty compact">Nenhum aluno matriculado nesta turma.</p>`}
             </article>
-          `).join("") : `<div class="teacher-empty compact"><h3>Nenhuma avaliação criada</h3><p>Crie a primeira avaliação no formulário acima.</p></div>`}
+          `;}).join("") : `<div class="teacher-empty compact"><h3>Nenhuma avaliação criada</h3><p>Crie a primeira avaliação no formulário acima.</p></div>`}
         </section>
       `;
+
+      content.querySelector("[data-export-csv]")?.addEventListener("click", () => {
+        const headers = ["Estudante", ...periods.map((p) => `${p.sequence}. ${p.name}`), "Media Anual", "Recuperacao Final", "Media Final", "Situacao"];
+        const rowsCsv = studentSummaries.map((st) => {
+          const badge = statusBadgeLabel(st.result);
+          return [
+            st.studentName,
+            ...st.periods.map((p) => (p.average !== null ? p.average.toFixed(2) : "")),
+            st.annualAverage !== null ? st.annualAverage.toFixed(2) : "",
+            st.finalRecovery !== null ? st.finalRecovery.toFixed(2) : "",
+            st.finalScore !== null ? st.finalScore.toFixed(2) : "",
+            badge.label
+          ];
+        });
+        const escapeCsv = (val) => `"${String(val ?? "").replaceAll('"', '""')}"`;
+        const csvString = "\uFEFF" + [headers.map(escapeCsv).join(";"), ...rowsCsv.map((r) => r.map(escapeCsv).join(";"))].join("\r\n");
+        const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `pauta-${course.class_name}-${course.subject_name}.csv`.toLowerCase().replace(/[^a-z0-9._-]+/g, "-");
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      });
 
       const assessmentForm = content.querySelector("[data-gradebook-new-assessment]");
       const typeSelect = assessmentForm.querySelector("[data-assessment-type]");
@@ -416,16 +543,86 @@
         }
       });
 
+      content.querySelectorAll("[data-toggle-edit-assessment]").forEach((btn) => btn.addEventListener("click", () => {
+        const id = btn.dataset.toggleEditAssessment;
+        const editForm = content.querySelector(`[data-edit-assessment-form="${id}"]`);
+        if (editForm) editForm.hidden = !editForm.hidden;
+      }));
+
+      content.querySelectorAll("[data-edit-assessment-form]").forEach((form) => form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const assessmentId = form.dataset.editAssessmentForm;
+        const cardMsg = content.querySelector(`[data-assessment-card-message="${assessmentId}"]`);
+        const body = Object.fromEntries(new FormData(form));
+        body.assessmentId = assessmentId;
+        body.dueAt = body.dueAt ? new Date(body.dueAt).toISOString() : null;
+        try {
+          await api("/api/gradebook?action=update-assessment", { method: "POST", body: JSON.stringify(body) });
+          await renderGradebookCourse(offeringId);
+        } catch (error) {
+          showMessage(cardMsg, error.message, "error");
+        }
+      }));
+
+      content.querySelectorAll("[data-delete-assessment]").forEach((btn) => btn.addEventListener("click", async () => {
+        const assessmentId = btn.dataset.deleteAssessment;
+        const cardMsg = content.querySelector(`[data-assessment-card-message="${assessmentId}"]`);
+        if (btn.dataset.confirming !== "true") {
+          btn.dataset.confirming = "true";
+          btn.textContent = "Confirmar exclusão?";
+          setTimeout(() => {
+            if (btn.isConnected) {
+              btn.dataset.confirming = "";
+              btn.textContent = "🗑️ Excluir";
+            }
+          }, 4000);
+          return;
+        }
+        try {
+          await api("/api/gradebook?action=delete-assessment", { method: "POST", body: JSON.stringify({ assessmentId }) });
+          await renderGradebookCourse(offeringId);
+        } catch (error) {
+          showMessage(cardMsg, error.message, "error");
+        }
+      }));
+
+      content.querySelectorAll("[data-toggle-history]").forEach((btn) => btn.addEventListener("click", async () => {
+        const assessmentId = btn.dataset.toggleHistory;
+        const drawer = content.querySelector(`[data-history-drawer="${assessmentId}"]`);
+        if (!drawer) return;
+        if (!drawer.hidden) {
+          drawer.hidden = true;
+          return;
+        }
+        drawer.hidden = false;
+        drawer.innerHTML = `<div class="teacher-loading">Carregando histórico de alterações...</div>`;
+        try {
+          const histData = await api(`/api/gradebook?action=grade-history&assessmentId=${encodeURIComponent(assessmentId)}`);
+          const logs = histData.history || [];
+          drawer.innerHTML = `
+            <strong style="display: block; margin-bottom: 8px; color: #fff;">🕒 Trilha de Auditoria de Notas (${logs.length})</strong>
+            ${logs.length ? `<div style="display: grid; gap: 6px; font-size: 0.85rem;">${logs.map((l) => `
+              <div style="display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.03);">
+                <span><strong>${escapeHtml(l.student_name)}</strong>: ${l.previous_score ?? "—"} (${escapeHtml(l.previous_grade_status || "novo")}) → <strong>${l.new_score ?? "—"}</strong> (${escapeHtml(l.new_grade_status || "")}) ${l.new_feedback ? `· 💬 "${escapeHtml(l.new_feedback)}"` : ""}</span>
+                <small style="color: var(--cor-subtexto);">por ${escapeHtml(l.changed_by_name)} em ${escapeHtml(formatDate(l.changed_at))}</small>
+              </div>
+            `).join("")}</div>` : `<p style="margin: 0; font-size: 0.85rem; color: var(--cor-subtexto);">Nenhuma alteração registrada ainda para esta avaliação.</p>`}
+          `;
+        } catch (error) {
+          drawer.innerHTML = `<p class="teacher-message error">${escapeHtml(error.message)}</p>`;
+        }
+      }));
+
       content.querySelectorAll("[data-save-grade]").forEach((form) => form.addEventListener("submit", async (event) => {
         event.preventDefault();
         const row = event.currentTarget;
         const values = Object.fromEntries(new FormData(row));
         try {
-          await api("/api/gradebook?action=save-grade", {
+          const res = await api("/api/gradebook?action=save-grade", {
             method: "POST",
             body: JSON.stringify({ assessmentId: row.dataset.assessment, enrollmentId: row.dataset.enrollment, ...values })
           });
-          showMessage(row.querySelector("[data-row-message]"), "✓ Salva", "success");
+          showMessage(row.querySelector("[data-row-message]"), res.activitySynced ? "✓ Salva & Atividade sincronizada" : "✓ Salva", "success");
         } catch (error) {
           showMessage(row.querySelector("[data-row-message]"), error.message, "error");
         }
@@ -452,7 +649,8 @@
             showMessage(row.querySelector("[data-row-message]"), "✓ Salva", "success");
             savedCount++;
           }
-          showMessage(cardMsg, `${savedCount} ${savedCount === 1 ? "registro salvo" : "registros salvos"} com sucesso.`, "success");
+          showMessage(cardMsg, `${savedCount} ${savedCount === 1 ? "registro salvo" : "registros salvos"} com sucesso. Atualizando médias...`, "success");
+          setTimeout(() => renderGradebookCourse(offeringId), 600);
         } catch (error) {
           showMessage(cardMsg, error.message, "error");
         } finally {
@@ -778,6 +976,9 @@
                 <option value="">Selecione a turma primeiro</option>
               </select>
             </label>
+            <label>Peso interno no componente
+              <input name="assessmentWeight" type="number" min="0.01" max="1000" step="0.01" value="1">
+            </label>
             <label>Prazo de entrega opcional<input name="dueAt" type="datetime-local"></label>
           </div>
 
@@ -790,31 +991,54 @@
           <span>${activities.length} ${activities.length === 1 ? "atividade" : "atividades"}</span>
         </div>
         <div class="teacher-list">
-          ${activities.length ? activities.map((activity) => `
+          ${activities.length ? activities.map((activity) => {
+            const isPeriodClosed = activity.period_status === "closed" || activity.assessment_status === "closed";
+            return `
             <article class="teacher-list-item" data-activity-item="${escapeHtml(activity.id)}">
               <div class="material-summary-header">
                 <div>
                   <div class="teacher-badges">
-                    <span class="teacher-badge">${activity.activity_type === "automatic" ? "Automática" : "Correção manual"}</span>
+                    <span class="teacher-badge">${activity.activity_type === "automatic" ? "⚡ Automática (Quiz)" : "Correção manual"}</span>
                     <span class="teacher-badge">${escapeHtml(activity.max_score)} pts</span>
                     ${activity.class_name ? `<span class="teacher-badge published">Turma: ${escapeHtml(activity.class_name)}</span>` : '<span class="teacher-badge">Geral</span>'}
-                    ${activity.assessment_id ? '<span class="teacher-badge published">✓ Vinculada ao Boletim</span>' : ''}
+                    ${activity.assessment_id ? `<span class="teacher-badge ${activity.assessment_status === "published" ? "published" : "draft"}">${activity.assessment_status === "published" ? "✓ Publicada no Boletim" : "📊 Boletim: Rascunho"} · Peso ${escapeHtml(activity.assessment_weight ?? 1)}</span>` : ""}
                   </div>
                   <h3>${escapeHtml(activity.title)}</h3>
                   <p>${escapeHtml(activity.description)}</p>
-                  <small>${activity.due_at ? `📅 Prazo: ${escapeHtml(formatDate(activity.due_at))}` : "Sem prazo definido"}</small>
+                  <small>${activity.due_at ? `📅 Prazo: ${escapeHtml(formatDate(activity.due_at))}` : "Sem prazo definido"} · ${activity.graded_count ?? 0}/${activity.submission_count ?? 0} entregas avaliadas</small>
                 </div>
-                <div class="subject-actions" style="margin: 0;">
+                <div class="subject-actions" style="margin: 0; display: flex; gap: 8px; flex-wrap: wrap;">
+                  ${activity.assessment_id && activity.assessment_status !== "published" ? `
+                    <button type="button" class="teacher-button secondary" data-publish-activity-assessment="${escapeHtml(activity.assessment_id)}" ${isPeriodClosed ? "disabled" : ""}>📢 Publicar no Boletim</button>
+                  ` : ""}
+                  <button type="button" class="teacher-button secondary" data-toggle-edit-activity="${escapeHtml(activity.id)}" ${isPeriodClosed ? "disabled" : ""}>✏️ Editar</button>
+                  <button type="button" class="teacher-button secondary" data-delete-activity="${escapeHtml(activity.id)}" ${isPeriodClosed ? "disabled" : ""}>🗑️ Excluir</button>
                   <button type="button" class="teacher-button" data-open-submissions="${escapeHtml(activity.id)}">
                     📋 Mesa de Correção (${activity.submission_count ?? 0} entregas)
                   </button>
                 </div>
               </div>
+
+              <form class="teacher-form" data-edit-activity-form="${escapeHtml(activity.id)}" hidden style="margin-top: 14px; padding: 14px; border: 1px solid var(--cor-borda); border-radius: 12px; background: rgba(255,255,255,0.02);">
+                <div class="teacher-form-row">
+                  <label>Título<input name="title" maxlength="200" value="${escapeHtml(activity.title)}" required></label>
+                  <label>Nota máxima (0-10)<input name="maxScore" type="number" min="0.01" max="10" step="0.01" value="${escapeHtml(activity.max_score)}" required></label>
+                  ${activity.assessment_id ? `<label>Peso interno no Boletim<input name="assessmentWeight" type="number" min="0.01" max="1000" step="0.01" value="${escapeHtml(activity.assessment_weight ?? 1)}"></label>` : ""}
+                  <label>Prazo opcional<input name="dueAt" type="datetime-local" value="${escapeHtml(toDatetimeLocal(activity.due_at))}"></label>
+                </div>
+                <label>Descrição e orientações<textarea name="description" rows="3" required>${escapeHtml(activity.description)}</textarea></label>
+                <div class="teacher-form-actions">
+                  <button type="submit" class="teacher-button">Salvar alterações</button>
+                </div>
+              </form>
+
+              <div class="teacher-message" data-activity-item-msg="${escapeHtml(activity.id)}" aria-live="polite"></div>
+
               <div class="submissions-drawer" data-submissions-drawer="${escapeHtml(activity.id)}" hidden style="margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--cor-borda);">
                 <div class="teacher-loading">Carregando entregas dos alunos...</div>
               </div>
             </article>
-          `).join("") : `
+          `;}).join("") : `
             <div class="teacher-empty compact"><span class="teacher-icon">📝</span><h3>Nenhuma atividade criada</h3><p>Use o formulário acima para criar a primeira atividade desta disciplina.</p></div>
           `}
         </div>
@@ -898,6 +1122,7 @@
             description: formData.get("description"),
             activityType: formData.get("activityType"),
             maxScore: formData.get("maxScore"),
+            assessmentWeight: formData.get("assessmentWeight") || 1,
             dueAt: dueAt ? new Date(dueAt).toISOString() : null,
             linkToGradebook: toggleGb?.checked ?? false,
             courseOfferingId: formData.get("courseOfferingId"),
@@ -914,6 +1139,86 @@
       }
     });
 
+    content.querySelectorAll("[data-toggle-edit-activity]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.toggleEditActivity;
+        const editForm = content.querySelector(`[data-edit-activity-form="${id}"]`);
+        if (editForm) editForm.hidden = !editForm.hidden;
+      });
+    });
+
+    content.querySelectorAll("[data-edit-activity-form]").forEach((editForm) => {
+      editForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const id = editForm.dataset.editActivityForm;
+        const msgEl = content.querySelector(`[data-activity-item-msg="${id}"]`);
+        const fd = new FormData(editForm);
+        const dueAt = fd.get("dueAt");
+        try {
+          await api("/api/academic?resource=activities&action=update", {
+            method: "POST",
+            body: JSON.stringify({
+              id,
+              title: fd.get("title"),
+              description: fd.get("description"),
+              maxScore: fd.get("maxScore"),
+              assessmentWeight: fd.get("assessmentWeight"),
+              dueAt: dueAt ? new Date(dueAt).toISOString() : null
+            })
+          });
+          await switchTab(subject, "activities");
+        } catch (err) {
+          showMessage(msgEl, err.message, "error");
+        }
+      });
+    });
+
+    content.querySelectorAll("[data-delete-activity]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const id = btn.dataset.deleteActivity;
+        const msgEl = content.querySelector(`[data-activity-item-msg="${id}"]`);
+        if (btn.dataset.confirming !== "true") {
+          btn.dataset.confirming = "true";
+          btn.textContent = "Confirmar exclusão?";
+          setTimeout(() => {
+            if (btn.isConnected) {
+              btn.dataset.confirming = "";
+              btn.textContent = "🗑️ Excluir";
+            }
+          }, 4000);
+          return;
+        }
+        try {
+          await api("/api/academic?resource=activities&action=delete", {
+            method: "POST",
+            body: JSON.stringify({ id })
+          });
+          await switchTab(subject, "activities");
+        } catch (err) {
+          showMessage(msgEl, err.message, "error");
+        }
+      });
+    });
+
+    content.querySelectorAll("[data-publish-activity-assessment]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const assessmentId = btn.dataset.publishActivityAssessment;
+        const card = btn.closest("[data-activity-item]");
+        const msgEl = card?.querySelector("[data-activity-item-msg]");
+        btn.disabled = true;
+        try {
+          await api("/api/gradebook?action=publish-assessment", {
+            method: "POST",
+            body: JSON.stringify({ assessmentId })
+          });
+          await switchTab(subject, "activities");
+        } catch (err) {
+          showMessage(msgEl, err.message, "error");
+          btn.disabled = false;
+        }
+      });
+    });
+
     content.querySelectorAll("[data-open-submissions]").forEach((btn) => {
       btn.addEventListener("click", async () => {
         const actId = btn.dataset.openSubmissions;
@@ -925,16 +1230,17 @@
         }
         drawer.hidden = false;
         btn.textContent = `▲ Fechar Correção`;
-        await renderSubmissionsDrawer(actId, drawer);
+        await renderSubmissionsDrawer(actId, drawer, subject);
       });
     });
   };
 
-  const renderSubmissionsDrawer = async (activityId, container) => {
+  const renderSubmissionsDrawer = async (activityId, container, subject) => {
     container.innerHTML = '<div class="teacher-loading">Carregando submissões dos alunos...</div>';
     try {
       const data = await api(`/api/academic?action=activity-submissions&activityId=${encodeURIComponent(activityId)}`);
       const { activity, students } = data;
+      const isClosed = activity.period_status === "closed" || activity.year_status === "closed" || activity.assessment_status === "closed";
 
       if (!students || !students.length) {
         container.innerHTML = `<p class="teacher-empty compact">Nenhum aluno vinculado ou nenhuma entrega realizada ainda.</p>`;
@@ -947,8 +1253,17 @@
             <span class="teacher-label">Mesa de Correção e Avaliação</span>
             <h3 style="margin: 2px 0;">Entregas de ${escapeHtml(activity.title)}</h3>
           </div>
-          ${activity.assessment_id ? '<span class="teacher-badge published">⚡ Notas sincronizadas com o Boletim</span>' : '<span class="teacher-badge">Atividade avulsa</span>'}
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            ${activity.assessment_id
+              ? `<span class="teacher-badge ${activity.assessment_status === "published" ? "published" : "draft"}">${activity.assessment_status === "published" ? "⚡ Notas publicadas no Boletim Oficial" : "⚠️ Avaliação em Rascunho no Boletim"}</span>`
+              : '<span class="teacher-badge">Atividade avulsa</span>'}
+            ${activity.assessment_id && activity.assessment_status !== "published" && !isClosed ? `
+              <button type="button" class="teacher-button" data-drawer-publish-assessment="${escapeHtml(activity.assessment_id)}">📢 Publicar Notas no Boletim</button>
+            ` : ""}
+          </div>
         </div>
+        <div class="teacher-message" data-drawer-global-msg aria-live="polite"></div>
+        ${isClosed ? `<p class="teacher-message info" style="margin-bottom: 10px;">🔒 O período avaliativo desta atividade está encerrado. As notas estão em modo somente leitura.</p>` : ""}
         <div class="grade-student-list">
           ${students.map((st) => {
             const hasSubmitted = Boolean(st.submitted_at);
@@ -968,15 +1283,15 @@
                 </div>
 
                 <label>Nota (0-10)
-                  <input name="score" type="number" min="0" max="10" step="0.01" value="${st.score ?? ""}" placeholder="0 a 10" required>
+                  <input name="score" type="number" min="0" max="10" step="0.01" value="${st.score ?? ""}" placeholder="0 a 10" required ${isClosed ? "disabled" : ""}>
                 </label>
 
                 <label style="grid-column: span 2;">Feedback ao aluno
-                  <input name="feedback" maxlength="2000" value="${escapeHtml(st.feedback || "")}" placeholder="Orientações ou elogios do professor...">
+                  <input name="feedback" maxlength="2000" value="${escapeHtml(st.feedback || "")}" placeholder="Orientações ou elogios do professor..." ${isClosed ? "disabled" : ""}>
                 </label>
 
                 <div class="grade-row-actions">
-                  <button class="teacher-button" type="submit">${isGraded ? "Atualizar nota" : "Lançar nota"}</button>
+                  <button class="teacher-button" type="submit" ${isClosed ? "disabled" : ""}>${isGraded ? "Atualizar nota" : "Lançar nota"}</button>
                   <span class="teacher-message" data-sub-message aria-live="polite"></span>
                 </div>
               </form>
@@ -984,6 +1299,27 @@
           }).join("")}
         </div>
       `;
+
+      container.querySelector("[data-drawer-publish-assessment]")?.addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        const assessmentId = btn.dataset.drawerPublishAssessment;
+        const globalMsg = container.querySelector("[data-drawer-global-msg]");
+        btn.disabled = true;
+        try {
+          await api("/api/gradebook?action=publish-assessment", {
+            method: "POST",
+            body: JSON.stringify({ assessmentId })
+          });
+          showMessage(globalMsg, "✓ Notas publicadas com sucesso no Boletim Escolar!", "success");
+          setTimeout(() => {
+            if (subject) switchTab(subject, "activities");
+            else renderSubmissionsDrawer(activityId, container, subject);
+          }, 700);
+        } catch (err) {
+          showMessage(globalMsg, err.message, "error");
+          btn.disabled = false;
+        }
+      });
 
       container.querySelectorAll("[data-grade-submission]").forEach((subForm) => {
         subForm.addEventListener("submit", async (e) => {
@@ -1003,7 +1339,10 @@
               method: "POST",
               body: JSON.stringify(body)
             });
-            showMessage(msg, res.gradeSynced ? "✓ Nota salva & Boletim sincronizado" : "✓ Nota salva", "success");
+            const statusHint = res.gradeSynced
+              ? (res.assessmentStatus === "published" ? "✓ Salva & Publicada no Boletim" : "✓ Salva no Diário (clique em Publicar para exibir no Boletim)")
+              : "✓ Nota salva";
+            showMessage(msg, statusHint, "success");
           } catch (err) {
             showMessage(msg, err.message, "error");
           } finally {

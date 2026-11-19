@@ -126,6 +126,8 @@ async function listActivities(teacherId, subjectSlug, res) {
     SELECT a.id, a.title, a.description, a.activity_type, a.max_score, a.due_at, a.created_at, a.updated_at,
            a.course_offering_id, a.grading_period_id, a.component_id, a.assessment_id,
            c.name AS class_name, y.name AS academic_year_name,
+           ass.status AS assessment_status, ass.weight AS assessment_weight,
+           gp.status AS period_status,
            (SELECT COUNT(*)::int FROM activity_submissions s WHERE s.activity_id = a.id) AS submission_count,
            (SELECT COUNT(*)::int FROM activity_submissions s WHERE s.activity_id = a.id AND s.status = 'graded') AS graded_count
     FROM activities a
@@ -133,6 +135,8 @@ async function listActivities(teacherId, subjectSlug, res) {
     LEFT JOIN course_offerings o ON o.id = a.course_offering_id
     LEFT JOIN class_groups c ON c.id = o.class_group_id
     LEFT JOIN academic_years y ON y.id = c.academic_year_id
+    LEFT JOIN assessments ass ON ass.id = a.assessment_id
+    LEFT JOIN grading_periods gp ON gp.id = a.grading_period_id
     WHERE a.teacher_id = ${teacherId}
       AND s.slug = ${subjectSlug}
     ORDER BY a.created_at DESC
@@ -146,6 +150,7 @@ async function createActivity(teacherId, body, res) {
   const description = String(body.description || "").trim();
   const type = String(body.activityType || "manual").trim().toLowerCase();
   const score = Number(body.maxScore ?? 10);
+  const assessmentWeight = Number(body.assessmentWeight ?? 1);
   const deadline = body.dueAt ? new Date(body.dueAt) : null;
   const courseOfferingId = body.courseOfferingId ? String(body.courseOfferingId).trim() : null;
   const gradingPeriodId = body.gradingPeriodId ? String(body.gradingPeriodId).trim() : null;
@@ -162,6 +167,10 @@ async function createActivity(teacherId, body, res) {
 
   if (!Number.isFinite(score) || score <= 0 || score > 100) {
     return res.status(400).json({ error: "A pontuação deve estar entre 0 e 100." });
+  }
+
+  if (!Number.isFinite(assessmentWeight) || assessmentWeight <= 0 || assessmentWeight > 1000) {
+    return res.status(400).json({ error: "O peso interno da avaliação deve ser maior que zero." });
   }
 
   if (deadline && Number.isNaN(deadline.getTime())) {
@@ -213,7 +222,7 @@ async function createActivity(teacherId, body, res) {
 
     const createdAssessment = await sql`
       INSERT INTO assessments (course_offering_id, grading_period_id, component_id, title, description, assessment_type, weight, due_at, created_by, status)
-      VALUES (${courseOfferingId}, ${gradingPeriodId}, ${componentId}, ${title}, ${description}, 'regular', 1, ${deadline ? deadline.toISOString() : null}, ${teacherId}, 'draft')
+      VALUES (${courseOfferingId}, ${gradingPeriodId}, ${componentId}, ${title}, ${description}, 'regular', ${assessmentWeight}, ${deadline ? deadline.toISOString() : null}, ${teacherId}, 'draft')
       RETURNING id
     `;
     createdAssessmentId = createdAssessment[0]?.id || null;
@@ -240,16 +249,105 @@ async function createActivity(teacherId, body, res) {
   return res.status(201).json({ activity: rows[0] });
 }
 
+async function updateActivity(teacherId, body, res) {
+  const id = String(body.id || "").trim();
+  const title = String(body.title || "").trim();
+  const description = String(body.description || "").trim();
+  const score = Number(body.maxScore ?? 10);
+  const assessmentWeight = body.assessmentWeight !== undefined && body.assessmentWeight !== "" ? Number(body.assessmentWeight) : null;
+  const deadline = body.dueAt ? new Date(body.dueAt) : null;
+
+  if (!UUID.test(id)) return res.status(400).json({ error: "Atividade inválida." });
+  if (!title || !description) return res.status(400).json({ error: "Título e descrição são obrigatórios." });
+  if (!Number.isFinite(score) || score <= 0 || score > 100) return res.status(400).json({ error: "A pontuação máxima deve estar entre 0 e 100." });
+  if (assessmentWeight !== null && (!Number.isFinite(assessmentWeight) || assessmentWeight <= 0 || assessmentWeight > 1000)) {
+    return res.status(400).json({ error: "O peso interno deve ser maior que zero." });
+  }
+  if (deadline && Number.isNaN(deadline.getTime())) return res.status(400).json({ error: "Prazo inválido." });
+
+  const target = await sql`
+    SELECT a.id, a.assessment_id, gp.status AS period_status, y.status AS year_status, ass.status AS assessment_status
+    FROM activities a
+    LEFT JOIN course_offerings o ON o.id = a.course_offering_id
+    LEFT JOIN class_groups c ON c.id = o.class_group_id
+    LEFT JOIN academic_years y ON y.id = c.academic_year_id
+    LEFT JOIN grading_periods gp ON gp.id = a.grading_period_id
+    LEFT JOIN assessments ass ON ass.id = a.assessment_id
+    WHERE a.id = ${id} AND a.teacher_id = ${teacherId}
+    LIMIT 1
+  `;
+  if (!target.length) return res.status(404).json({ error: "Atividade não encontrada." });
+  if (target[0].period_status === "closed" || target[0].year_status === "closed" || target[0].assessment_status === "closed") {
+    return res.status(409).json({ error: "Esta atividade pertence a um período encerrado e não pode ser editada." });
+  }
+
+  const isoDue = deadline ? deadline.toISOString() : null;
+  const updated = await sql`
+    UPDATE activities
+    SET title = ${title}, description = ${description}, max_score = ${score}, due_at = ${isoDue}, updated_at = NOW()
+    WHERE id = ${id} AND teacher_id = ${teacherId}
+    RETURNING *
+  `;
+
+  if (target[0].assessment_id) {
+    await sql`
+      UPDATE assessments
+      SET title = ${title}, description = ${description}, due_at = ${isoDue},
+          weight = COALESCE(${assessmentWeight}, weight), updated_at = NOW()
+      WHERE id = ${target[0].assessment_id}
+    `;
+  }
+
+  return res.status(200).json({ activity: updated[0] });
+}
+
+async function deleteActivity(teacherId, body, res) {
+  const id = String(body.id || "").trim();
+  if (!UUID.test(id)) return res.status(400).json({ error: "Atividade inválida." });
+
+  const target = await sql`
+    SELECT a.id, a.assessment_id, gp.status AS period_status, y.status AS year_status, ass.status AS assessment_status
+    FROM activities a
+    LEFT JOIN course_offerings o ON o.id = a.course_offering_id
+    LEFT JOIN class_groups c ON c.id = o.class_group_id
+    LEFT JOIN academic_years y ON y.id = c.academic_year_id
+    LEFT JOIN grading_periods gp ON gp.id = a.grading_period_id
+    LEFT JOIN assessments ass ON ass.id = a.assessment_id
+    WHERE a.id = ${id} AND a.teacher_id = ${teacherId}
+    LIMIT 1
+  `;
+  if (!target.length) return res.status(404).json({ error: "Atividade não encontrada." });
+  if (target[0].period_status === "closed" || target[0].year_status === "closed" || target[0].assessment_status === "closed") {
+    return res.status(409).json({ error: "Não é possível remover atividades de um período encerrado." });
+  }
+
+  const assessmentId = target[0].assessment_id;
+  await sql`DELETE FROM activities WHERE id = ${id} AND teacher_id = ${teacherId}`;
+
+  if (assessmentId) {
+    await sql`DELETE FROM grade_change_log WHERE grade_id IN (SELECT id FROM grades WHERE assessment_id = ${assessmentId})`;
+    await sql`DELETE FROM grades WHERE assessment_id = ${assessmentId}`;
+    await sql`DELETE FROM assessments WHERE id = ${assessmentId}`;
+  }
+
+  return res.status(200).json({ ok: true });
+}
+
 // Mesa de correção: listar entregas de uma atividade
 async function listActivitySubmissions(teacherId, activityId, res) {
   if (!UUID.test(activityId)) return res.status(400).json({ error: "Atividade inválida." });
 
   const activity = await sql`
-    SELECT a.*, s.name AS subject_name, c.name AS class_name
+    SELECT a.*, s.name AS subject_name, c.name AS class_name,
+           ass.status AS assessment_status, ass.weight AS assessment_weight,
+           gp.status AS period_status, y.status AS year_status
     FROM activities a
     JOIN subjects s ON s.id = a.subject_id
     LEFT JOIN course_offerings o ON o.id = a.course_offering_id
     LEFT JOIN class_groups c ON c.id = o.class_group_id
+    LEFT JOIN academic_years y ON y.id = c.academic_year_id
+    LEFT JOIN grading_periods gp ON gp.id = a.grading_period_id
+    LEFT JOIN assessments ass ON ass.id = a.assessment_id
     WHERE a.id = ${activityId} AND a.teacher_id = ${teacherId}
     LIMIT 1
   `;
@@ -295,14 +393,21 @@ async function gradeSubmission(teacherId, body, res) {
   }
 
   const activity = await sql`
-    SELECT a.*, o.class_group_id
+    SELECT a.*, o.class_group_id, gp.status AS period_status, y.status AS year_status, ass.status AS assessment_status
     FROM activities a
     LEFT JOIN course_offerings o ON o.id = a.course_offering_id
+    LEFT JOIN class_groups c ON c.id = o.class_group_id
+    LEFT JOIN academic_years y ON y.id = c.academic_year_id
+    LEFT JOIN grading_periods gp ON gp.id = a.grading_period_id
+    LEFT JOIN assessments ass ON ass.id = a.assessment_id
     WHERE a.id = ${activityId} AND a.teacher_id = ${teacherId}
     LIMIT 1
   `;
   if (!activity.length) {
     return res.status(404).json({ error: "Atividade não encontrada ou sem permissão." });
+  }
+  if (activity[0].period_status === "closed" || activity[0].year_status === "closed" || activity[0].assessment_status === "closed") {
+    return res.status(409).json({ error: "Este período está encerrado e não aceita alterações de notas." });
   }
 
   let finalScore = null;
@@ -357,7 +462,7 @@ async function gradeSubmission(teacherId, body, res) {
     if (savedGrade.length) gradeSynced = true;
   }
 
-  return res.status(200).json({ submission: savedSub[0], gradeSynced });
+  return res.status(200).json({ submission: savedSub[0], gradeSynced, assessmentStatus: activity[0].assessment_status });
 }
 
 // Aluno envia sua entrega/trabalho
@@ -373,13 +478,20 @@ async function submitStudentActivity(studentId, body, res) {
   }
 
   const activity = await sql`
-    SELECT a.*, o.class_group_id
+    SELECT a.*, o.class_group_id, gp.status AS period_status, y.status AS year_status, ass.status AS assessment_status
     FROM activities a
     LEFT JOIN course_offerings o ON o.id = a.course_offering_id
+    LEFT JOIN class_groups c ON c.id = o.class_group_id
+    LEFT JOIN academic_years y ON y.id = c.academic_year_id
+    LEFT JOIN grading_periods gp ON gp.id = a.grading_period_id
+    LEFT JOIN assessments ass ON ass.id = a.assessment_id
     WHERE a.id = ${activityId}
     LIMIT 1
   `;
   if (!activity.length) return res.status(404).json({ error: "Atividade não encontrada." });
+  if (activity[0].period_status === "closed" || activity[0].year_status === "closed" || activity[0].assessment_status === "closed") {
+    return res.status(409).json({ error: "O período avaliativo desta atividade já foi encerrado." });
+  }
 
   let enrollment = null;
   if (activity[0].class_group_id) {
@@ -398,6 +510,15 @@ async function submitStudentActivity(studentId, body, res) {
     `;
     if (!enrRows.length) return res.status(403).json({ error: "Matrícula ativa não encontrada." });
     enrollment = enrRows[0];
+  }
+
+  const existingSub = await sql`
+    SELECT status FROM activity_submissions
+    WHERE activity_id = ${activityId} AND enrollment_id = ${enrollment.id}
+    LIMIT 1
+  `;
+  if (existingSub.length && existingSub[0].status === "graded") {
+    return res.status(409).json({ error: "Esta atividade já foi corrigida pelo professor e não pode ser alterada." });
   }
 
   const saved = await sql`
@@ -437,17 +558,20 @@ module.exports = async function handler(req, res) {
       // Buscar atividades de turmas em que o aluno está matriculado ou atividades gerais
       const activities = await sql`
         SELECT a.id, a.title, a.description, a.activity_type, a.max_score, a.due_at, a.created_at,
+               a.assessment_id, a.course_offering_id,
                s.name AS subject_name, s.slug AS subject_slug,
                u.name AS teacher_name,
                c.name AS class_name,
+               gp.status AS period_status,
                sub.id AS submission_id, sub.status AS submission_status, sub.content AS submission_content,
                sub.link AS submission_link, sub.score AS submission_score, sub.feedback AS submission_feedback,
-               sub.submitted_at
+               sub.submitted_at, sub.graded_at
         FROM activities a
         JOIN subjects s ON s.id = a.subject_id
         JOIN users u ON u.id = a.teacher_id
         LEFT JOIN course_offerings o ON o.id = a.course_offering_id
         LEFT JOIN class_groups c ON c.id = o.class_group_id
+        LEFT JOIN grading_periods gp ON gp.id = a.grading_period_id
         LEFT JOIN student_enrollments se ON se.student_id = ${studentId} AND (se.class_group_id = c.id OR a.course_offering_id IS NULL) AND se.status = 'active'
         LEFT JOIN activity_submissions sub ON sub.activity_id = a.id AND sub.enrollment_id = se.id
         WHERE (a.course_offering_id IS NULL OR EXISTS (
@@ -488,11 +612,11 @@ module.exports = async function handler(req, res) {
       return res.status(405).json({ error: "Método não permitido." });
     }
 
-    if (["create", "update"].includes(action) && req.method !== "POST") {
+    if (["create", "update", "delete"].includes(action) && req.method !== "POST") {
       return res.status(405).json({ error: "Método não permitido." });
     }
 
-    if (!["list", "create", "update"].includes(action)) {
+    if (!["list", "create", "update", "delete"].includes(action)) {
       return res.status(400).json({ error: "Ação acadêmica inválida." });
     }
 
@@ -506,8 +630,13 @@ module.exports = async function handler(req, res) {
 
     const body = jsonBody(req);
     if (action === "update") {
-      if (resource !== "materials") return res.status(400).json({ error: "Ação de edição inválida para este recurso." });
-      return updateMaterial(teacherId, body, res);
+      return resource === "materials"
+        ? updateMaterial(teacherId, body, res)
+        : updateActivity(teacherId, body, res);
+    }
+    if (action === "delete") {
+      if (resource !== "activities") return res.status(400).json({ error: "Exclusão não disponível para este recurso." });
+      return deleteActivity(teacherId, body, res);
     }
     return resource === "materials"
       ? createMaterial(teacherId, body, res)

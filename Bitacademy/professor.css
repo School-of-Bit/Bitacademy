@@ -441,6 +441,73 @@
   color: #fde047;
 }
 
+.teacher-badge.danger {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
+/* ─── QUADRO DE MÉDIAS / PAUTA DA TURMA ─── */
+.pauta-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--cor-borda);
+  border-radius: 14px;
+  background: rgba(15, 15, 26, 0.55);
+}
+
+.pauta-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.pauta-table th,
+.pauta-table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pauta-table th {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--cor-subtexto);
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.pauta-table th small {
+  font-weight: 600;
+  text-transform: none;
+  opacity: 0.8;
+}
+
+.pauta-table tr:last-child td {
+  border-bottom: none;
+}
+
+.pauta-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pauta-score-low {
+  color: #fca5a5;
+}
+
+.pauta-rec-tag {
+  font-size: 0.75rem;
+  color: var(--cor-ciano);
+}
+
+.pauta-alert-tag {
+  font-size: 0.74rem;
+  color: #fbbf24;
+  font-weight: 700;
+}
+
 .teacher-empty {
   padding: 56px 24px;
   border: 1px dashed var(--cor-borda-forte);

@@ -1909,3 +1909,46 @@ footer {
     padding: 20px;
   }
 }
+
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #111827 !important;
+    padding: 0 !important;
+  }
+
+  .home-topbar,
+  .profile-tabs,
+  .intro-actions,
+  .no-print,
+  footer {
+    display: none !important;
+  }
+
+  .profile-hero,
+  .profile-card-section,
+  .gradebook-report-card,
+  .gradebook-period-list > section,
+  .gradebook-component-list > section {
+    background: #ffffff !important;
+    color: #111827 !important;
+    border-color: #cbd5e1 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+
+  .profile-hero h2,
+  .profile-card-section h2,
+  .gradebook-report-heading strong,
+  .gradebook-period-heading strong,
+  .gradebook-assessment-list b {
+    color: #000000 !important;
+  }
+
+  .gradebook-report-heading span,
+  .gradebook-period-heading span,
+  .gradebook-assessment-list > div,
+  .gradebook-assessment-list small {
+    color: #374151 !important;
+  }
+}

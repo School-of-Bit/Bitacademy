@@ -197,14 +197,52 @@
         </article>
       `).join("") : "<p>Nenhum ano letivo configurado.</p>";
 
-      document.querySelector("[data-gradebook-classes]").innerHTML = data.classes.length ? data.classes.map((item) => `
-        <article class="teacher-card">
-          <h3>${escapeHtml(item.name)}</h3>
-          <p>Ano letivo ${escapeHtml(item.academic_year_name)} · ${escapeHtml(item.grade_level || "Série não informada")} · <strong>${item.student_count}</strong> ${item.student_count === 1 ? "aluno" : "alunos"}</p>
-        </article>
-      `).join("") : "<p>Nenhuma turma cadastrada.</p>";
-      gbMessage.textContent = "Configuração do boletim sincronizada.";
-      gbMessage.className = "message success";
+      const allEnrollments = data.enrollments || [];
+      const allOfferings = data.offerings || [];
+
+      document.querySelector("[data-gradebook-classes]").innerHTML = data.classes.length ? data.classes.map((item) => {
+        const classOfferings = allOfferings.filter((o) => o.class_group_id === item.id);
+        const classEnrollments = allEnrollments.filter((e) => e.class_group_id === item.id);
+        return `
+          <article class="teacher-card">
+            <h3>${escapeHtml(item.name)}</h3>
+            <p>Ano letivo ${escapeHtml(item.academic_year_name)} · ${escapeHtml(item.grade_level || "Série não informada")} · <strong>${item.student_count}</strong> ${item.student_count === 1 ? "aluno ativo" : "alunos ativos"}</p>
+
+            <div style="margin-top: 12px;">
+              <strong style="font-size: 0.85rem; color: var(--cor-ciano); display: block; margin-bottom: 6px;">📚 Disciplinas &amp; Professores (${classOfferings.length})</strong>
+              ${classOfferings.length ? classOfferings.map((off) => `
+                <div class="subject-row">
+                  <span><strong>${escapeHtml(off.subject_name)}</strong> · Prof. ${escapeHtml(off.teacher_name)} <small>(${off.assessment_count} aval.)</small></span>
+                  <button type="button" data-remove-offering="${escapeHtml(off.id)}">Remover</button>
+                </div>
+              `).join("") : "<p style='font-size: 0.85rem; margin: 4px 0;'>Nenhuma disciplina vinculada a esta turma.</p>"}
+            </div>
+
+            <div style="margin-top: 12px;">
+              <strong style="font-size: 0.85rem; color: #a5b4fc; display: block; margin-bottom: 6px;">👨‍🎓 Estudantes Matriculados (${classEnrollments.length})</strong>
+              ${classEnrollments.length ? classEnrollments.map((enr) => `
+                <div class="subject-row" style="gap: 8px; flex-wrap: wrap;">
+                  <span style="flex: 1; min-width: 140px;">${escapeHtml(enr.student_name)} <small style="display: block; opacity: 0.75;">${escapeHtml(enr.student_email)}</small></span>
+                  <div style="display: flex; gap: 6px; align-items: center;">
+                    <select data-enrollment-status-select="${escapeHtml(enr.id)}" aria-label="Situação da matrícula" style="padding: 4px 8px; font-size: 0.8rem; border-radius: 6px; background: #0f0f1a; color: #fff; border: 1px solid rgba(255,255,255,0.15);">
+                      <option value="active" ${enr.status === "active" ? "selected" : ""}>Ativa</option>
+                      <option value="transferred" ${enr.status === "transferred" ? "selected" : ""}>Transferido</option>
+                      <option value="withdrawn" ${enr.status === "withdrawn" ? "selected" : ""}>Cancelada</option>
+                      <option value="completed" ${enr.status === "completed" ? "selected" : ""}>Concluída</option>
+                    </select>
+                    <button type="button" data-save-enrollment="${escapeHtml(enr.id)}">Salvar</button>
+                  </div>
+                </div>
+              `).join("") : "<p style='font-size: 0.85rem; margin: 4px 0;'>Nenhum aluno matriculado nesta turma.</p>"}
+            </div>
+          </article>
+        `;
+      }).join("") : "<p>Nenhuma turma cadastrada.</p>";
+      if (!gbMessage.dataset.keepError) {
+        gbMessage.textContent = "Configuração do boletim sincronizada.";
+        gbMessage.className = "message success";
+      }
+      delete gbMessage.dataset.keepError;
     } catch (error) {
       gbMessage.textContent = error.message;
       gbMessage.className = "message error";
@@ -392,9 +430,71 @@
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Não foi possível atualizar o estado.");
+        gbMessage.dataset.keepError = "true";
+        await loadGradebook();
         gbMessage.textContent = "Estado atualizado com sucesso.";
         gbMessage.className = "message success";
+      } catch (error) {
+        gbMessage.style.whiteSpace = "pre-line";
+        gbMessage.textContent = error.message;
+        gbMessage.className = "message error";
+      }
+      return;
+    }
+
+    const saveEnrollmentBtn = event.target.closest("[data-save-enrollment]");
+    if (saveEnrollmentBtn) {
+      const enrollmentId = saveEnrollmentBtn.dataset.saveEnrollment;
+      const selectEl = document.querySelector(`[data-enrollment-status-select="${enrollmentId}"]`);
+      const gbMessage = document.querySelector("[data-gradebook-message]");
+      try {
+        const response = await fetch("/api/gradebook?action=update-enrollment-status", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enrollmentId, status: selectEl?.value })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Não foi possível atualizar a matrícula.");
+        gbMessage.dataset.keepError = "true";
         await loadGradebook();
+        gbMessage.textContent = "Situação da matrícula atualizada.";
+        gbMessage.className = "message success";
+      } catch (error) {
+        gbMessage.textContent = error.message;
+        gbMessage.className = "message error";
+      }
+      return;
+    }
+
+    const removeOfferingBtn = event.target.closest("[data-remove-offering]");
+    if (removeOfferingBtn) {
+      const offeringId = removeOfferingBtn.dataset.removeOffering;
+      const gbMessage = document.querySelector("[data-gradebook-message]");
+      if (removeOfferingBtn.dataset.confirming !== "true") {
+        removeOfferingBtn.dataset.confirming = "true";
+        removeOfferingBtn.textContent = "Confirmar?";
+        setTimeout(() => {
+          if (removeOfferingBtn.isConnected) {
+            removeOfferingBtn.dataset.confirming = "";
+            removeOfferingBtn.textContent = "Remover";
+          }
+        }, 4000);
+        return;
+      }
+      try {
+        const response = await fetch("/api/gradebook?action=remove-course-offering", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ offeringId })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Não foi possível remover a disciplina da turma.");
+        gbMessage.dataset.keepError = "true";
+        await loadGradebook();
+        gbMessage.textContent = data.archived ? "Disciplina arquivada da turma (possuía avaliações)." : "Disciplina desvinculada da turma.";
+        gbMessage.className = "message success";
       } catch (error) {
         gbMessage.textContent = error.message;
         gbMessage.className = "message error";

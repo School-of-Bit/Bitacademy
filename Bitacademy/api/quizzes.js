@@ -107,6 +107,74 @@ module.exports = async function handler(req, res) {
 
       if (!rows.length) return res.status(404).json({ error: "Disciplina não encontrada." });
 
+      // Fase 3: Integração automática com atividades do tipo 'automatic' e Boletim Escolar
+      let autoGradedActivities = 0;
+      try {
+        const autoScore = Math.round((score / total) * 1000) / 100;
+        const autoContent = `Concluído automaticamente via Quiz (${score}/${total} acertos · ${percentage}%)`;
+        const autoFeedback = `Nota calculada automaticamente pelo desempenho no Quiz de ${quiz.title}.`;
+
+        const eligibleActivities = await sql`
+          SELECT a.id AS activity_id, a.teacher_id, a.assessment_id, se.id AS enrollment_id
+          FROM activities a
+          JOIN subjects s ON s.id = a.subject_id
+          LEFT JOIN course_offerings o ON o.id = a.course_offering_id
+          LEFT JOIN grading_periods gp ON gp.id = a.grading_period_id
+          LEFT JOIN academic_years y ON y.id = gp.academic_year_id
+          JOIN student_enrollments se ON se.student_id = ${userId} AND se.status = 'active'
+            AND (a.course_offering_id IS NULL OR se.class_group_id = o.class_group_id)
+          WHERE s.slug = ${materia}
+            AND a.activity_type = 'automatic'
+            AND (gp.id IS NULL OR gp.status = 'open')
+            AND (y.id IS NULL OR y.status <> 'closed')
+        `;
+
+        for (const item of eligibleActivities) {
+          await sql`
+            INSERT INTO activity_submissions (activity_id, enrollment_id, content, score, feedback, status, submitted_at, graded_at, graded_by)
+            VALUES (${item.activity_id}, ${item.enrollment_id}, ${autoContent}, ${autoScore}, ${autoFeedback}, 'graded', NOW(), NOW(), ${item.teacher_id})
+            ON CONFLICT (activity_id, enrollment_id)
+            DO UPDATE SET
+              content = CASE WHEN EXCLUDED.score >= COALESCE(activity_submissions.score, -1) THEN EXCLUDED.content ELSE activity_submissions.content END,
+              score = GREATEST(COALESCE(activity_submissions.score, 0), EXCLUDED.score),
+              feedback = CASE WHEN EXCLUDED.score >= COALESCE(activity_submissions.score, -1) THEN EXCLUDED.feedback ELSE activity_submissions.feedback END,
+              status = 'graded',
+              graded_at = NOW(),
+              updated_at = NOW()
+          `;
+
+          if (item.assessment_id) {
+            await sql`
+              WITH previous AS (
+                SELECT id, score, grade_status, feedback, TRUE AS existed
+                FROM grades WHERE assessment_id = ${item.assessment_id} AND enrollment_id = ${item.enrollment_id}
+              ), changed AS (
+                INSERT INTO grades (assessment_id, enrollment_id, score, grade_status, feedback, entered_by)
+                VALUES (${item.assessment_id}, ${item.enrollment_id}, ${autoScore}, 'scored', ${autoFeedback}, ${item.teacher_id})
+                ON CONFLICT (assessment_id, enrollment_id)
+                DO UPDATE SET
+                  score = GREATEST(COALESCE(grades.score, 0), EXCLUDED.score),
+                  grade_status = 'scored',
+                  feedback = CASE WHEN EXCLUDED.score >= COALESCE(grades.score, -1) THEN EXCLUDED.feedback ELSE grades.feedback END,
+                  updated_at = NOW()
+                RETURNING *
+              ), audit AS (
+                INSERT INTO grade_change_log (grade_id, changed_by, previous_score, new_score, previous_grade_status, new_grade_status, previous_feedback, new_feedback)
+                SELECT changed.id, ${item.teacher_id}, previous.score, changed.score, previous.grade_status, changed.grade_status, previous.feedback, changed.feedback
+                FROM changed LEFT JOIN previous ON TRUE
+                WHERE NOT COALESCE(previous.existed, FALSE)
+                   OR previous.score IS DISTINCT FROM changed.score OR previous.grade_status IS DISTINCT FROM changed.grade_status
+                RETURNING id
+              )
+              SELECT changed.id FROM changed
+            `;
+          }
+          autoGradedActivities++;
+        }
+      } catch (autoErr) {
+        console.warn("Aviso ao sincronizar atividade automática via quiz:", autoErr.message);
+      }
+
       return res.status(200).json({
         result: {
           id: rows[0].id,
@@ -117,7 +185,8 @@ module.exports = async function handler(req, res) {
           percent: rows[0].percentage,
           playerName: rows[0].player_name,
           date: rows[0].completed_at,
-          improved: rows[0].improved
+          improved: rows[0].improved,
+          autoGradedActivities
         }
       });
     }
