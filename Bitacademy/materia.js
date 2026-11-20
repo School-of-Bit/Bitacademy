@@ -63,11 +63,60 @@
       document.querySelector("[data-subject-description]").textContent = data.subject.description || "Conteúdos e materiais para estudar esta disciplina.";
       window.BitAcademyMotion?.panelIn(".material-hero");
 
+      const SUBJECT_ARCADE_GAMES = {
+        portugues: {
+          resource_type: "game",
+          title: "Termo Escolar",
+          description: "Descubra palavras de 5 letras do vocabulário de Português em até 6 tentativas com feedback colorido e ranking oficial.",
+          html_path: "Jogos/jogo.html?mode=portugues-termo"
+        },
+        ingles: {
+          resource_type: "game",
+          title: "Word Match Bilíngue",
+          description: "Jogo da memória 3D para parear vocabulário e verbos em Inglês ↔ Português com bônus de combo.",
+          html_path: "Jogos/jogo.html?mode=ingles-match"
+        },
+        historia: {
+          resource_type: "game",
+          title: "Antes ou Depois?",
+          description: "Decida se cada marco histórico aconteceu antes ou depois do evento de referência e construa sua linha do tempo.",
+          html_path: "Jogos/jogo.html?mode=historia-cronologia"
+        },
+        geografia: {
+          resource_type: "game",
+          title: "GeoRadar",
+          description: "Desafio de capitais mundiais, estados brasileiros e biomas com 3 vidas e sistema de dicas 50/50.",
+          html_path: "Jogos/jogo.html?mode=geografia-radar"
+        },
+        ciencias: {
+          resource_type: "game",
+          title: "Lab Relâmpago",
+          description: "Classifique fenômenos físicos/químicos, tabela periódica e sistemas do corpo antes de o tempo acabar.",
+          html_path: "Jogos/jogo.html?mode=ciencias-lab"
+        },
+        artes: {
+          resource_type: "game",
+          title: "Estúdio Cromático",
+          description: "Misture canais de luz RGB para recriar tons-alvo em tempo real e identifique movimentos artísticos.",
+          html_path: "Jogos/jogo.html?mode=artes-estudio"
+        },
+        filosofia: {
+          resource_type: "game",
+          title: "Oráculo Filosófico",
+          description: "Desvende grandes pensadores usando pistas progressivas — quanto menos pistas usar, maior sua pontuação.",
+          html_path: "Jogos/jogo.html?mode=filosofia-oraculo"
+        }
+      };
+
       try {
         const resourceResponse = await fetch(`/api/academic?action=resources&subject=${encodeURIComponent(slug)}`);
         const resourceData = await resourceResponse.json();
         if (!resourceResponse.ok) throw new Error(resourceData.error || "Falha ao carregar recursos.");
-        const resources = resourceData.resources || [];
+        const resources = [...(resourceData.resources || [])];
+        const builtInGame = SUBJECT_ARCADE_GAMES[slug];
+        if (builtInGame && !resources.some((r) => r.html_path === builtInGame.html_path)) {
+          resources.unshift(builtInGame);
+        }
         resourceList.innerHTML = resources.length
           ? resources.map((item) => `
               <article class="material-card resource-card">

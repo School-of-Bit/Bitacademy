@@ -468,3 +468,706 @@ button.secondary {
     grid-template-columns: 1fr;
   }
 }
+
+/* =============================================
+   ARCADE MULTI-MATÉRIAS (7 JOGOS EDUCATIVOS)
+   ============================================= */
+.arcade-stage {
+  padding: 24px;
+  border: 1px solid color-mix(in srgb, var(--game-accent, #6366f1) 34%, var(--cor-borda));
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--game-accent, #6366f1) 12%, transparent), rgba(15, 15, 26, 0.72)),
+    rgba(255, 255, 255, 0.03);
+}
+
+.arcade-feedback {
+  margin-top: 14px;
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--cor-subtexto);
+}
+
+.arcade-feedback.is-success {
+  padding: 11px 15px;
+  border-radius: 12px;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  color: #86efac;
+}
+
+.arcade-feedback.is-error {
+  padding: 11px 15px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
+.arcade-feedback.is-info {
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(34, 211, 238, 0.08);
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  color: var(--cor-ciano);
+}
+
+.small-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  font-size: 0.84rem;
+}
+
+.termo-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.arcade-hint-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: rgba(250, 204, 21, 0.1);
+  border: 1px solid rgba(250, 204, 21, 0.32);
+  color: #fef08a;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+/* 1. TERMO ESCOLAR */
+.termo-grid {
+  display: grid;
+  gap: 8px;
+  width: min(100%, 330px);
+  margin: 0 auto 20px;
+}
+
+.termo-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+}
+
+.termo-tile {
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  border: 2px solid var(--cor-borda);
+  background: rgba(15, 15, 26, 0.7);
+  color: #fff;
+  font-family: var(--fonte-mono);
+  font-size: 1.45rem;
+  font-weight: 800;
+  transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.termo-tile.is-filled {
+  border-color: var(--cor-ciano);
+  transform: scale(1.03);
+}
+
+.termo-tile.is-correct {
+  background: #16a34a;
+  border-color: #22c55e;
+}
+
+.termo-tile.is-present {
+  background: #d97706;
+  border-color: #f59e0b;
+}
+
+.termo-tile.is-absent {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--cor-subtexto);
+}
+
+.termo-keyboard {
+  display: grid;
+  gap: 7px;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.termo-kb-row {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+
+.termo-key {
+  flex: 1;
+  max-width: 48px;
+  height: 44px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-family: var(--fonte-mono);
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.termo-key.is-wide {
+  max-width: 78px;
+  font-size: 0.78rem;
+}
+
+.termo-key.is-correct { background: #16a34a; border-color: #22c55e; }
+.termo-key.is-present { background: #d97706; border-color: #f59e0b; }
+.termo-key.is-absent { background: rgba(15, 15, 26, 0.65); color: rgba(152, 152, 184, 0.45); }
+
+.arcade-round-next {
+  display: flex;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.arcade-round-next button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 24px;
+}
+
+/* 2. WORD MATCH BILÍNGUE */
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.memory-card {
+  perspective: 900px;
+  background: transparent;
+  padding: 0;
+  border: 0;
+  height: 98px;
+}
+
+.memory-card:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.memory-card-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.memory-card.is-flipped .memory-card-inner {
+  transform: rotateY(180deg);
+}
+
+.memory-front,
+.memory-back {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  border-radius: 14px;
+  backface-visibility: hidden;
+  border: 1px solid var(--cor-borda);
+}
+
+.memory-front {
+  background: linear-gradient(145deg, rgba(59, 130, 246, 0.2), rgba(15, 15, 26, 0.9));
+  color: var(--cor-ciano);
+}
+
+.memory-back {
+  transform: rotateY(180deg);
+  background: rgba(15, 15, 26, 0.92);
+  border-color: var(--cor-ciano);
+  text-align: center;
+}
+
+.memory-card.is-matched .memory-back {
+  background: rgba(34, 197, 94, 0.16);
+  border-color: #22c55e;
+}
+
+.memory-lang {
+  font-family: var(--fonte-mono);
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.memory-lang.is-en { background: rgba(59, 130, 246, 0.22); color: #93c5fd; }
+.memory-lang.is-pt { background: rgba(250, 204, 21, 0.18); color: #fde047; }
+
+.memory-back strong {
+  color: #fff;
+  font-size: 0.88rem;
+  line-height: 1.25;
+}
+
+/* 3. HISTÓRIA — ANTES OU DEPOIS */
+.timeline-arena {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 14px;
+  align-items: stretch;
+  margin-bottom: 18px;
+}
+
+.timeline-card {
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px solid var(--cor-borda);
+  background: rgba(15, 15, 26, 0.72);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.timeline-card.is-challenger {
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.timeline-card h3 {
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.timeline-year {
+  font-family: var(--fonte-mono);
+  font-size: 2.2rem;
+  color: var(--cor-amarelo);
+  letter-spacing: -0.03em;
+}
+
+.timeline-card small {
+  color: var(--cor-subtexto);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.timeline-vs {
+  align-self: center;
+  font-family: var(--fonte-mono);
+  font-weight: 800;
+  font-size: 0.88rem;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--cor-ciano);
+}
+
+.timeline-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.timeline-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 15px 16px;
+  font-size: 0.94rem;
+}
+
+.timeline-strip {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.timeline-strip span {
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.78rem;
+  color: var(--cor-subtexto);
+}
+
+.timeline-strip b {
+  font-family: var(--fonte-mono);
+  color: var(--cor-amarelo);
+  margin-right: 4px;
+}
+
+/* 4. GEORADAR & 7. ORÁCULO */
+.radar-question {
+  font-size: 1.25rem;
+  line-height: 1.45;
+  margin-bottom: 18px;
+}
+
+.radar-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 11px;
+}
+
+.radar-opt {
+  padding: 15px 16px;
+  border-radius: 13px;
+  border: 2px solid var(--cor-borda);
+  background: rgba(15, 15, 26, 0.72);
+  color: var(--cor-texto);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: left;
+}
+
+.radar-opt:hover:not(:disabled) {
+  border-color: var(--cor-ciano);
+  background: rgba(34, 211, 238, 0.1);
+}
+
+.radar-opt.is-correct {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.18);
+  color: #bbf7d0;
+}
+
+.radar-opt.is-wrong {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.18);
+  color: #fecaca;
+}
+
+/* 5. CIÊNCIAS — LAB RELÂMPAGO */
+.lab-timer-bar {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.lab-timer-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, var(--cor-ciano));
+  transition: width 0.06s linear;
+}
+
+.lab-timer-fill.is-urgent {
+  background: #ef4444;
+}
+
+.lab-specimen {
+  padding: 26px 20px;
+  margin-bottom: 18px;
+  border-radius: 16px;
+  background: rgba(15, 15, 26, 0.78);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+  text-align: center;
+}
+
+.lab-specimen small {
+  display: block;
+  color: var(--cor-subtexto);
+  font-size: 0.82rem;
+  margin-bottom: 8px;
+}
+
+.lab-specimen strong {
+  font-family: var(--fonte-titulo);
+  font-size: clamp(1.35rem, 3vw, 2rem);
+  color: #fff;
+}
+
+.lab-bins {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.lab-bin-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 14px;
+  border-radius: 13px;
+  border: 2px solid var(--cor-borda);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 0.94rem;
+}
+
+.lab-bin-btn:hover {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.16);
+}
+
+.lab-bin-key {
+  font-family: var(--fonte-mono);
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--cor-ciano);
+  font-size: 0.8rem;
+}
+
+/* 6. ARTES — ESTÚDIO CROMÁTICO */
+.color-studio {
+  display: grid;
+  gap: 16px;
+}
+
+.studio-hint {
+  font-size: 0.9rem;
+}
+
+.color-swatches {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.swatch-box {
+  display: grid;
+  gap: 8px;
+  text-align: center;
+}
+
+.swatch-preview {
+  height: 112px;
+  border-radius: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.18);
+}
+
+.swatch-box span {
+  font-family: var(--fonte-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--cor-subtexto);
+}
+
+.rgb-sliders {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(15, 15, 26, 0.65);
+  border: 1px solid var(--cor-borda);
+}
+
+.rgb-row {
+  display: grid;
+  grid-template-columns: 115px 1fr 44px;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.rgb-row b {
+  font-family: var(--fonte-mono);
+  text-align: right;
+  color: #fff;
+}
+
+.rgb-row.is-r input { accent-color: #ef4444; }
+.rgb-row.is-g input { accent-color: #22c55e; }
+.rgb-row.is-b input { accent-color: #3b82f6; }
+
+.color-studio button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 20px;
+}
+
+.mini-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+/* 7. FILOSOFIA — ORÁCULO */
+.oracle-clues {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.oracle-clue-item {
+  padding: 14px 16px;
+  border-radius: 13px;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.oracle-clue-item span {
+  display: inline-block;
+  font-family: var(--fonte-mono);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: #c4b5fd;
+  margin-bottom: 4px;
+}
+
+.oracle-clue-item p {
+  color: #fff;
+  font-size: 0.96rem;
+  line-height: 1.5;
+}
+
+/* TELA DE RESULTADO FINAL DO ARCADE */
+.arcade-result-card {
+  text-align: center;
+  display: grid;
+  gap: 14px;
+  padding: 12px 6px;
+}
+
+.arcade-result-icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--game-accent, #6366f1), #7c3aed);
+  color: #fff;
+  box-shadow: 0 12px 30px rgba(99, 102, 241, 0.35);
+}
+
+.arcade-result-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 6px 0;
+}
+
+.arcade-result-metrics > div {
+  padding: 14px 10px;
+  border-radius: 13px;
+  background: rgba(15, 15, 26, 0.7);
+  border: 1px solid var(--cor-borda);
+}
+
+.arcade-result-metrics span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--cor-subtexto);
+}
+
+.arcade-result-metrics strong {
+  display: block;
+  margin-top: 4px;
+  font-family: var(--fonte-mono);
+  font-size: 1.45rem;
+  color: var(--cor-ciano);
+}
+
+.arcade-save-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--cor-amarelo);
+}
+
+.arcade-save-note.is-ok {
+  color: #86efac;
+}
+
+/* SWITCHER DE JOGOS NA SIDEBAR */
+.arcade-switcher {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--cor-borda);
+}
+
+.arcade-switcher h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.96rem;
+  margin-bottom: 10px;
+}
+
+.arcade-switcher-list {
+  display: grid;
+  gap: 7px;
+}
+
+.switcher-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 0.2s ease;
+}
+
+.switcher-pill:hover,
+.switcher-pill.is-active {
+  border-color: var(--cor-ciano);
+  background: rgba(34, 211, 238, 0.1);
+}
+
+.switcher-pill > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: rgba(99, 102, 241, 0.18);
+  color: var(--cor-ciano);
+  flex-shrink: 0;
+}
+
+.switcher-pill strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #fff;
+}
+
+.switcher-pill small {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--cor-subtexto);
+  font-weight: 600;
+}
+
+@media (max-width: 680px) {
+  .memory-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .timeline-arena { grid-template-columns: 1fr; }
+  .timeline-controls, .radar-options { grid-template-columns: 1fr; }
+  .arcade-result-metrics { grid-template-columns: repeat(2, 1fr); }
+}

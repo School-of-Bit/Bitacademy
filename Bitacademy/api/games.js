@@ -4,6 +4,16 @@ const { getSessionUserId } = require("../lib/_auth");
 
 const GAME_MODE = "math-infinite";
 const GAME_TITLE = "Matemática Infinita";
+const GAME_MODES = {
+  "math-infinite": { title: "Matemática Infinita", maxScore: 50000, serverSessionOnly: true },
+  "portugues-termo": { title: "Termo Escolar", maxScore: 50000 },
+  "ingles-match": { title: "Word Match Bilíngue", maxScore: 50000 },
+  "historia-cronologia": { title: "Antes ou Depois?", maxScore: 50000 },
+  "geografia-radar": { title: "GeoRadar", maxScore: 50000 },
+  "ciencias-lab": { title: "Lab Relâmpago", maxScore: 50000 },
+  "artes-estudio": { title: "Estúdio Cromático", maxScore: 50000 },
+  "filosofia-oraculo": { title: "Oráculo Filosófico", maxScore: 50000 }
+};
 const INITIAL_TIME_MS = 30_000;
 const MAX_TIME_MS = 60_000;
 
@@ -151,22 +161,71 @@ module.exports = async function handler(req, res) {
       if (req.method !== "GET") return res.status(405).json({ error: "Método não permitido." });
       const mode = String(req.query?.mode || "").trim();
       const limit = Math.min(Math.max(Number(req.query?.limit) || 10, 1), 50);
-      if (mode !== GAME_MODE) return res.status(400).json({ error: "Modo de jogo inválido." });
+      if (!GAME_MODES[mode]) return res.status(400).json({ error: "Modo de jogo inválido." });
 
       const rows = await sql`SELECT id, game_mode, game_title, score,
           correct_answers, wrong_answers, best_streak, duration_seconds, player_name, played_at
-        FROM game_scores WHERE game_mode = ${GAME_MODE} AND user_id IS NOT NULL
+        FROM game_scores WHERE game_mode = ${mode} AND user_id IS NOT NULL
         ORDER BY score DESC, correct_answers DESC, played_at ASC LIMIT ${limit}`;
       return res.status(200).json({ ranking: rows.map(mapScore) });
     }
 
-    if (!["start", "answer", "finish", "abort"].includes(action)) {
+    if (!["start", "answer", "finish", "abort", "record"].includes(action)) {
       return res.status(400).json({ error: "Ação de jogo inválida." });
     }
     if (req.method !== "POST") return res.status(405).json({ error: "Método não permitido." });
     const userId = await getSessionUserId(req);
     if (!userId) return res.status(401).json({ error: "Entre na sua conta para jogar pelo ranking." });
     const body = jsonBody(req);
+
+    if (action === "record") {
+      const mode = String(body.mode || "").trim();
+      const config = GAME_MODES[mode];
+      if (!config || config.serverSessionOnly) {
+        return res.status(400).json({ error: "Modo de jogo inválido para registro direto." });
+      }
+      const score = Math.round(Number(body.score) || 0);
+      const correct = Math.max(0, Math.min(9999, Math.round(Number(body.correct) || 0)));
+      const wrong = Math.max(0, Math.min(9999, Math.round(Number(body.wrong) || 0)));
+      const bestStreak = Math.max(0, Math.min(9999, Math.round(Number(body.bestStreak) || 0)));
+      const duration = Math.max(1, Math.min(7200, Math.round(Number(body.duration) || 1)));
+
+      if (!Number.isFinite(score) || score <= 0 || score > config.maxScore) {
+        return res.status(200).json({ recorded: false, improved: false });
+      }
+
+      const rows = await sql`WITH saved AS (
+          INSERT INTO game_scores (user_id, game_mode, game_title, score, correct_answers,
+            wrong_answers, best_streak, duration_seconds, player_name)
+          SELECT users.id, ${mode}, ${config.title}, ${score},
+            ${correct}, ${wrong}, ${bestStreak}, ${duration}, users.name
+          FROM users WHERE users.id = ${userId}
+          ON CONFLICT (user_id, game_mode) WHERE user_id IS NOT NULL
+          DO UPDATE SET game_title = EXCLUDED.game_title, score = EXCLUDED.score,
+            correct_answers = EXCLUDED.correct_answers, wrong_answers = EXCLUDED.wrong_answers,
+            best_streak = EXCLUDED.best_streak, duration_seconds = EXCLUDED.duration_seconds,
+            player_name = EXCLUDED.player_name, played_at = NOW()
+          WHERE EXCLUDED.score > game_scores.score
+            OR (EXCLUDED.score = game_scores.score AND EXCLUDED.correct_answers > game_scores.correct_answers)
+            OR (EXCLUDED.score = game_scores.score AND EXCLUDED.correct_answers = game_scores.correct_answers
+                AND EXCLUDED.best_streak > game_scores.best_streak)
+          RETURNING id, game_mode, game_title, score, correct_answers, wrong_answers,
+            best_streak, duration_seconds, player_name, played_at
+        ) SELECT saved.*, TRUE AS improved FROM saved
+        UNION ALL
+        SELECT game_scores.id, game_scores.game_mode, game_scores.game_title, game_scores.score,
+          game_scores.correct_answers, game_scores.wrong_answers, game_scores.best_streak,
+          game_scores.duration_seconds, game_scores.player_name, game_scores.played_at, FALSE AS improved
+        FROM game_scores
+        WHERE game_scores.user_id = ${userId} AND game_scores.game_mode = ${mode}
+          AND NOT EXISTS (SELECT 1 FROM saved)
+        LIMIT 1`;
+      return res.status(200).json({
+        recorded: true,
+        improved: rows[0]?.improved === true,
+        bestScore: rows[0] ? mapScore(rows[0]) : null
+      });
+    }
 
     if (action === "start") {
       if (body.mode !== GAME_MODE) return res.status(400).json({ error: "Modo de jogo inválido." });

@@ -542,6 +542,15 @@ window.BitAcademyAuth = (() => {
     return data.ranking || [];
   };
 
+  const recordGameScore = async ({ mode, score, correct = 0, wrong = 0, bestStreak = 0, duration = 1 }) => {
+    const data = await api("games?action=record", {
+      method: "POST",
+      body: JSON.stringify({ mode, score, correct, wrong, bestStreak, duration })
+    });
+    profileData = null;
+    return data;
+  };
+
   const getUserGameScores = async () => {
     if (!currentUser) return [];
     if (!profileData) profileData = await api("profile");
@@ -1547,6 +1556,7 @@ window.BitAcademyAuth = (() => {
     getCurrentUser,
     renderAuthStatus,
     getGameRanking,
+    recordGameScore,
     getProgress,
     getQuizRanking,
     startGame,
