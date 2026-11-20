@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arena de Jogos — BitAcademy</title>
+    <link rel="icon" type="image/png" href="../assets/logos/favicon.png">
+    <link rel="stylesheet" href="jogos.css">
+</head>
+<body>
+    <main class="game-shell arcade-shell">
+        <section class="game-panel">
+            <div class="game-top">
+                <div class="game-top-links">
+                    <a class="back-link" href="../Bitacademy.html#quizzes"><i data-lucide="arrow-left" data-lucide-size="16"></i> Voltar ao Portal</a>
+                    <a class="back-link" id="subject-back-link" href="../Bitacademy.html#disciplinas"><i data-lucide="book-open" data-lucide-size="16"></i> Estudar Disciplina</a>
+                </div>
+                <span data-auth-status><a href="../login.html"><i data-lucide="log-in" data-lucide-size="16"></i> Entrar</a></span>
+            </div>
+
+            <header class="game-hero">
+                <div>
+                    <p class="eyebrow" id="arcade-eyebrow">Arena de Prática</p>
+                    <h1 id="arcade-title">Carregando jogo...</h1>
+                    <p id="arcade-subtitle">Prepare-se para testar seus conhecimentos de forma interativa.</p>
+                </div>
+                <div class="battle-badge" id="arcade-badge">
+                    <span id="arcade-badge-label"><i data-lucide="gamepad-2" data-lucide-size="14"></i> Modo</span>
+                    <strong id="arcade-badge-value">Competitivo</strong>
+                </div>
+            </header>
+
+            <section class="game-stats" aria-label="Status da partida">
+                <article>
+                    <span id="stat-1-label"><i data-lucide="trophy" data-lucide-size="16"></i> Pontuação</span>
+                    <strong id="stat-1-value">0</strong>
+                </article>
+                <article>
+                    <span id="stat-2-label"><i data-lucide="flame" data-lucide-size="16"></i> Sequência</span>
+                    <strong id="stat-2-value">0</strong>
+                </article>
+                <article>
+                    <span id="stat-3-label"><i data-lucide="target" data-lucide-size="16"></i> Rodada</span>
+                    <strong id="stat-3-value">1</strong>
+                </article>
+            </section>
+
+            <section class="arcade-stage" id="arcade-stage" aria-live="polite"></section>
+
+            <div class="arcade-feedback" id="arcade-feedback" aria-live="polite"></div>
+        </section>
+
+        <aside class="ranking-panel" aria-label="Ranking oficial e catálogo de jogos">
+            <div>
+                <p class="eyebrow"><i data-lucide="trophy" data-lucide-size="14"></i> Ranking Oficial</p>
+                <h2 id="ranking-title">Top 10</h2>
+                <p id="ranking-status">Carregando recordes...</p>
+            </div>
+            <div class="ranking-list" id="ranking-list"></div>
+
+            <div class="arcade-switcher">
+                <h3><i data-lucide="gamepad-2" data-lucide-size="16"></i> Outros Jogos</h3>
+                <nav class="arcade-switcher-list" id="arcade-switcher-list" aria-label="Trocar de jogo"></nav>
+            </div>
+        </aside>
+    </main>
+
+    <script src="../auth.js"></script>
+    <script src="jogos-arcade.js"></script>
+</body>
+</html>
