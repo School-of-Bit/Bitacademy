@@ -70,14 +70,21 @@ INSERT INTO subject_resources (subject_id, resource_type, title, description, ht
 SELECT s.id, r.resource_type, r.title, r.description, r.html_path
 FROM (VALUES
     ('artes', 'quiz', 'Quiz de Artes', 'Revise movimentos e conceitos artísticos.', 'Quiz/quiz-artes.html'),
+    ('artes', 'game', 'Estúdio Cromático', 'Misture canais RGB em tempo real e identifique movimentos artísticos.', 'Jogos/jogo.html?mode=artes-estudio'),
     ('ciencias', 'quiz', 'Quiz de Ciências', 'Pratique Biologia, Química e Física.', 'Quiz/quiz-ciencias.html'),
+    ('ciencias', 'game', 'Lab Relâmpago', 'Classifique fenômenos, elementos químicos e sistemas do corpo contra o tempo.', 'Jogos/jogo.html?mode=ciencias-lab'),
     ('filosofia', 'quiz', 'Quiz de Filosofia', 'Teste conceitos de ética e pensamento crítico.', 'Quiz/quiz-filosofia.html'),
+    ('filosofia', 'game', 'Oráculo Filosófico', 'Desvende pensadores clássicos usando pistas progressivas.', 'Jogos/jogo.html?mode=filosofia-oraculo'),
     ('geografia', 'quiz', 'Quiz de Geografia', 'Revise clima, relevo e espaço geográfico.', 'Quiz/quiz-geografia.html'),
+    ('geografia', 'game', 'GeoRadar', 'Identifique capitais, estados brasileiros e biomas com dicas 50/50.', 'Jogos/jogo.html?mode=geografia-radar'),
     ('historia', 'quiz', 'Quiz de História', 'Pratique os períodos e processos históricos.', 'Quiz/quiz-historia.html'),
+    ('historia', 'game', 'Antes ou Depois?', 'Decida a ordem dos marcos históricos e construa sua linha do tempo.', 'Jogos/jogo.html?mode=historia-cronologia'),
     ('ingles', 'quiz', 'Quiz de Inglês', 'Pratique vocabulário e gramática.', 'Quiz/quiz-ingles.html'),
+    ('ingles', 'game', 'Word Match Bilíngue', 'Jogo da memória 3D pareando vocabulário Inglês ↔ Português.', 'Jogos/jogo.html?mode=ingles-match'),
     ('matematica', 'quiz', 'Quiz de Matemática', 'Teste seus conhecimentos matemáticos.', 'Quiz/quiz-matematica.html'),
     ('matematica', 'game', 'Matemática Infinita', 'Resolva desafios contra o relógio.', 'Jogos/matematica-infinita.html'),
-    ('portugues', 'quiz', 'Quiz de Português', 'Pratique leitura, gramática e interpretação.', 'Quiz/quiz-portugues.html')
+    ('portugues', 'quiz', 'Quiz de Português', 'Pratique leitura, gramática e interpretação.', 'Quiz/quiz-portugues.html'),
+    ('portugues', 'game', 'Termo Escolar', 'Descubra palavras de 5 letras em até 6 tentativas com feedback colorido.', 'Jogos/jogo.html?mode=portugues-termo')
 ) AS r(subject_slug, resource_type, title, description, html_path)
 JOIN subjects s ON s.slug = r.subject_slug
 ON CONFLICT (subject_id, html_path) DO NOTHING;

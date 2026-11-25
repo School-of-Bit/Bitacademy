@@ -4,22 +4,21 @@ Portal de aprendizado com disciplinas, materiais, quizzes e jogos. O projeto usa
 
 ## Funcionalidades
 
-- Catálogo de disciplinas carregado do banco de dados e páginas de conteúdo por disciplina.
-- Materiais de estudo publicados pelos professores, com suporte a rascunhos e links complementares.
-- Oito quizzes temáticos e o jogo Matemática Infinita, com resultados e rankings.
-- Cadastro e login com sessão autenticada e senha armazenada como hash.
-- Perfis de **Aluno**, **Professor** e **Administrador**, com páginas e navegação de acordo com o papel.
-- Perfil do aluno com melhores resultados por disciplina, recordes de jogos, rankings e atividades disponibilizadas pelos professores.
-- Área do professor para consultar disciplinas vinculadas, criar/editar materiais e cadastrar atividades.
-- Boletim com anos letivos, períodos de duração e peso configuráveis, turmas, matrículas, notas, recuperações e média final.
-- Painel administrativo para gerenciar usuários, redefinir senhas, editar disciplinas, vincular professores e cadastrar/editar/remover quizzes e jogos.
-- Recursos interativos associados a uma disciplina por um caminho de HTML já existente no projeto.
+- Catálogo de disciplinas carregado do banco de dados e páginas dinâmicas de conteúdo por disciplina (`materia.html?slug=...`).
+- Materiais de estudo publicados pelos professores, com suporte a rascunhos, links complementares e tempo estimado de leitura.
+- **8 quizzes temáticos** e **8 jogos educativos competitivos** (1 por disciplina: *Matemática Infinita*, *Termo Escolar*, *Word Match Bilíngue*, *Antes ou Depois?*, *GeoRadar*, *Lab Relâmpago*, *Estúdio Cromático* e *Oráculo Filosófico*), todos com **Ranking Oficial** salvo no banco.
+- Cadastro e login guiados com validação por campo, medidor de força de senha, checklist em tempo real, detector de Caps Lock, sessão autenticada e senha armazenada como hash.
+- Perfis de **Aluno**, **Professor** e **Administrador**, com avatares dinâmicos via **DiceBear API**, navegação adaptada ao papel e identidade visual própria (logos oficiais, Lucide Icons, tipografia 3-níveis e animações fluidas).
+- Perfil do aluno com visão geral gamificada, recordes nos quizzes e jogos, **Boletim Escolar** detalhado com exportação em **PDF** e área de **Atividades & Entregas** (envio de texto/link, feedbacks e notas sincronizadas).
+- Área do professor com gestão de materiais, criação/edição/exclusão de atividades (manuais ou com correção automática via Quiz), **Mesa de Correção**, **Pauta da Turma**, **Diário de Notas**, **Histórico de Alterações** e exportação **CSV**.
+- Boletim escolar com anos letivos, períodos de duração e peso configuráveis, componentes avaliativos (soma 100%), turmas, matrículas, notas, recuperações de período/final e média anual.
+- Painel administrativo para gerenciar usuários, redefinir senhas, editar disciplinas, vincular professores, cadastrar recursos interativos e acompanhar o **Conselho de Classe** (visão consolidada das turmas com exportação CSV).
 - Layout responsivo para celular e computador.
 
 ## Tecnologias
 
-- HTML, CSS e JavaScript no cliente.
-- Node.js 20 ou superior nas funções de API.
+- HTML, CSS e JavaScript no cliente (ícones **Lucide**, animações **BitAcademyMotion**, fontes *Space Grotesk*, *Plus Jakarta Sans* e *JetBrains Mono*, e avatares via **DiceBear API**).
+- Node.js 20 ou superior nas funções serverless de API.
 - PostgreSQL no Neon, acessado por `@neondatabase/serverless`.
 - Vercel para hospedar páginas estáticas e funções serverless.
 - `bcryptjs` para hash de senha e `jsonwebtoken` para sessões.
@@ -30,15 +29,19 @@ O código da aplicação está na pasta `Bitacademy/`:
 
 ```text
 Bitacademy/
-├── api/                 # autenticação, dados acadêmicos, perfil e administração
-├── database/            # esquema e scripts SQL
-├── Jogos/               # jogos HTML/JavaScript
-├── Quiz/                # quizzes HTML/JavaScript
+├── api/                 # autenticação, dados acadêmicos, boletim, quizzes, jogos, perfil e admin
+├── assets/logos/        # identidade visual oficial (logo-mark, favicon e banner)
+├── database/            # esquema e migrações SQL idempotentes
+├── Jogos/               # Matemática Infinita e motor arcade multi-matérias (jogo.html)
+├── Quiz/                # quizzes temáticos HTML/JavaScript
 ├── lib/                 # conexão Neon e autenticação de sessão
-├── Bitacademy.html      # página inicial
+├── Bitacademy.html      # página inicial e Arena de Prática
+├── login.html           # login e cadastro guiados
 ├── materia.html         # página dinâmica de disciplina
-├── professor.html       # área do professor
-├── admin.html           # área administrativa
+├── perfil.html          # perfil do aluno, boletim e entregas de atividades
+├── professor.html       # área do professor (materiais, atividades e boletim)
+├── admin.html           # painel administrativo e conselho de classe
+├── sobre-mim.html       # página institucional e equipe
 └── package.json
 ```
 
@@ -49,11 +52,12 @@ Crie um banco PostgreSQL no [Neon](https://neon.tech/) e abra o SQL Editor do pr
 1. `Bitacademy/database/schema.sql` — cria usuários, disciplinas, vínculos de professores, tentativas de quiz e pontuações de jogos.
 2. `Bitacademy/database/ranking-best-results.sql` — remove registros anônimos e duplicados, prepara um único recorde por usuário, disciplina e modo de jogo e cria a tabela de sessões validadas do jogo.
 3. `Bitacademy/database/admin-migration.sql` — habilita o papel Administrador e `auth_version`. O script pode ser executado novamente com segurança.
-4. `Bitacademy/database/academic.sql` — cria materiais, atividades e cadastro de recursos HTML; também pré-cadastra os quizzes e o jogo que já estão no repositório.
+4. `Bitacademy/database/academic.sql` — cria materiais, atividades e cadastro de recursos HTML; também pré-cadastra os 8 quizzes e os 8 jogos do repositório.
 5. `Bitacademy/database/legacy-subject-content.sql` — importa para o banco os textos das páginas originais das disciplinas.
-6. `Bitacademy/database/gradebook.sql` — cria anos letivos, períodos, turmas, matrículas, ofertas de disciplinas, avaliações, notas e trilha de alterações.
+6. `Bitacademy/database/gradebook.sql` — cria anos letivos, períodos, componentes avaliativos, turmas, matrículas, ofertas de disciplinas, avaliações, notas e trilha de alterações (`grade_change_log`).
+7. `Bitacademy/database/activities-gradebook.sql` — cria a tabela de entregas de atividades (`activity_submissions`) e integra atividades manuais e automáticas às avaliações do boletim.
 
-Os scripts 2 a 6 podem ser executados novamente conforme indicado em cada arquivo. Em bancos já configurados, execute novamente `ranking-best-results.sql` para consolidar os rankings e habilitar as sessões de jogo validadas; execute também `academic.sql` se ainda não tiver aplicado os recursos acadêmicos atuais. Execute `gradebook.sql` depois dos demais scripts para habilitar o boletim.
+Os scripts 2 a 7 são idempotentes e podem ser executados novamente conforme indicado em cada arquivo. Em bancos já configurados, execute `academic.sql`, `gradebook.sql` e `activities-gradebook.sql` para aplicar os novos jogos, componentes avaliativos e entregas de atividades.
 
 ## Rodar localmente
 

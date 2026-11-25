@@ -16,11 +16,23 @@ O ranking mantém somente o melhor resultado de cada conta por modo de jogo. `ga
 
 **Regra de segurança:** não aceite `score`, `correct_answers`, `duration_seconds` ou outros totais enviados pelo cliente como resultado final. O servidor deve derivar esses valores do estado da partida que ele próprio armazenou e validou.
 
-## Limitação atual
+## Modos atualmente integrados em `api/games.js`
 
-A implementação atual de `api/games.js` e `game_sessions` aceita apenas o modo `math-infinite`, com questões aritméticas geradas e respostas verificadas pelo servidor. Cadastrar outro HTML como jogo no painel faz o link aparecer na disciplina, mas não cria automaticamente uma sessão validada nem um ranking para esse jogo.
+A API `Bitacademy/api/games.js` mantém o registro `GAME_MODES` com **8 modos oficiais** e ranking individual em `game_scores`:
 
-Para ranquear um jogo novo, implemente sua validação no servidor e estenda a API e o armazenamento de sessões para o seu modo. Não reutilize o endpoint atual enviando a pontuação final pelo navegador.
+| `game_mode` | Jogo | Disciplina | Fluxo |
+| --- | --- | --- | --- |
+| `math-infinite` | Matemática Infinita | Matemática | Sessão validada no servidor (`start`/`answer`/`finish`/`abort`) |
+| `portugues-termo` | Termo Escolar | Português | Arcade unificado (`Jogos/jogo.html?mode=portugues-termo`) + `record` |
+| `ingles-match` | Word Match Bilíngue | Inglês | Arcade unificado (`Jogos/jogo.html?mode=ingles-match`) + `record` |
+| `historia-cronologia` | Antes ou Depois? | História | Arcade unificado (`Jogos/jogo.html?mode=historia-cronologia`) + `record` |
+| `geografia-radar` | GeoRadar | Geografia | Arcade unificado (`Jogos/jogo.html?mode=geografia-radar`) + `record` |
+| `ciencias-lab` | Lab Relâmpago | Ciências | Arcade unificado (`Jogos/jogo.html?mode=ciencias-lab`) + `record` |
+| `artes-estudio` | Estúdio Cromático | Artes | Arcade unificado (`Jogos/jogo.html?mode=artes-estudio`) + `record` |
+| `filosofia-oraculo` | Oráculo Filosófico | Filosofia | Arcade unificado (`Jogos/jogo.html?mode=filosofia-oraculo`) + `record` |
+
+- **Modo servidor-autoritativo (`math-infinite`):** todas as questões são geradas e validadas no servidor com controle de tempo e revisão em `game_sessions`; o endpoint `record` recusa modos marcados com `serverSessionOnly: true`.
+- **Modos arcade multi-matérias (`Jogos/jogo.html` + `Jogos/jogos-arcade.js`):** compartilham o mesmo shell de interface, switcher de jogos e painel de Ranking Oficial, registrando o melhor recorde autenticado via `POST /api/games?action=record` (com limite máximo de pontuação por modo). Para jogos que exijam proteção anti-trapaça estrita, siga o contrato servidor-autoritativo abaixo.
 
 ## Passos para adicionar um jogo
 

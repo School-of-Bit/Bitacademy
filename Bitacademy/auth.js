@@ -702,7 +702,7 @@ window.BitAcademyAuth = (() => {
         </div>
         <div class="intro-actions">
           <a class="primary-link" href="Bitacademy.html#disciplinas"><i data-lucide="book-open" data-lucide-size="17"></i> Continuar estudando</a>
-          <a class="secondary-link" href="Jogos/matematica-infinita.html"><i data-lucide="gamepad-2" data-lucide-size="17"></i> Jogar Matemática Infinita</a>
+          <a class="secondary-link" href="Bitacademy.html#quizzes"><i data-lucide="gamepad-2" data-lucide-size="17"></i> Arena de Jogos</a>
         </div>
       </section>
 
@@ -718,21 +718,35 @@ window.BitAcademyAuth = (() => {
             <article><span><i data-lucide="book-marked" data-lucide-size="16"></i> Disciplinas com recorde</span><strong>${results.length}</strong></article>
             <article><span><i data-lucide="target" data-lucide-size="16"></i> Média nos quizzes</span><strong>${average}%</strong></article>
             <article><span><i data-lucide="trophy" data-lucide-size="16"></i> Melhor desempenho</span><strong>${bestPercent}%</strong></article>
-            <article><span><i data-lucide="zap" data-lucide-size="16"></i> Recorde Matemática Infinita</span><strong>${bestGameScore}</strong></article>
+            <article><span><i data-lucide="zap" data-lucide-size="16"></i> Maior recorde nos jogos</span><strong>${bestGameScore}</strong></article>
           </div>
           <div class="profile-next-step">
             <div>
               <p class="eyebrow">Próximo passo</p>
               <h2>${results.length ? "Supere seus recordes" : "Faça seu primeiro quiz"}</h2>
-              <p>${results.length ? "Seus melhores resultados por disciplina ficam registrados aqui e contam para o ranking oficial." : "Ao finalizar qualquer quiz conectado à sua conta, sua maior pontuação aparece automaticamente aqui."}</p>
+              <p>${results.length ? "Seus melhores resultados nos quizzes e jogos ficam registrados aqui e contam para o ranking oficial." : "Ao finalizar qualquer quiz ou jogo conectado à sua conta, sua maior pontuação aparece automaticamente aqui."}</p>
             </div>
             <a class="primary-link" href="Bitacademy.html#quizzes"><i data-lucide="gamepad-2" data-lucide-size="18"></i> Ir para Arena de Prática</a>
           </div>
         </div>
 
         <div class="profile-card-section" style="margin-top: 24px;">
+          <p class="eyebrow">Arena de Jogos</p>
+          <h2>Recordes nos jogos educativos</h2>
+          ${gameScores.length ? `<div class="result-list" style="margin-top: 14px;">${gameScores.map((g) => `
+            <article>
+              <div>
+                <strong>${escapeHtml(g.title)}</strong>
+                <span>${g.correct} acerto(s) · melhor combo ${g.bestStreak} · ${new Date(g.date).toLocaleDateString("pt-BR")}</span>
+              </div>
+              <b>${g.score} pts</b>
+            </article>
+          `).join("")}</div>` : '<p>Você ainda não registrou recordes nos jogos. Acesse a Arena de Prática para jogar e entrar no ranking oficial!</p>'}
+        </div>
+
+        <div class="profile-card-section" style="margin-top: 24px;">
           <p class="eyebrow">Histórico gamificado</p>
-          <h2>Melhores resultados por disciplina</h2>
+          <h2>Melhores resultados por disciplina (Quizzes)</h2>
           ${results.length ? `<div class="result-list" style="margin-top: 14px;">${results.map((result) => `
             <article>
               <div>
