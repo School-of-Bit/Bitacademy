@@ -275,6 +275,9 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  background:
+    linear-gradient(155deg, color-mix(in srgb, var(--subject-accent) 22%, rgba(15, 15, 26, 0.84)) 0%, rgba(20, 20, 36, 0.96) 68%),
+    url("https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=640&q=75") center/cover no-repeat;
 }
 
 .resource-card .resource-type {
