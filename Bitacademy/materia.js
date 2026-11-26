@@ -67,7 +67,7 @@
         portugues: {
           resource_type: "game",
           title: "Termo Escolar",
-          description: "Descubra palavras de 5 letras do vocabulário de Português em até 6 tentativas com feedback colorido e ranking oficial.",
+          description: "Descubra palavras de 5 letras do vocabulário de Português em até 6 tentativas com feedback colorido em modo treino.",
           html_path: "Jogos/jogo.html?mode=portugues-termo"
         },
         ingles: {

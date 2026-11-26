@@ -13,6 +13,7 @@ class MathInfiniteGame {
       score: document.getElementById("score"),
       streak: document.getElementById("streak"),
       level: document.getElementById("level-label"),
+      levelProgress: document.getElementById("level-progress"),
       feedback: document.getElementById("feedback"),
       question: document.getElementById("question"),
       form: document.getElementById("answer-form"),
@@ -36,6 +37,9 @@ class MathInfiniteGame {
       correct: 0,
       wrong: 0,
       level: 1,
+      levelName: "Iniciante",
+      maxLevel: 12,
+      nextLevelIn: 5,
       revision: 0
     };
   }
@@ -110,10 +114,13 @@ class MathInfiniteGame {
     this.state.streak = Number(state.streak);
     this.state.bestStreak = Number(state.bestStreak);
     this.state.level = Number(state.level);
+    this.state.levelName = state.levelName;
+    this.state.maxLevel = Number(state.maxLevel);
+    this.state.nextLevelIn = Number(state.nextLevelIn);
     this.state.timeLeft = Number(state.timeLeft);
     this.state.revision = Number(state.revision);
     if (game.question) {
-      this.elements.question.textContent = game.question;
+      this.elements.question.textContent = game.question.replace("*", "×").replace("/", "÷").replace("-", "−");
       window.BitAcademyMotion?.pop(this.elements.question, 1.1);
     }
     this.elements.answer.value = "";
@@ -122,6 +129,7 @@ class MathInfiniteGame {
 
   async submitAnswer() {
     if (!this.isRunning || this.pendingAnswer) return;
+    if (!this.elements.answer.value.trim()) return;
     const userAnswer = Number(this.elements.answer.value);
     if (!Number.isInteger(userAnswer)) return;
     this.pendingAnswer = true;
@@ -130,6 +138,7 @@ class MathInfiniteGame {
     this.elements.reset.disabled = true;
     this.elements.feedback.textContent = "Verificando resposta...";
     try {
+      const previousLevel = this.state.level;
       const game = await window.BitAcademyAuth.submitGameAnswer({
         sessionId: this.sessionId,
         answer: userAnswer,
@@ -142,7 +151,9 @@ class MathInfiniteGame {
       }
       this.elements.feedback.textContent = game.accepted === false
         ? "A resposta já havia sido enviada. Questão atualizada."
-        : game.wasCorrect ? "✨ Acertou! +4s" : `⚠️ Errou. A resposta era ${game.correctAnswer}. -5s`;
+        : game.wasCorrect
+          ? (this.state.level > previousLevel ? `🚀 Nível ${this.state.level} desbloqueado! +4s` : "✨ Acertou! +4s")
+          : `⚠️ Errou. A resposta era ${game.correctAnswer}. -5s`;
       if (game.wasCorrect) {
         window.BitAcademyMotion?.pop(this.elements.score, 1.22);
         window.BitAcademyMotion?.pop(this.elements.streak, 1.22);
@@ -208,7 +219,10 @@ class MathInfiniteGame {
     this.elements.time.textContent = `${this.state.timeLeft}s`;
     this.elements.score.textContent = this.state.score;
     this.elements.streak.textContent = this.state.streak;
-    this.elements.level.textContent = `Nível ${this.state.level}`;
+    this.elements.level.textContent = `Nível ${this.state.level} · ${this.state.levelName}`;
+    this.elements.levelProgress.textContent = this.state.level >= this.state.maxLevel
+      ? "Nível máximo! Continue batendo seu recorde."
+      : `${this.state.nextLevelIn} ${this.state.nextLevelIn === 1 ? "acerto" : "acertos"} para o próximo nível.`;
     if (this.elements.timeBar) {
       const pct = Math.min(100, Math.max(0, (this.state.timeLeft / 45) * 100));
       this.elements.timeBar.style.width = `${pct}%`;

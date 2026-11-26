@@ -162,61 +162,14 @@
   };
 
   const loadRanking = async () => {
-    if (!rankingListEl || !window.BitAcademyAuth) return;
-    try {
-      const ranking = await window.BitAcademyAuth.getGameRanking(currentConfig.mode, 10);
-      if (!ranking.length) {
-        rankingStatusEl.textContent = "Nenhum recorde registrado ainda. Seja o 1º no ranking!";
-        rankingListEl.innerHTML = "";
-        return;
-      }
-      rankingStatusEl.textContent = `Top ${ranking.length} jogadores em ${currentConfig.title}`;
-      rankingListEl.innerHTML = ranking.map((entry, idx) => `
-        <article class="${idx === 0 ? "podium-1" : ""}">
-          <span>${idx + 1}º</span>
-          <div style="display:flex;align-items:center;gap:10px;min-width:0;">
-            ${window.BitAcademyIcons.avatar(entry.playerName, 30, "user-avatar-sm")}
-            <div style="min-width:0;">
-              <strong>${escapeHtml(entry.playerName)}</strong>
-              <small>${entry.correct} acerto(s) · combo ${entry.bestStreak}</small>
-            </div>
-          </div>
-          <b>${entry.score}</b>
-        </article>
-      `).join("");
-      window.BitAcademyMotion?.staggerCards(rankingListEl, "article", { stagger: 0.04, y: 10 });
-    } catch (err) {
-      rankingStatusEl.textContent = "Ranking indisponível no momento.";
-    }
+    rankingStatusEl.textContent = "Modo treino: ranking oficial indisponível até a validação no servidor.";
+    rankingListEl.innerHTML = "";
   };
 
-  const saveScoreToServer = async ({ score, correct, wrong, bestStreak, duration }) => {
-    await window.BitAcademyAuth?.ready;
-    const user = window.BitAcademyAuth?.getCurrentUser();
-    if (!user) {
-      return { saved: false, reason: "Entre na sua conta para gravar seu recorde no ranking oficial!" };
-    }
-    if (score <= 0) {
-      return { saved: false, reason: "Faça pelo menos 1 ponto para entrar no ranking." };
-    }
-    try {
-      const res = await window.BitAcademyAuth.recordGameScore({
-        mode: currentConfig.mode,
-        score,
-        correct,
-        wrong,
-        bestStreak,
-        duration
-      });
-      await loadRanking();
-      if (res.improved) {
-        return { saved: true, improved: true, reason: "Novo recorde pessoal gravado no ranking oficial!" };
-      }
-      return { saved: true, improved: false, reason: "Pontuação processada! Seu recorde anterior continua no topo." };
-    } catch (err) {
-      return { saved: false, reason: err.message || "Não foi possível salvar no servidor." };
-    }
-  };
+  const saveScoreToServer = async () => ({
+    saved: false, improved: false,
+    reason: "Partida de treino concluída. A pontuação não é enviada ao ranking oficial."
+  });
 
   const renderGameOverScreen = async ({ title, subtitle, score, correct, wrong, bestStreak, duration, onRestart }) => {
     setFeedback("");
@@ -1450,7 +1403,7 @@
     document.getElementById("arcade-subtitle").textContent = currentConfig.subtitle;
     document.getElementById("arcade-badge-label").innerHTML = `${window.BitAcademyIcons.svg("gamepad-2", 14)} ${escapeHtml(currentConfig.badgeLabel)}`;
     document.getElementById("arcade-badge-value").textContent = currentConfig.badgeValue;
-    rankingTitleEl.textContent = `Top 10 · ${currentConfig.title}`;
+    rankingTitleEl.textContent = `Treino · ${currentConfig.title}`;
 
     const subjectLink = document.getElementById("subject-back-link");
     if (subjectLink) {

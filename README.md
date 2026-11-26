@@ -6,7 +6,7 @@ Portal de aprendizado com disciplinas, materiais, quizzes e jogos. O projeto usa
 
 - Catálogo de disciplinas carregado do banco de dados e páginas dinâmicas de conteúdo por disciplina (`materia.html?slug=...`).
 - Materiais de estudo publicados pelos professores, com suporte a rascunhos, links complementares e tempo estimado de leitura.
-- **8 quizzes temáticos** e **8 jogos educativos competitivos** (1 por disciplina: *Matemática Infinita*, *Termo Escolar*, *Word Match Bilíngue*, *Antes ou Depois?*, *GeoRadar*, *Lab Relâmpago*, *Estúdio Cromático* e *Oráculo Filosófico*), todos com **Ranking Oficial** salvo no banco.
+- **8 quizzes temáticos** e **8 jogos educativos competitivos** (1 por disciplina: *Matemática Infinita*, *Termo Escolar*, *Word Match Bilíngue*, *Antes ou Depois?*, *GeoRadar*, *Lab Relâmpago*, *Estúdio Cromático* e *Oráculo Filosófico*), com ranking oficial nos quizzes e em Matemática Infinita; os outros sete jogos funcionam em modo treino.
 - Cadastro e login guiados com validação por campo, medidor de força de senha, checklist em tempo real, detector de Caps Lock, sessão autenticada e senha armazenada como hash.
 - Perfis de **Aluno**, **Professor** e **Administrador**, com avatares dinâmicos via **DiceBear API**, navegação adaptada ao papel e identidade visual própria (logos oficiais, Lucide Icons, tipografia 3-níveis e animações fluidas).
 - Perfil do aluno com visão geral gamificada, recordes nos quizzes e jogos, **Boletim Escolar** detalhado com exportação em **PDF** e área de **Atividades & Entregas** (envio de texto/link, feedbacks e notas sincronizadas).
@@ -57,7 +57,9 @@ Crie um banco PostgreSQL no [Neon](https://neon.tech/) e abra o SQL Editor do pr
 6. `Bitacademy/database/gradebook.sql` — cria anos letivos, períodos, componentes avaliativos, turmas, matrículas, ofertas de disciplinas, avaliações, notas e trilha de alterações (`grade_change_log`).
 7. `Bitacademy/database/activities-gradebook.sql` — cria a tabela de entregas de atividades (`activity_submissions`) e integra atividades manuais e automáticas às avaliações do boletim.
 
-Os scripts 2 a 7 são idempotentes e podem ser executados novamente conforme indicado em cada arquivo. Em bancos já configurados, execute `academic.sql`, `gradebook.sql` e `activities-gradebook.sql` para aplicar os novos jogos, componentes avaliativos e entregas de atividades.
+8. `Bitacademy/database/security-upgrade.sql` — adiciona controle de tentativas de login e rodadas de quiz consumidas.
+
+Os scripts 2 a 8 são idempotentes e podem ser executados novamente conforme indicado em cada arquivo. Em bancos já configurados, execute `academic.sql`, `gradebook.sql` e `activities-gradebook.sql` para aplicar os novos jogos, componentes avaliativos e entregas de atividades.
 
 ## Rodar localmente
 
@@ -113,7 +115,7 @@ As páginas dependem das APIs e do banco. Abrir `Bitacademy.html` diretamente pe
 
 1. Entre com uma conta de aluno.
 2. Na página inicial, escolha uma disciplina. A página dinâmica reúne os textos importados, materiais publicados e recursos interativos cadastrados.
-3. Entre na conta antes de responder quizzes ou jogar para registrar seus recordes. O perfil mostra o melhor resultado por disciplina e modo de jogo.
+3. Entre na conta antes de responder quizzes ou jogar Matemática Infinita para registrar seus recordes. Os outros jogos funcionam em modo treino.
 4. Consulte no perfil as atividades cadastradas pelos professores.
 
 ### Professor
@@ -148,3 +150,7 @@ Importe o repositório na Vercel e configure o **Root Directory** como `Bitacade
 - Gabriel de Jesus
 
 Projeto acadêmico sem fins comerciais.
+
+## Atualização de segurança
+
+Veja [o guia de atualização](docs/MELHORIAS_SEGURANCA.md), com migração, testes e limitações.
