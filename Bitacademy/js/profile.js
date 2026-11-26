@@ -118,6 +118,7 @@ window.createBitAcademyProfile = ({ api, ready, getCurrentUser, escapeHtml, setP
         <div class="intro-actions">
           <a class="primary-link" href="Bitacademy.html#disciplinas"><i data-lucide="book-open" data-lucide-size="17"></i> Continuar estudando</a>
           <a class="secondary-link" href="Bitacademy.html#quizzes"><i data-lucide="gamepad-2" data-lucide-size="17"></i> Arena de Jogos</a>
+          <a class="secondary-link" href="aventura.html">⚔ Minha aventura RPG</a>
         </div>
       </section>
 

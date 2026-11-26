@@ -1,3 +1,4 @@
+const { progression } = require("../lib/rpg");
 const { sql } = require("../lib/db");
 const { getSessionUserId } = require("../lib/_auth");
 
@@ -18,6 +19,16 @@ module.exports = async function handler(req, res) {
     if (!users.length) return res.status(401).json({ error: "Sessão inválida." });
     const user = users[0];
 
+    if (req.query?.view === "rpg") {
+      if (user.account_type !== "Aluno") return res.status(403).json({ error: "A aventura é exclusiva para alunos." });
+      const quizzes = await sql`SELECT s.slug AS materia, MAX(qa.percentage) AS percent
+        FROM quiz_attempts qa JOIN subjects s ON s.id = qa.subject_id
+        WHERE qa.user_id = ${userId} GROUP BY s.slug`;
+      const arena = await sql`SELECT COALESCE(MAX(correct_answers), 0) AS best
+        FROM game_sessions WHERE user_id = ${userId} AND status = 'finished' AND game_mode = 'math-infinite'`;
+      res.setHeader("Cache-Control", "no-store");
+      return res.status(200).json({name: user.name, ...progression(quizzes, arena[0]?.best)});
+    }
     const results = await sql`
       SELECT qa.quiz_title, qa.score, qa.total_questions, qa.percentage,
              qa.completed_at, s.slug AS materia
