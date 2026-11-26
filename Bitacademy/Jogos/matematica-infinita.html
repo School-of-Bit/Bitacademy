@@ -22,7 +22,7 @@
                 <div>
                     <p class="eyebrow">Modo competitivo infinito</p>
                     <h1 id="game-title">Matemática Infinita</h1>
-                    <p>Resolva o máximo de contas antes do tempo acabar. Acertos concedem <strong>+4s</strong>, erros descontam <strong>-5s</strong>.</p>
+                    <p>Resolva o máximo de contas antes do tempo acabar. Acertos concedem <strong>+4s</strong>, erros descontam <strong>-5s</strong>. A cada 5 acertos, a dificuldade aumenta.</p>
                 </div>
                 <div class="battle-badge">
                     <span><i data-lucide="shield-check" data-lucide-size="14"></i> Validado no Servidor</span>
@@ -50,14 +50,15 @@
 
             <section class="challenge-card" aria-live="polite">
                 <div class="challenge-meta">
-                    <span id="level-label" class="level-pill">Nível 1</span>
+                    <span id="level-label" class="level-pill">Nível 1 · Iniciante</span>
                     <span id="feedback">Pronto para começar?</span>
                 </div>
-                <div id="question" class="question">?</div>
+                <p id="level-progress" class="math-level-progress">5 acertos para o próximo nível.</p>
+                <div id="question" class="question math-question">?</div>
                 <form id="answer-form" class="answer-form">
                     <label for="answer">Sua resposta</label>
                     <div>
-                        <input type="number" id="answer" name="answer" inputmode="numeric" autocomplete="off" placeholder="Digite o resultado..." disabled>
+                        <input type="number" id="answer" name="answer" inputmode="numeric" autocomplete="off" placeholder="Digite o resultado..." required step="1" min="0" max="100000" disabled>
                         <button type="submit" disabled>Responder</button>
                     </div>
                 </form>
@@ -78,12 +79,15 @@
             <div id="ranking-list" class="ranking-list"></div>
             <section class="battle-preview">
                 <h3><i data-lucide="lightbulb" data-lucide-size="18"></i> Dica de pontuação</h3>
-                <p>Manter uma sequência alta de acertos aumenta o nível do desafio e multiplica os pontos ganhos a cada resposta certa.</p>
+                <p>O nível aumenta a cada 5 acertos acumulados, até o nível 12. Erros não reduzem o nível, mas encerram a sequência e descontam tempo. Sequências maiores rendem mais pontos.</p>
             </section>
         </aside>
     </main>
 
-    <script src="../auth.js"></script>
+    <script src="../js/icons.js"></script>
+<script src="../js/motion.js"></script>
+<script src="../js/profile.js"></script>
+<script src="../auth.js"></script>
     <script src="matematica-infinita.js"></script>
 </body>
 </html>

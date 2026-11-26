@@ -571,3 +571,5 @@ h4,
   .quiz-header { padding: 18px 16px; }
   .question-text { font-size: 1.05rem; }
 }
+
+.option-btn.selected { outline: 2px solid var(--quiz-accent, #818cf8); outline-offset: 2px; }

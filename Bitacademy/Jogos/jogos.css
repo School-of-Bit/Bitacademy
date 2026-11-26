@@ -1171,3 +1171,19 @@ button.secondary {
   .timeline-controls, .radar-options { grid-template-columns: 1fr; }
   .arcade-result-metrics { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* Progresso de dificuldade em Matemática Infinita */
+.math-level-progress {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  text-align: center;
+  opacity: 0.85;
+}
+
+.math-question {
+  font-size: clamp(1.8rem, 6vw, 4.5rem);
+  overflow-wrap: anywhere;
+}
+.challenge-meta:has(+ .math-level-progress) {
+  flex-wrap: wrap;
+}

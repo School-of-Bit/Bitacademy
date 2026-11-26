@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const { sql } = require("../../lib/db");
+const { checkLoginRateLimit } = require("../../lib/login-rate-limit");
 const { setSessionCookie } = require("../../lib/_auth");
 
 function jsonBody(req) {
@@ -17,8 +18,14 @@ module.exports = async function handler(req, res) {
     const { email, password } = jsonBody(req);
     const normalizedEmail = String(email || "").trim().toLowerCase();
 
-    if (normalizedEmail.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail) || !password) {
+    if (normalizedEmail.length > 255 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizedEmail) || typeof password !== "string" || !password || password.length > 1024) {
       return res.status(400).json({ error: "Informe e-mail e senha." });
+    }
+
+    const retryAfter = await checkLoginRateLimit(req, normalizedEmail);
+    if (retryAfter > 0) {
+      res.setHeader("Retry-After", String(retryAfter));
+      return res.status(429).json({ error: "Muitas tentativas. Aguarde alguns minutos e tente novamente." });
     }
 
     const users = await sql`

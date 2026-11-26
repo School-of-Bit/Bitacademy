@@ -492,8 +492,10 @@ async function submitStudentActivity(studentId, body, res) {
     return res.status(400).json({ error: "O link deve começar com http:// ou https:// e ter até 2.048 caracteres." });
   }
 
+  const students = await sql`SELECT id FROM users WHERE id = ${studentId} AND account_type = 'Aluno'`;
+  if (!students.length) return res.status(403).json({ error: "Apenas alunos podem enviar atividades." });
   const activity = await sql`
-    SELECT a.*, o.class_group_id, gp.status AS period_status, y.status AS year_status, ass.status AS assessment_status
+    SELECT a.*, (a.due_at IS NOT NULL AND a.due_at <= NOW()) AS deadline_expired, o.class_group_id, gp.status AS period_status, y.status AS year_status, ass.status AS assessment_status
     FROM activities a
     LEFT JOIN course_offerings o ON o.id = a.course_offering_id
     LEFT JOIN class_groups c ON c.id = o.class_group_id
@@ -507,6 +509,9 @@ async function submitStudentActivity(studentId, body, res) {
   if (activity[0].period_status === "closed" || activity[0].year_status === "closed" || activity[0].assessment_status === "closed") {
     return res.status(409).json({ error: "O período avaliativo desta atividade já foi encerrado." });
   }
+
+  if (activity[0].deadline_expired) return res.status(409).json({ error: "O prazo de entrega desta atividade expirou." });
+  if (activity[0].activity_type !== "manual") return res.status(409).json({ error: "Conclua o quiz para entregar esta atividade automática." });
 
   let enrollment = null;
   if (activity[0].class_group_id) {
@@ -538,12 +543,26 @@ async function submitStudentActivity(studentId, body, res) {
 
   const saved = await sql`
     INSERT INTO activity_submissions (activity_id, enrollment_id, content, link, status, submitted_at)
-    VALUES (${activityId}, ${enrollment.id}, ${content}, ${link}, 'submitted', NOW())
+    SELECT a.id, se.id, ${content}, ${link}, 'submitted', NOW()
+    FROM activities a
+    JOIN student_enrollments se ON se.id = ${enrollment.id} AND se.student_id = ${studentId} AND se.status = 'active'
+    LEFT JOIN course_offerings o ON o.id = a.course_offering_id
+    LEFT JOIN class_groups c ON c.id = o.class_group_id
+    LEFT JOIN academic_years y ON y.id = c.academic_year_id
+    LEFT JOIN grading_periods gp ON gp.id = a.grading_period_id
+    LEFT JOIN assessments ass ON ass.id = a.assessment_id
+    WHERE a.id = ${activityId} AND a.activity_type = 'manual'
+      AND (a.due_at IS NULL OR a.due_at > NOW())
+      AND (a.course_offering_id IS NULL OR se.class_group_id = o.class_group_id)
+      AND gp.status IS DISTINCT FROM 'closed' AND y.status IS DISTINCT FROM 'closed'
+      AND ass.status IS DISTINCT FROM 'closed' 
     ON CONFLICT (activity_id, enrollment_id)
     DO UPDATE SET content = EXCLUDED.content, link = EXCLUDED.link,
                   status = 'submitted', submitted_at = NOW(), updated_at = NOW()
+    WHERE activity_submissions.status <> 'graded'
     RETURNING *
   `;
+  if (!saved.length) return res.status(409).json({ error: "A entrega não está mais disponível. Atualize a página." });
 
   return res.status(200).json({ submission: saved[0] });
 }

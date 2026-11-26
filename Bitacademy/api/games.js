@@ -1,4 +1,4 @@
-const { randomInt } = require("node:crypto");
+const { createQuestion, difficultyFor } = require("../lib/math-difficulty");
 const { sql } = require("../lib/db");
 const { getSessionUserId } = require("../lib/_auth");
 
@@ -23,33 +23,6 @@ function jsonBody(req) {
   try { return JSON.parse(req.body); } catch { return {}; }
 }
 
-function createQuestion(correctAnswers) {
-  const level = Math.min(8, Math.floor(correctAnswers / 5) + 1);
-  const operations = level < 3 ? ["+", "-"] : level < 6 ? ["+", "-", "*"] : ["+", "-", "*", "/"];
-  const operation = operations[randomInt(operations.length)];
-  const max = 8 + level * 6;
-  let a = randomInt(2, max + 1);
-  let b = randomInt(2, max + 1);
-  let answer;
-
-  if (operation === "+") answer = a + b;
-  if (operation === "-") {
-    if (b > a) [a, b] = [b, a];
-    answer = a - b;
-  }
-  if (operation === "*") {
-    b = randomInt(2, Math.min(12, level + 5) + 1);
-    answer = a * b;
-  }
-  if (operation === "/") {
-    answer = randomInt(2, Math.min(12, level + 5) + 1);
-    b = randomInt(2, Math.min(12, level + 4) + 1);
-    a = answer * b;
-  }
-
-  return { a, b, operation, answer, level };
-}
-
 function mapState(row) {
   return {
     score: Number(row.score),
@@ -57,7 +30,7 @@ function mapState(row) {
     wrong: Number(row.wrong_answers),
     streak: Number(row.streak),
     bestStreak: Number(row.best_streak),
-    level: Math.min(8, Math.floor(Number(row.correct_answers) / 5) + 1),
+    ...difficultyFor(Number(row.correct_answers)),
     timeLeft: Math.ceil(Number(row.time_left_ms) / 1000),
     revision: Number(row.revision)
   };
@@ -160,9 +133,10 @@ module.exports = async function handler(req, res) {
     if (action === "ranking") {
       if (req.method !== "GET") return res.status(405).json({ error: "Método não permitido." });
       const mode = String(req.query?.mode || "").trim();
-      const limit = Math.min(Math.max(Number(req.query?.limit) || 10, 1), 50);
-      if (!GAME_MODES[mode]) return res.status(400).json({ error: "Modo de jogo inválido." });
+      const limit = Math.min(Math.max(Math.trunc(Number(req.query?.limit) || 10), 1), 50);
+      if (!Object.hasOwn(GAME_MODES, mode)) return res.status(400).json({ error: "Modo de jogo inválido." });
 
+      if (mode !== GAME_MODE) return res.status(200).json({ ranking: [], practiceOnly: true });
       const rows = await sql`SELECT id, game_mode, game_title, score,
           correct_answers, wrong_answers, best_streak, duration_seconds, player_name, played_at
         FROM game_scores WHERE game_mode = ${mode} AND user_id IS NOT NULL
@@ -179,52 +153,7 @@ module.exports = async function handler(req, res) {
     const body = jsonBody(req);
 
     if (action === "record") {
-      const mode = String(body.mode || "").trim();
-      const config = GAME_MODES[mode];
-      if (!config || config.serverSessionOnly) {
-        return res.status(400).json({ error: "Modo de jogo inválido para registro direto." });
-      }
-      const score = Math.round(Number(body.score) || 0);
-      const correct = Math.max(0, Math.min(9999, Math.round(Number(body.correct) || 0)));
-      const wrong = Math.max(0, Math.min(9999, Math.round(Number(body.wrong) || 0)));
-      const bestStreak = Math.max(0, Math.min(9999, Math.round(Number(body.bestStreak) || 0)));
-      const duration = Math.max(1, Math.min(7200, Math.round(Number(body.duration) || 1)));
-
-      if (!Number.isFinite(score) || score <= 0 || score > config.maxScore) {
-        return res.status(200).json({ recorded: false, improved: false });
-      }
-
-      const rows = await sql`WITH saved AS (
-          INSERT INTO game_scores (user_id, game_mode, game_title, score, correct_answers,
-            wrong_answers, best_streak, duration_seconds, player_name)
-          SELECT users.id, ${mode}, ${config.title}, ${score},
-            ${correct}, ${wrong}, ${bestStreak}, ${duration}, users.name
-          FROM users WHERE users.id = ${userId}
-          ON CONFLICT (user_id, game_mode) WHERE user_id IS NOT NULL
-          DO UPDATE SET game_title = EXCLUDED.game_title, score = EXCLUDED.score,
-            correct_answers = EXCLUDED.correct_answers, wrong_answers = EXCLUDED.wrong_answers,
-            best_streak = EXCLUDED.best_streak, duration_seconds = EXCLUDED.duration_seconds,
-            player_name = EXCLUDED.player_name, played_at = NOW()
-          WHERE EXCLUDED.score > game_scores.score
-            OR (EXCLUDED.score = game_scores.score AND EXCLUDED.correct_answers > game_scores.correct_answers)
-            OR (EXCLUDED.score = game_scores.score AND EXCLUDED.correct_answers = game_scores.correct_answers
-                AND EXCLUDED.best_streak > game_scores.best_streak)
-          RETURNING id, game_mode, game_title, score, correct_answers, wrong_answers,
-            best_streak, duration_seconds, player_name, played_at
-        ) SELECT saved.*, TRUE AS improved FROM saved
-        UNION ALL
-        SELECT game_scores.id, game_scores.game_mode, game_scores.game_title, game_scores.score,
-          game_scores.correct_answers, game_scores.wrong_answers, game_scores.best_streak,
-          game_scores.duration_seconds, game_scores.player_name, game_scores.played_at, FALSE AS improved
-        FROM game_scores
-        WHERE game_scores.user_id = ${userId} AND game_scores.game_mode = ${mode}
-          AND NOT EXISTS (SELECT 1 FROM saved)
-        LIMIT 1`;
-      return res.status(200).json({
-        recorded: true,
-        improved: rows[0]?.improved === true,
-        bestScore: rows[0] ? mapScore(rows[0]) : null
-      });
+      return res.status(403).json({ error: "Pontuações calculadas pelo navegador não são aceitas no ranking oficial." });
     }
 
     if (action === "start") {
@@ -300,7 +229,8 @@ module.exports = async function handler(req, res) {
       return res.status(200).json(result);
     }
 
-    const isCorrect = Number(body.answer) === Number(session.current_answer);
+    const correctAnswer = Number(session.current_answer);
+    const isCorrect = Number(body.answer) === correctAnswer;
     let correct = Number(session.correct_answers);
     let wrong = Number(session.wrong_answers);
     let streak = Number(session.streak);
@@ -312,7 +242,7 @@ module.exports = async function handler(req, res) {
       correct++;
       streak++;
       bestStreak = Math.max(bestStreak, streak);
-      const level = Math.min(8, Math.floor(Number(session.correct_answers) / 5) + 1);
+      const { level } = difficultyFor(Number(session.correct_answers));
       score += 10 + streak * 2 + level;
       timeLeftMs = Math.min(MAX_TIME_MS, timeLeftMs + 4000);
     } else {
@@ -343,13 +273,13 @@ module.exports = async function handler(req, res) {
     session = rows[0];
     if (finished) {
       const result = await finishSession(session, userId);
-      return res.status(200).json({ ...result, wasCorrect: isCorrect, correctAnswer: Number(session.current_answer) });
+      return res.status(200).json({ ...result, wasCorrect: isCorrect, correctAnswer });
     }
     return res.status(200).json({
       accepted: true,
       finished: false,
       wasCorrect: isCorrect,
-      correctAnswer: Number(session.current_answer),
+      correctAnswer,
       question: mapQuestion(session),
       state: mapState(session)
     });
